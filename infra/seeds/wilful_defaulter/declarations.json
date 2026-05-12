@@ -1,0 +1,18 @@
+[
+  {
+    "cin": "U45201MH2005PTC155294",
+    "din": "00009876",
+    "bank_name": "State Bank of India",
+    "amount": 28500000000.0,
+    "declared_date": "2018-09-10",
+    "source": "RBI"
+  },
+  {
+    "cin": "U27101MH2010PTC215432",
+    "din": "00554433",
+    "bank_name": "ICICI Bank",
+    "amount": 850000000.0,
+    "declared_date": "2019-02-22",
+    "source": "CIBIL"
+  }
+]

@@ -13,6 +13,7 @@ from neo4j import AsyncDriver
 from backend.app.config import get_settings
 from backend.app.ingest.benchmarks import BenchmarkPoint
 from backend.app.ingest.gst import RawGSTEntity
+from backend.app.ingest.nclt import RawNCLTProceeding
 from backend.app.ingest.schemas import (
     CompanyBundle,
     RawCharge,
@@ -21,6 +22,7 @@ from backend.app.ingest.schemas import (
     RawFinancialStatement,
 )
 from backend.app.ingest.validation import DataQualityError
+from backend.app.ingest.wilful_defaulter import RawWilfulDefaulter
 
 logger = logging.getLogger(__name__)
 
@@ -285,3 +287,71 @@ async def upsert_gst_entity(driver: AsyncDriver, gst: RawGSTEntity) -> str:
     if record is None:
         raise RuntimeError(f"Failed to upsert GSTEntity {gst.gstin}")
     return record["gstin"]
+
+
+# --- Day 5 additions: NCLT + WilfulDefaulter -------------------------------
+
+_UPSERT_NCLT = """
+MERGE (n:NCLTProceeding {case_number: $case_number})
+SET n.cin = $cin,
+    n.petition_type = $petition_type,
+    n.filing_date = date($filing_date),
+    n.status = $status,
+    n.amount_claimed = $amount_claimed,
+    n.bench = $bench,
+    n.last_refreshed_at = datetime()
+WITH n
+MATCH (c:Company {cin: $cin})
+MERGE (c)-[:HAS_NCLT_PROCEEDING]->(n)
+RETURN n.case_number AS case_number
+"""
+
+_UPSERT_WILFUL_DEFAULTER = """
+MERGE (w:WilfulDefaulter {cin: $cin, bank_name: $bank_name, declared_date: date($declared_date)})
+SET w.din = $din,
+    w.amount = $amount,
+    w.source = $source,
+    w.last_refreshed_at = datetime()
+WITH w
+MATCH (c:Company {cin: $cin})
+MERGE (c)-[r:HAS_WILFUL_DEFAULTER_FLAG]->(w)
+SET r.declared_date = date($declared_date)
+RETURN id(w) AS id
+"""
+
+
+async def upsert_nclt_proceeding(driver: AsyncDriver, proceeding: RawNCLTProceeding) -> str:
+    settings = get_settings()
+    async with driver.session(database=settings.neo4j_database) as session:
+        result = await session.run(
+            _UPSERT_NCLT,
+            case_number=proceeding.case_number,
+            cin=proceeding.cin,
+            petition_type=proceeding.petition_type,
+            filing_date=proceeding.filing_date.isoformat(),
+            status=proceeding.status,
+            amount_claimed=proceeding.amount_claimed,
+            bench=proceeding.bench,
+        )
+        record = await result.single()
+    if record is None:
+        raise RuntimeError(f"Failed to upsert NCLTProceeding {proceeding.case_number}")
+    return record["case_number"]
+
+
+async def upsert_wilful_defaulter(driver: AsyncDriver, declaration: RawWilfulDefaulter) -> int:
+    settings = get_settings()
+    async with driver.session(database=settings.neo4j_database) as session:
+        result = await session.run(
+            _UPSERT_WILFUL_DEFAULTER,
+            cin=declaration.cin,
+            din=declaration.din,
+            bank_name=declaration.bank_name,
+            declared_date=declaration.declared_date.isoformat(),
+            amount=declaration.amount,
+            source=declaration.source,
+        )
+        record = await result.single()
+    if record is None:
+        raise RuntimeError(f"Failed to upsert WilfulDefaulter for {declaration.cin}")
+    return int(record["id"])

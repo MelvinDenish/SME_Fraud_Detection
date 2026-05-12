@@ -1,0 +1,29 @@
+[
+  {
+    "case_number": "C.P. (IB) 3334/MB/2018",
+    "cin": "U45201MH2005PTC155294",
+    "petition_type": "CIRP",
+    "filing_date": "2018-10-01",
+    "status": "admitted",
+    "amount_claimed": 910000000000.0,
+    "bench": "NCLT Mumbai"
+  },
+  {
+    "case_number": "C.P. (IB) 1245/MB/2019",
+    "cin": "U27101MH2010PTC215432",
+    "petition_type": "CIRP",
+    "filing_date": "2019-03-14",
+    "status": "admitted",
+    "amount_claimed": 12400000000.0,
+    "bench": "NCLT Mumbai"
+  },
+  {
+    "case_number": "C.P. 88/MB/2024",
+    "cin": "U45203MH2020PTC315678",
+    "petition_type": "winding_up",
+    "filing_date": "2024-06-18",
+    "status": "filed",
+    "amount_claimed": 18000000.0,
+    "bench": "NCLT Mumbai"
+  }
+]
