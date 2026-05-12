@@ -21,6 +21,13 @@ from backend.app.ingest.schemas import (
     RawDirector,
     RawFinancialStatement,
 )
+from backend.app.ingest.special_seeds import (
+    RawCarouselGSTEntity,
+    RawClaimsITCFrom,
+    RawFundedRepaymentOf,
+    RawITCClaim,
+    RawLoanRepayment,
+)
 from backend.app.ingest.validation import DataQualityError
 from backend.app.ingest.wilful_defaulter import RawWilfulDefaulter
 
@@ -354,4 +361,166 @@ async def upsert_wilful_defaulter(driver: AsyncDriver, declaration: RawWilfulDef
         record = await result.single()
     if record is None:
         raise RuntimeError(f"Failed to upsert WilfulDefaulter for {declaration.cin}")
+    return int(record["id"])
+
+
+# --- Day 6 additions: LoanRepayment, FUNDED_REPAYMENT_OF, ITC carousel ----
+
+_UPSERT_LOAN_REPAYMENT = """
+MATCH (l:LoanDisbursement {loan_id: $loan_id})
+MERGE (r:LoanRepayment {loan_id: $loan_id, repayment_date: date($repayment_date)})
+SET r.cin = $cin,
+    r.amount = $amount,
+    r.source_account_ifsc = $source_account_ifsc,
+    r.days_to_repayment = $days_to_repayment
+MERGE (l)<-[:REPAID_LOAN]-(r)
+WITH r
+MATCH (c:Company {cin: $cin})
+MERGE (c)-[:REPAID_LOAN]->(r)
+RETURN r.loan_id AS loan_id
+"""
+
+_UPSERT_FUNDED_REPAYMENT_OF = """
+MATCH (funding:LoanDisbursement {loan_id: $funding_loan_id})
+MATCH (repaid:LoanDisbursement {loan_id: $funded_repayment_loan_id})
+MERGE (funding)-[r:FUNDED_REPAYMENT_OF]->(repaid)
+SET r.days_between = $days_between,
+    r.amount_overlap_pct = $amount_overlap_pct
+RETURN id(r) AS id
+"""
+
+_UPSERT_CAROUSEL_GST_ENTITY = """
+MERGE (g:GSTEntity {gstin: $gstin})
+SET g.name = $name,
+    g.pan = $pan,
+    g.registration_date = date($registration_date),
+    g.is_cancelled = $is_cancelled,
+    g.taxpayer_type = $taxpayer_type,
+    g.aggregate_turnover = $aggregate_turnover,
+    g.tax_paid_ytd = $tax_paid_ytd,
+    g.is_synthetic = true
+WITH g
+FOREACH (_ IN CASE WHEN $is_missing_trader THEN [1] ELSE [] END |
+    MERGE (m:MissingTrader {gstin: $gstin})
+    SET m.total_itc_generated = $aggregate_turnover,
+        m.tax_liability_paid = $tax_paid_ytd,
+        m.liability_gap = $aggregate_turnover - $tax_paid_ytd
+    MERGE (g)-[:IS_MISSING_TRADER]->(m)
+)
+RETURN g.gstin AS gstin
+"""
+
+_UPSERT_ITC_CLAIM = """
+MATCH (g:GSTEntity {gstin: $gstin})
+MERGE (i:ITCClaim {gstin: $gstin, period: $period})
+SET i.claimed_amount = $claimed_amount,
+    i.eligible_amount = $eligible_amount,
+    i.source_gstin = $source_gstin
+MERGE (g)-[:HAS_ITC_CLAIM]->(i)
+RETURN i.gstin AS gstin
+"""
+
+_UPSERT_CLAIMS_ITC_FROM = """
+MATCH (src:GSTEntity {gstin: $from_gstin})
+MATCH (dst:GSTEntity {gstin: $to_gstin})
+MERGE (src)-[r:CLAIMS_ITC_FROM {period: $period}]->(dst)
+SET r.amount = $amount,
+    r.invoice_count = $invoice_count,
+    r.risk_flag = $risk_flag
+RETURN id(r) AS id
+"""
+
+
+async def upsert_loan_repayment(driver: AsyncDriver, repayment: RawLoanRepayment) -> str:
+    settings = get_settings()
+    async with driver.session(database=settings.neo4j_database) as session:
+        result = await session.run(
+            _UPSERT_LOAN_REPAYMENT,
+            loan_id=repayment.loan_id,
+            cin=repayment.cin,
+            repayment_date=repayment.repayment_date.isoformat(),
+            amount=repayment.amount,
+            source_account_ifsc=repayment.source_account_ifsc,
+            days_to_repayment=repayment.days_to_repayment,
+        )
+        record = await result.single()
+    if record is None:
+        raise RuntimeError(f"Failed to upsert LoanRepayment for {repayment.loan_id}")
+    return record["loan_id"]
+
+
+async def upsert_funded_repayment_of(driver: AsyncDriver, edge: RawFundedRepaymentOf) -> int:
+    settings = get_settings()
+    async with driver.session(database=settings.neo4j_database) as session:
+        result = await session.run(
+            _UPSERT_FUNDED_REPAYMENT_OF,
+            funding_loan_id=edge.funding_loan_id,
+            funded_repayment_loan_id=edge.funded_repayment_loan_id,
+            days_between=edge.days_between,
+            amount_overlap_pct=edge.amount_overlap_pct,
+        )
+        record = await result.single()
+    if record is None:
+        raise RuntimeError(
+            f"Failed to upsert FUNDED_REPAYMENT_OF "
+            f"{edge.funding_loan_id} -> {edge.funded_repayment_loan_id}"
+        )
+    return int(record["id"])
+
+
+async def upsert_carousel_gst_entity(driver: AsyncDriver, entity: RawCarouselGSTEntity) -> str:
+    settings = get_settings()
+    async with driver.session(database=settings.neo4j_database) as session:
+        result = await session.run(
+            _UPSERT_CAROUSEL_GST_ENTITY,
+            gstin=entity.gstin,
+            name=entity.name,
+            pan=entity.pan,
+            registration_date=entity.registration_date.isoformat(),
+            is_cancelled=entity.is_cancelled,
+            taxpayer_type=entity.taxpayer_type,
+            aggregate_turnover=entity.aggregate_turnover,
+            tax_paid_ytd=entity.tax_paid_ytd,
+            is_missing_trader=entity.is_missing_trader,
+        )
+        record = await result.single()
+    if record is None:
+        raise RuntimeError(f"Failed to upsert carousel GSTEntity {entity.gstin}")
+    return record["gstin"]
+
+
+async def upsert_itc_claim(driver: AsyncDriver, claim: RawITCClaim) -> str:
+    settings = get_settings()
+    async with driver.session(database=settings.neo4j_database) as session:
+        result = await session.run(
+            _UPSERT_ITC_CLAIM,
+            gstin=claim.gstin,
+            period=claim.period,
+            claimed_amount=claim.claimed_amount,
+            eligible_amount=claim.eligible_amount,
+            source_gstin=claim.source_gstin,
+        )
+        record = await result.single()
+    if record is None:
+        raise RuntimeError(f"Failed to upsert ITCClaim {claim.gstin}/{claim.period}")
+    return record["gstin"]
+
+
+async def upsert_claims_itc_from(driver: AsyncDriver, edge: RawClaimsITCFrom) -> int:
+    settings = get_settings()
+    async with driver.session(database=settings.neo4j_database) as session:
+        result = await session.run(
+            _UPSERT_CLAIMS_ITC_FROM,
+            from_gstin=edge.from_gstin,
+            to_gstin=edge.to_gstin,
+            period=edge.period,
+            amount=edge.amount,
+            invoice_count=edge.invoice_count,
+            risk_flag=edge.risk_flag,
+        )
+        record = await result.single()
+    if record is None:
+        raise RuntimeError(
+            f"Failed to upsert CLAIMS_ITC_FROM {edge.from_gstin} -> {edge.to_gstin}"
+        )
     return int(record["id"])

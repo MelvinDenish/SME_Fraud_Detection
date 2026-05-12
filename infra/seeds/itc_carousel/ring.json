@@ -1,0 +1,95 @@
+{
+  "ring_id": "SYN-ITC-RING-001",
+  "description": "SYNTHETIC DATA - 7-node ITC carousel ring per PRD §14 demo. Forms a directed cycle G1→G2→G3→G4→G5→G6→G7→G1 on CLAIMS_ITC_FROM. G4 is the missing trader (tax_paid/itc_generated < 0.05). Total ITC churned: ₹6.4 cr.",
+  "gst_entities": [
+    {
+      "gstin": "27SYNAB0001A1Z5",
+      "name": "Synthetic Traders Alpha Pvt Ltd",
+      "pan": "SYNAB0001A",
+      "registration_date": "2023-04-12",
+      "is_cancelled": false,
+      "taxpayer_type": "regular",
+      "aggregate_turnover": 92000000.0,
+      "tax_paid_ytd": 1840000.0
+    },
+    {
+      "gstin": "27SYNAB0002B1Z3",
+      "name": "Synthetic Traders Beta Pvt Ltd",
+      "pan": "SYNAB0002B",
+      "registration_date": "2023-04-18",
+      "is_cancelled": false,
+      "taxpayer_type": "regular",
+      "aggregate_turnover": 88000000.0,
+      "tax_paid_ytd": 1760000.0
+    },
+    {
+      "gstin": "27SYNAB0003C1Z1",
+      "name": "Synthetic Traders Gamma Pvt Ltd",
+      "pan": "SYNAB0003C",
+      "registration_date": "2023-05-02",
+      "is_cancelled": false,
+      "taxpayer_type": "regular",
+      "aggregate_turnover": 94000000.0,
+      "tax_paid_ytd": 1880000.0
+    },
+    {
+      "gstin": "27SYNAB0004D1Z9",
+      "name": "Synthetic Traders Delta Pvt Ltd",
+      "pan": "SYNAB0004D",
+      "registration_date": "2023-05-08",
+      "is_cancelled": false,
+      "taxpayer_type": "regular",
+      "aggregate_turnover": 91000000.0,
+      "tax_paid_ytd": 45000.0,
+      "is_missing_trader": true
+    },
+    {
+      "gstin": "27SYNAB0005E1Z7",
+      "name": "Synthetic Traders Epsilon Pvt Ltd",
+      "pan": "SYNAB0005E",
+      "registration_date": "2023-05-20",
+      "is_cancelled": false,
+      "taxpayer_type": "regular",
+      "aggregate_turnover": 89000000.0,
+      "tax_paid_ytd": 1780000.0
+    },
+    {
+      "gstin": "27SYNAB0006F1Z5",
+      "name": "Synthetic Traders Zeta Pvt Ltd",
+      "pan": "SYNAB0006F",
+      "registration_date": "2023-06-01",
+      "is_cancelled": false,
+      "taxpayer_type": "regular",
+      "aggregate_turnover": 96000000.0,
+      "tax_paid_ytd": 1920000.0
+    },
+    {
+      "gstin": "27SYNAB0007G1Z3",
+      "name": "Synthetic Traders Eta Pvt Ltd",
+      "pan": "SYNAB0007G",
+      "registration_date": "2023-06-12",
+      "is_cancelled": false,
+      "taxpayer_type": "regular",
+      "aggregate_turnover": 93000000.0,
+      "tax_paid_ytd": 1860000.0
+    }
+  ],
+  "itc_claims": [
+    {"gstin": "27SYNAB0001A1Z5", "period": "202309", "claimed_amount": 9100000.0, "eligible_amount": 9100000.0, "source_gstin": "27SYNAB0007G1Z3"},
+    {"gstin": "27SYNAB0002B1Z3", "period": "202309", "claimed_amount": 9200000.0, "eligible_amount": 9200000.0, "source_gstin": "27SYNAB0001A1Z5"},
+    {"gstin": "27SYNAB0003C1Z1", "period": "202309", "claimed_amount": 9300000.0, "eligible_amount": 9300000.0, "source_gstin": "27SYNAB0002B1Z3"},
+    {"gstin": "27SYNAB0004D1Z9", "period": "202309", "claimed_amount": 9400000.0, "eligible_amount": 9400000.0, "source_gstin": "27SYNAB0003C1Z1"},
+    {"gstin": "27SYNAB0005E1Z7", "period": "202309", "claimed_amount": 9500000.0, "eligible_amount": 9500000.0, "source_gstin": "27SYNAB0004D1Z9"},
+    {"gstin": "27SYNAB0006F1Z5", "period": "202309", "claimed_amount": 9600000.0, "eligible_amount": 9600000.0, "source_gstin": "27SYNAB0005E1Z7"},
+    {"gstin": "27SYNAB0007G1Z3", "period": "202309", "claimed_amount": 9700000.0, "eligible_amount": 9700000.0, "source_gstin": "27SYNAB0006F1Z5"}
+  ],
+  "edges": [
+    {"from_gstin": "27SYNAB0001A1Z5", "to_gstin": "27SYNAB0002B1Z3", "period": "202309", "amount": 9200000.0, "invoice_count": 14, "risk_flag": "CARROUSEL"},
+    {"from_gstin": "27SYNAB0002B1Z3", "to_gstin": "27SYNAB0003C1Z1", "period": "202309", "amount": 9300000.0, "invoice_count": 12, "risk_flag": "CARROUSEL"},
+    {"from_gstin": "27SYNAB0003C1Z1", "to_gstin": "27SYNAB0004D1Z9", "period": "202309", "amount": 9400000.0, "invoice_count": 18, "risk_flag": "CARROUSEL"},
+    {"from_gstin": "27SYNAB0004D1Z9", "to_gstin": "27SYNAB0005E1Z7", "period": "202309", "amount": 9500000.0, "invoice_count": 11, "risk_flag": "CARROUSEL"},
+    {"from_gstin": "27SYNAB0005E1Z7", "to_gstin": "27SYNAB0006F1Z5", "period": "202309", "amount": 9600000.0, "invoice_count": 15, "risk_flag": "CARROUSEL"},
+    {"from_gstin": "27SYNAB0006F1Z5", "to_gstin": "27SYNAB0007G1Z3", "period": "202309", "amount": 9700000.0, "invoice_count": 13, "risk_flag": "CARROUSEL"},
+    {"from_gstin": "27SYNAB0007G1Z3", "to_gstin": "27SYNAB0001A1Z5", "period": "202309", "amount": 9100000.0, "invoice_count": 16, "risk_flag": "CARROUSEL"}
+  ]
+}

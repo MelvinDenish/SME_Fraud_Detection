@@ -33,6 +33,10 @@ CONSTRAINTS: list[str] = [
     "CREATE CONSTRAINT loan_disbursement_id IF NOT EXISTS FOR (l:LoanDisbursement) REQUIRE l.loan_id IS UNIQUE",
     "CREATE CONSTRAINT nclt_case_number IF NOT EXISTS FOR (n:NCLTProceeding) REQUIRE n.case_number IS UNIQUE",
     "CREATE CONSTRAINT wilful_defaulter_key IF NOT EXISTS FOR (w:WilfulDefaulter) REQUIRE (w.cin, w.bank_name, w.declared_date) IS UNIQUE",
+    # Day 6 — Evergreening + ITC carousel extension nodes
+    "CREATE CONSTRAINT loan_repayment_key IF NOT EXISTS FOR (r:LoanRepayment) REQUIRE (r.loan_id, r.repayment_date) IS UNIQUE",
+    "CREATE CONSTRAINT evergreening_cluster_id IF NOT EXISTS FOR (e:EvergreeningCluster) REQUIRE e.cluster_id IS UNIQUE",
+    "CREATE CONSTRAINT missing_trader_gstin IF NOT EXISTS FOR (m:MissingTrader) REQUIRE m.gstin IS UNIQUE",
 ]
 
 
