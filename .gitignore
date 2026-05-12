@@ -1,0 +1,80 @@
+# --- Environment / secrets --------------------------------------------------
+.env
+.env.local
+.env.*.local
+.env.production
+*.pem
+*.key
+.credentials.json
+
+# --- Python -----------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.venv/
+venv/
+env/
+
+# --- uv ---------------------------------------------------------------------
+.uv-cache/
+
+# --- ML artifacts (regenerable) --------------------------------------------
+.torch_cache/
+ml/artifacts/*.pkl
+ml/artifacts/*.pt
+ml/artifacts/*.joblib
+ml/artifacts/*.npz
+ml/artifacts/*.bin
+ml/artifacts/checkpoints/
+data/raw/
+data/interim/
+data/processed/
+*.parquet
+*.feather
+
+# --- Node / frontend -------------------------------------------------------
+node_modules/
+dist/
+.vite/
+*.tsbuildinfo
+.next/
+
+# --- IDE / OS --------------------------------------------------------------
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Logs ------------------------------------------------------------------
+*.log
+logs/
+
+# --- Claude Code -----------------------------------------------------------
+.claude/memory.json
+.claude/cache/
+.claude/sessions/
+
+# --- Fly / Railway / Vercel ------------------------------------------------
+.fly/
+.railway/
+.vercel/
+
+# --- Docker volumes (local Neo4j data) ------------------------------------
+infra/.neo4j-data/
+infra/.neo4j-logs/
+infra/.neo4j-plugins/
+
+# --- Misc -------------------------------------------------------------------
+.docx_extract/
+*.tmp
+*.bak
