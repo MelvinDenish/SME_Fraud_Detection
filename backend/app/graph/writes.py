@@ -11,6 +11,8 @@ from typing import Any
 from neo4j import AsyncDriver
 
 from backend.app.config import get_settings
+from backend.app.ingest.benchmarks import BenchmarkPoint
+from backend.app.ingest.gst import RawGSTEntity
 from backend.app.ingest.schemas import (
     CompanyBundle,
     RawCharge,
@@ -212,3 +214,74 @@ async def write_bundle(driver: AsyncDriver, bundle: CompanyBundle) -> None:
         await upsert_financial(driver, f)
     for ch in bundle.charges:
         await upsert_charge(driver, ch)
+
+
+# --- Day 4 additions: IndustryBenchmark + GSTEntity ------------------------
+
+_UPSERT_INDUSTRY_BENCHMARK = """
+MERGE (b:IndustryBenchmark {nic_code: $nic_code, year: $year, metric: $metric})
+SET b.p25 = $p25,
+    b.median = $median,
+    b.p75 = $p75,
+    b.benford_applicable = $benford_applicable,
+    b.last_refreshed_at = datetime()
+RETURN b.metric AS metric
+"""
+
+_UPSERT_GST_ENTITY = """
+MERGE (g:GSTEntity {gstin: $gstin})
+SET g.pan = $pan,
+    g.registration_date = date($registration_date),
+    g.cancellation_date = CASE WHEN $cancellation_date IS NULL THEN NULL ELSE date($cancellation_date) END,
+    g.is_cancelled = $is_cancelled,
+    g.taxpayer_type = $taxpayer_type,
+    g.aggregate_turnover = $aggregate_turnover,
+    g.tax_paid_ytd = $tax_paid_ytd,
+    g.last_refreshed_at = datetime()
+WITH g
+MATCH (c:Company {cin: $cin})
+MERGE (c)-[:HAS_GST_ENTITY]->(g)
+RETURN g.gstin AS gstin
+"""
+
+
+async def upsert_industry_benchmark(driver: AsyncDriver, point: BenchmarkPoint) -> str:
+    settings = get_settings()
+    async with driver.session(database=settings.neo4j_database) as session:
+        result = await session.run(
+            _UPSERT_INDUSTRY_BENCHMARK,
+            nic_code=point.nic_code,
+            year=point.year,
+            metric=point.metric,
+            p25=point.p25,
+            median=point.median,
+            p75=point.p75,
+            benford_applicable=point.benford_applicable,
+        )
+        record = await result.single()
+    if record is None:
+        raise RuntimeError(
+            f"Failed to upsert IndustryBenchmark {point.nic_code}/{point.year}/{point.metric}"
+        )
+    return record["metric"]
+
+
+async def upsert_gst_entity(driver: AsyncDriver, gst: RawGSTEntity) -> str:
+    settings = get_settings()
+    async with driver.session(database=settings.neo4j_database) as session:
+        result = await session.run(
+            _UPSERT_GST_ENTITY,
+            gstin=gst.gstin,
+            pan=gst.pan,
+            cin=gst.cin,
+            registration_date=gst.registration_date.isoformat(),
+            cancellation_date=gst.cancellation_date.isoformat() if gst.cancellation_date else None,
+            is_cancelled=gst.is_cancelled,
+            taxpayer_type=gst.taxpayer_type,
+            aggregate_turnover=gst.aggregate_turnover,
+            tax_paid_ytd=gst.tax_paid_ytd,
+        )
+        record = await result.single()
+    if record is None:
+        raise RuntimeError(f"Failed to upsert GSTEntity {gst.gstin}")
+    return record["gstin"]
