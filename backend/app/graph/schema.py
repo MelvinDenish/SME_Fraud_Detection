@@ -18,6 +18,10 @@ logger = logging.getLogger(__name__)
 
 # --- Uniqueness constraints (one per natural key) ---------------------------
 CONSTRAINTS: list[str] = [
+    # Auth (Day 2) — User lives in Neo4j too, per the single-data-store constraint.
+    "CREATE CONSTRAINT user_id IF NOT EXISTS FOR (u:User) REQUIRE u.user_id IS UNIQUE",
+    "CREATE CONSTRAINT user_email IF NOT EXISTS FOR (u:User) REQUIRE u.email IS UNIQUE",
+
     "CREATE CONSTRAINT company_cin IF NOT EXISTS FOR (c:Company) REQUIRE c.cin IS UNIQUE",
     "CREATE CONSTRAINT director_din IF NOT EXISTS FOR (d:Director) REQUIRE d.din IS UNIQUE",
     "CREATE CONSTRAINT financial_statement_key IF NOT EXISTS FOR (f:FinancialStatement) REQUIRE (f.cin, f.year) IS UNIQUE",
