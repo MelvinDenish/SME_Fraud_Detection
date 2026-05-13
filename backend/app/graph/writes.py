@@ -14,6 +14,7 @@ from backend.app.config import get_settings
 from backend.app.ingest.benchmarks import BenchmarkPoint
 from backend.app.ingest.gst import RawGSTEntity
 from backend.app.ingest.nclt import RawNCLTProceeding
+from backend.app.modules.base import FraudSignal
 from backend.app.ingest.schemas import (
     CompanyBundle,
     RawCharge,
@@ -524,3 +525,97 @@ async def upsert_claims_itc_from(driver: AsyncDriver, edge: RawClaimsITCFrom) ->
             f"Failed to upsert CLAIMS_ITC_FROM {edge.from_gstin} -> {edge.to_gstin}"
         )
     return int(record["id"])
+
+
+# --- Day 8 additions: FraudSignal + TRIGGERED_BY (PRD §6 evidence provenance)
+
+_UPSERT_FRAUD_SIGNAL = """
+MERGE (s:FraudSignal {signal_id: $signal_id})
+SET s.signal_type = $signal_type,
+    s.severity = $severity,
+    s.score_contribution = $score_contribution,
+    s.evidence_string = $evidence_string,
+    s.module_name = $module_name,
+    s.created_at = datetime($created_at)
+WITH s
+MATCH (c:Company {cin: $cin})
+OPTIONAL MATCH (c)-[:HAS_FINANCIALS {year: $year}]->(fs:FinancialStatement)
+FOREACH (_ IN CASE WHEN fs IS NULL THEN [] ELSE [1] END |
+    MERGE (fs)-[r:HAS_FRAUD_SIGNAL]->(s)
+    SET r.module = $module_name, r.severity = $severity
+)
+RETURN s.signal_id AS signal_id
+"""
+
+
+_LINK_TRIGGERED_BY_FS = """
+MATCH (s:FraudSignal {signal_id: $signal_id})
+MATCH (e:FinancialStatement {cin: $cin, year: $year})
+MERGE (s)-[:TRIGGERED_BY]->(e)
+RETURN id(e) AS id
+"""
+
+_LINK_TRIGGERED_BY_LOAN = """
+MATCH (s:FraudSignal {signal_id: $signal_id})
+MATCH (e:LoanDisbursement {loan_id: $loan_id})
+MERGE (s)-[:TRIGGERED_BY]->(e)
+RETURN id(e) AS id
+"""
+
+_LINK_TRIGGERED_BY_GST = """
+MATCH (s:FraudSignal {signal_id: $signal_id})
+MATCH (e:GSTEntity {gstin: $gstin})
+MERGE (s)-[:TRIGGERED_BY]->(e)
+RETURN id(e) AS id
+"""
+
+
+async def upsert_fraud_signal(
+    driver: AsyncDriver, cin: str, year: int | None, signal: FraudSignal,
+) -> str:
+    """Persist a FraudSignal + HAS_FRAUD_SIGNAL link + every TRIGGERED_BY edge
+    declared in `signal.triggered_by`. Idempotent on signal_id."""
+    settings = get_settings()
+    async with driver.session(database=settings.neo4j_database) as session:
+        result = await session.run(
+            _UPSERT_FRAUD_SIGNAL,
+            signal_id=signal.signal_id,
+            signal_type=signal.signal_type,
+            severity=signal.severity.value,
+            score_contribution=float(signal.score_contribution),
+            evidence_string=signal.evidence_string,
+            module_name=signal.module_name,
+            created_at=signal.created_at.isoformat(),
+            cin=cin,
+            year=year,
+        )
+        record = await result.single()
+
+        # TRIGGERED_BY edges — one Cypher per source type
+        for ref in signal.triggered_by:
+            label = ref.get("label")
+            if label == "FinancialStatement":
+                await session.run(
+                    _LINK_TRIGGERED_BY_FS,
+                    signal_id=signal.signal_id,
+                    cin=ref["cin"],
+                    year=ref["year"],
+                )
+            elif label == "LoanDisbursement":
+                await session.run(
+                    _LINK_TRIGGERED_BY_LOAN,
+                    signal_id=signal.signal_id,
+                    loan_id=ref["loan_id"],
+                )
+            elif label == "GSTEntity":
+                await session.run(
+                    _LINK_TRIGGERED_BY_GST,
+                    signal_id=signal.signal_id,
+                    gstin=ref["gstin"],
+                )
+            # Other label types (Director, ITCClaim, etc.) wired in later days
+            #  as their modules come online.
+
+    if record is None:
+        raise RuntimeError(f"Failed to upsert FraudSignal {signal.signal_id}")
+    return record["signal_id"]
