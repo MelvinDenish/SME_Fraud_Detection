@@ -96,7 +96,9 @@
       "short_term_borrowings": 5400000.0,
       "auditor_name": "Sharma & Associates",
       "auditor_type": "partnership",
-      "notes_word_count": 2850
+      "notes_word_count": 2850,
+      "pdf_creation_software": "Microsoft Word",
+      "pdf_metadata_anomaly": true
     }
   ],
   "charges": [
