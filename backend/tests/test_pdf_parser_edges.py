@@ -89,14 +89,9 @@ def test_total_revenue_synonym_matches(tmp_path: Path) -> None:
     assert stmt.revenue == 1_675_000.0
 
 
-@pytest.mark.xfail(
-    reason="Day 11 Module 8 will add unit-conversion (lakhs/crores) and "
-           "parenthesised-negative parsing. Day 7 only documents the gap.",
-    strict=False,
-)
 def test_parenthesised_negative_value_known_gap(tmp_path: Path) -> None:
-    """Indian audit convention: '(123,456)' means -123,456. Day-7 parser doesn't
-    handle this yet — Day-11 Document Forensics fix tracks it."""
+    """Indian audit convention: '(123,456)' means -123,456. Resolved post-Day-9
+    by paren-neg pre-processing in pdf_parser._PAREN_NEG_PATTERN."""
     out = tmp_path / "paren_neg.pdf"
     _make_pdf(out, [
         "CIN: U27101MH2010PTC215432",
@@ -107,13 +102,9 @@ def test_parenthesised_negative_value_known_gap(tmp_path: Path) -> None:
     assert stmt.pat == -1_500_000.0
 
 
-@pytest.mark.xfail(
-    reason="Day 11 Module 8 will add lakhs/crores unit conversion. Day-7 "
-           "parser treats '12.4 Cr' as 12.4.",
-    strict=False,
-)
 def test_lakhs_crores_unit_known_gap(tmp_path: Path) -> None:
-    """Many SME PDFs report values in crores ('₹ Cr') or lakhs."""
+    """Many SME PDFs report values in crores ('₹ Cr') or lakhs. Resolved post-Day-9
+    via document-level unit-multiplier detection in pdf_parser."""
     out = tmp_path / "crores.pdf"
     _make_pdf(out, [
         "CIN: U27101MH2010PTC215432",

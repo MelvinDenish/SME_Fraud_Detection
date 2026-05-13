@@ -53,20 +53,20 @@ class PDFForensics:
 # --- Label → field map for the AOC-4 baseline (case-insensitive, anchored) -
 # Order matters: more specific labels first so generic ones don't match prematurely.
 _FIELD_PATTERNS: list[tuple[str, re.Pattern[str]]] = [
-    ("revenue",            re.compile(r"(?:revenue\s+from\s+operations|total\s+revenue)\s*[:\-]?\s*([\d,]+(?:\.\d+)?)", re.I)),
-    ("cost_of_materials",  re.compile(r"cost\s+of\s+materials\s+consumed\s*[:\-]?\s*([\d,]+(?:\.\d+)?)", re.I)),
-    ("employee_cost",      re.compile(r"employee\s+benefits?\s+expense\s*[:\-]?\s*([\d,]+(?:\.\d+)?)", re.I)),
-    ("finance_costs",      re.compile(r"finance\s+costs?\s*[:\-]?\s*([\d,]+(?:\.\d+)?)", re.I)),
-    ("depreciation",       re.compile(r"depreciation\s+and\s+amortisation\s*[:\-]?\s*([\d,]+(?:\.\d+)?)", re.I)),
-    ("pbt",                re.compile(r"profit\s+before\s+tax\s*[:\-]?\s*([\d,]+(?:\.\d+)?)", re.I)),
-    ("pat",                re.compile(r"profit\s+after\s+tax\s*[:\-]?\s*([\d,]+(?:\.\d+)?)", re.I)),
-    ("total_assets",       re.compile(r"total\s+assets\s*[:\-]?\s*([\d,]+(?:\.\d+)?)", re.I)),
-    ("fixed_assets",       re.compile(r"(?:property,\s*plant\s+and\s+equipment|fixed\s+assets)\s*[:\-]?\s*([\d,]+(?:\.\d+)?)", re.I)),
-    ("cwip",               re.compile(r"capital\s+work[\-\s]in[\-\s]progress\s*[:\-]?\s*([\d,]+(?:\.\d+)?)", re.I)),
-    ("cash_and_equivalents", re.compile(r"cash\s+and\s+cash\s+equivalents\s*[:\-]?\s*([\d,]+(?:\.\d+)?)", re.I)),
-    ("receivables",        re.compile(r"trade\s+receivables\s*[:\-]?\s*([\d,]+(?:\.\d+)?)", re.I)),
-    ("long_term_borrowings", re.compile(r"long[\-\s]term\s+borrowings\s*[:\-]?\s*([\d,]+(?:\.\d+)?)", re.I)),
-    ("short_term_borrowings", re.compile(r"short[\-\s]term\s+borrowings\s*[:\-]?\s*([\d,]+(?:\.\d+)?)", re.I)),
+    ("revenue",            re.compile(r"(?:revenue\s+from\s+operations|total\s+revenue)\s*[:\-]?\s*(-?[\d,]+(?:\.\d+)?)", re.I)),
+    ("cost_of_materials",  re.compile(r"cost\s+of\s+materials\s+consumed\s*[:\-]?\s*(-?[\d,]+(?:\.\d+)?)", re.I)),
+    ("employee_cost",      re.compile(r"employee\s+benefits?\s+expense\s*[:\-]?\s*(-?[\d,]+(?:\.\d+)?)", re.I)),
+    ("finance_costs",      re.compile(r"finance\s+costs?\s*[:\-]?\s*(-?[\d,]+(?:\.\d+)?)", re.I)),
+    ("depreciation",       re.compile(r"depreciation\s+and\s+amortisation\s*[:\-]?\s*(-?[\d,]+(?:\.\d+)?)", re.I)),
+    ("pbt",                re.compile(r"profit\s+before\s+tax\s*[:\-]?\s*(-?[\d,]+(?:\.\d+)?)", re.I)),
+    ("pat",                re.compile(r"profit\s+after\s+tax\s*[:\-]?\s*(-?[\d,]+(?:\.\d+)?)", re.I)),
+    ("total_assets",       re.compile(r"total\s+assets\s*[:\-]?\s*(-?[\d,]+(?:\.\d+)?)", re.I)),
+    ("fixed_assets",       re.compile(r"(?:property,\s*plant\s+and\s+equipment|fixed\s+assets)\s*[:\-]?\s*(-?[\d,]+(?:\.\d+)?)", re.I)),
+    ("cwip",               re.compile(r"capital\s+work[\-\s]in[\-\s]progress\s*[:\-]?\s*(-?[\d,]+(?:\.\d+)?)", re.I)),
+    ("cash_and_equivalents", re.compile(r"cash\s+and\s+cash\s+equivalents\s*[:\-]?\s*(-?[\d,]+(?:\.\d+)?)", re.I)),
+    ("receivables",        re.compile(r"trade\s+receivables\s*[:\-]?\s*(-?[\d,]+(?:\.\d+)?)", re.I)),
+    ("long_term_borrowings", re.compile(r"long[\-\s]term\s+borrowings\s*[:\-]?\s*(-?[\d,]+(?:\.\d+)?)", re.I)),
+    ("short_term_borrowings", re.compile(r"short[\-\s]term\s+borrowings\s*[:\-]?\s*(-?[\d,]+(?:\.\d+)?)", re.I)),
 ]
 
 _CIN_PATTERN = re.compile(r"\b([LU]\d{5}[A-Z]{2}\d{4}[A-Z]{3}\d{6})\b")
@@ -80,8 +80,46 @@ _AUDIT_OPINION_PATTERN = re.compile(
 )
 _AUDITOR_NAME_PATTERN = re.compile(r"for\s+(.{3,80}?)\s*(?:chartered\s+accountants|firm\s+registration)", re.I)
 
+# Indian audit convention: '(1,500,000)' = -1,500,000. Pre-process the raw text
+# and replace digit-only parenthesised values with a leading minus so the
+# downstream label-anchored regexes work unchanged.
+_PAREN_NEG_PATTERN = re.compile(r"\((\d[\d,]*(?:\.\d+)?)\)")
+
+# Document-level unit declarations: 'All amounts in INR crore', '(in lakhs)', etc.
+# A declaration of crore multiplies every parsed numeric by 1e7; lakhs by 1e5.
+_UNIT_CRORE_PATTERN = re.compile(
+    r"\(?\s*(?:all\s+amounts\s+(?:are\s+)?in\s+)?(?:₹|inr|rs\.?)?\s*crores?\s*\)?",
+    re.I,
+)
+_UNIT_LAKH_PATTERN = re.compile(
+    r"\(?\s*(?:all\s+amounts\s+(?:are\s+)?in\s+)?(?:₹|inr|rs\.?)?\s*lakhs?\s*\)?",
+    re.I,
+)
+# More restrictive document-level markers so a stray 'crore' inside prose
+# doesn't rescale every number. We look for explicit '(... in crore)' or
+# '(All amounts in INR crore)' shapes.
+_DOC_CRORE_PATTERN = re.compile(
+    r"\(?\s*(?:all\s+amounts?\s+(?:are\s+)?in|in)\s+(?:₹|inr|rs\.?\s*)?\s*crores?\s*\)?",
+    re.I,
+)
+_DOC_LAKH_PATTERN = re.compile(
+    r"\(?\s*(?:all\s+amounts?\s+(?:are\s+)?in|in)\s+(?:₹|inr|rs\.?\s*)?\s*lakhs?\s*\)?",
+    re.I,
+)
+
+
+def _detect_unit_multiplier(text: str) -> float:
+    """Return 1e7 (crore), 1e5 (lakh), or 1.0 (no marker)."""
+    if _DOC_CRORE_PATTERN.search(text):
+        return 1e7
+    if _DOC_LAKH_PATTERN.search(text):
+        return 1e5
+    return 1.0
+
 
 def _to_float(raw: str) -> float:
+    """Parse a captured numeric. Negative prefix '-' (synthesised from a
+    parenthesised value upstream) is preserved."""
     return float(raw.replace(",", "").strip())
 
 
@@ -147,6 +185,13 @@ def parse_financial_pdf(
         forensics = _extract_forensics(pdf)
         all_text = "\n".join((page.extract_text() or "") for page in pdf.pages)
 
+    # Detect document-level unit declaration BEFORE paren-neg rewrite — the
+    # marker '(All amounts in INR crore)' contains letters so it won't be
+    # mistaken for a numeric paren-neg.
+    unit_multiplier = _detect_unit_multiplier(all_text)
+    # Rewrite parenthesised numeric values as negatives (Indian audit convention).
+    all_text = _PAREN_NEG_PATTERN.sub(r"-\1", all_text)
+
     cin = cin_override
     if cin is None:
         m = _CIN_PATTERN.search(all_text)
@@ -166,7 +211,7 @@ def parse_financial_pdf(
         match = pattern.search(all_text)
         if match:
             try:
-                fields[field_name] = _to_float(match.group(1))
+                fields[field_name] = _to_float(match.group(1)) * unit_multiplier
             except ValueError:
                 logger.warning("Could not parse number for %s in %s: %r", field_name, path, match.group(1))
 
