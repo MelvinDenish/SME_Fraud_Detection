@@ -569,6 +569,20 @@ MERGE (s)-[:TRIGGERED_BY]->(e)
 RETURN id(e) AS id
 """
 
+_LINK_TRIGGERED_BY_COMPANY = """
+MATCH (s:FraudSignal {signal_id: $signal_id})
+MATCH (e:Company {cin: $cin})
+MERGE (s)-[:TRIGGERED_BY]->(e)
+RETURN id(e) AS id
+"""
+
+_LINK_TRIGGERED_BY_DIRECTOR = """
+MATCH (s:FraudSignal {signal_id: $signal_id})
+MATCH (e:Director {din: $din})
+MERGE (s)-[:TRIGGERED_BY]->(e)
+RETURN id(e) AS id
+"""
+
 
 async def upsert_fraud_signal(
     driver: AsyncDriver, cin: str, year: int | None, signal: FraudSignal,
@@ -613,8 +627,18 @@ async def upsert_fraud_signal(
                     signal_id=signal.signal_id,
                     gstin=ref["gstin"],
                 )
-            # Other label types (Director, ITCClaim, etc.) wired in later days
-            #  as their modules come online.
+            elif label == "Company":
+                await session.run(
+                    _LINK_TRIGGERED_BY_COMPANY,
+                    signal_id=signal.signal_id,
+                    cin=ref["cin"],
+                )
+            elif label == "Director":
+                await session.run(
+                    _LINK_TRIGGERED_BY_DIRECTOR,
+                    signal_id=signal.signal_id,
+                    din=ref["din"],
+                )
 
     if record is None:
         raise RuntimeError(f"Failed to upsert FraudSignal {signal.signal_id}")
