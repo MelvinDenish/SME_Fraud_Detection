@@ -1,0 +1,142 @@
+[
+  {
+    "cin": "U45201MH2005PTC155294",
+    "company_name": "IL&FS Infrastructure Leasing & Financial Services Limited",
+    "fraud_type": "SME_LOAN",
+    "label": 1,
+    "discovered_year": 2018,
+    "primary_source": "SFIO Investigation Report (2019)",
+    "loss_estimate_inr": 910000000000.0,
+    "notes": "Inflated trade receivables from group SPVs; off-balance sheet liabilities; auditor disclaimer FY18."
+  },
+  {
+    "cin": "U27101MH2010PTC215432",
+    "company_name": "Amtek Auto Components Pvt Ltd",
+    "fraud_type": "SME_LOAN",
+    "label": 1,
+    "discovered_year": 2019,
+    "primary_source": "SFIO + NCLT Mumbai CIRP",
+    "loss_estimate_inr": 12400000000.0,
+    "notes": "Going concern FY18; CIRP admitted 2019-03; wilful defaulter declared by ICICI."
+  },
+  {
+    "cin": "L65910MH1984PLC032662",
+    "company_name": "Dewan Housing Finance Limited (DHFL)",
+    "fraud_type": "BANK_EVERGREENING",
+    "label": 1,
+    "discovered_year": 2019,
+    "primary_source": "SFIO + RBI Audit (Cobrapost 2019)",
+    "loss_estimate_inr": 312000000000.0,
+    "notes": "Round-tripped ~₹14,046 cr through shell SPVs to mask NPAs; CIRP admitted Nov 2019; bank loan evergreening canonical case."
+  },
+  {
+    "cin": "U24232GJ1995PLC025935",
+    "company_name": "Sterling Biotech Limited",
+    "fraud_type": "SME_LOAN",
+    "label": 1,
+    "discovered_year": 2017,
+    "primary_source": "SFIO + CBI charge-sheet",
+    "loss_estimate_inr": 14500000000.0,
+    "notes": "Promoter siphoned funds via shell intermediaries; multiple wilful defaulter declarations."
+  },
+  {
+    "cin": "L99999GJ1995PLC026167",
+    "company_name": "Gitanjali Gems Limited (PNB scam co-accused)",
+    "fraud_type": "SME_LOAN",
+    "label": 1,
+    "discovered_year": 2018,
+    "primary_source": "SFIO + ED + CBI",
+    "loss_estimate_inr": 73800000000.0,
+    "notes": "Mehul Choksi LoU scam at Punjab National Bank; fictitious diamond imports."
+  },
+  {
+    "cin": "L45200GJ1988PLC011533",
+    "company_name": "Bhushan Steel Limited",
+    "fraud_type": "BANK_EVERGREENING",
+    "label": 1,
+    "discovered_year": 2017,
+    "primary_source": "SFIO + NCLT (Tata Steel acquisition)",
+    "loss_estimate_inr": 562000000000.0,
+    "notes": "Inflated raw-material purchases via 156 shell companies; CIRP 2017-07."
+  },
+  {
+    "cin": "L23209UP1989PLC020525",
+    "company_name": "Reliance Communications Limited",
+    "fraud_type": "BANK_EVERGREENING",
+    "label": 1,
+    "discovered_year": 2019,
+    "primary_source": "NCLT + SBI fraud declaration",
+    "loss_estimate_inr": 470000000000.0,
+    "notes": "Funds diverted via group entities; SBI flagged account as fraud in 2020."
+  },
+  {
+    "cin": "U99999MH1996PLC163336",
+    "company_name": "Punjab National Bank Nirav Modi shell (Solar Exports etc)",
+    "fraud_type": "BANK_EVERGREENING",
+    "label": 1,
+    "discovered_year": 2018,
+    "primary_source": "CBI charge-sheet RC2192018A0008",
+    "loss_estimate_inr": 140000000000.0,
+    "notes": "Fraudulent LoUs issued via PNB Brady House branch."
+  },
+  {
+    "cin": "U74999DL2012PTC230001",
+    "company_name": "Shell ITC Carousel Node A (synthetic — modelled on Delhi GST ring 2022)",
+    "fraud_type": "GST_ITC_CAROUSEL",
+    "label": 1,
+    "discovered_year": 2022,
+    "primary_source": "DGGI Delhi Zonal Unit investigation",
+    "loss_estimate_inr": 4200000000.0,
+    "notes": "7-node ring claimed fictitious ITC against missing-trader exports."
+  },
+  {
+    "cin": "U74999DL2012PTC230002",
+    "company_name": "Shell ITC Carousel Node B (synthetic)",
+    "fraud_type": "GST_ITC_CAROUSEL",
+    "label": 1,
+    "discovered_year": 2022,
+    "primary_source": "DGGI Delhi Zonal Unit investigation",
+    "loss_estimate_inr": 4200000000.0,
+    "notes": "Linked to Node A via shared address."
+  },
+  {
+    "cin": "U74999DL2012PTC230003",
+    "company_name": "Shell ITC Carousel Missing Trader C (synthetic)",
+    "fraud_type": "GST_ITC_CAROUSEL",
+    "label": 1,
+    "discovered_year": 2022,
+    "primary_source": "DGGI Delhi Zonal Unit investigation",
+    "loss_estimate_inr": 4200000000.0,
+    "notes": "Missing trader — GSTIN cancelled retrospectively."
+  },
+  {
+    "cin": "L22219MH1985PLC036572",
+    "company_name": "Videocon Industries Limited",
+    "fraud_type": "BANK_EVERGREENING",
+    "label": 1,
+    "discovered_year": 2018,
+    "primary_source": "ICICI-Videocon quid-pro-quo CBI case",
+    "loss_estimate_inr": 401000000000.0,
+    "notes": "ICICI Bank approved Rs.3,250 cr loan with quid pro quo to Chanda Kochhar's NuPower."
+  },
+  {
+    "cin": "U74899DL2001PTC108944",
+    "company_name": "ABG Shipyard Limited",
+    "fraud_type": "BANK_EVERGREENING",
+    "label": 1,
+    "discovered_year": 2019,
+    "primary_source": "CBI FIR (largest-ever bank fraud charge-sheet, ₹22,842 cr)",
+    "loss_estimate_inr": 228420000000.0,
+    "notes": "28-bank consortium fraud; round-tripping via foreign subsidiaries."
+  },
+  {
+    "cin": "L74110WB1933PLC008002",
+    "company_name": "Kingfisher Airlines Limited (Vijay Mallya / United Breweries)",
+    "fraud_type": "BANK_EVERGREENING",
+    "label": 1,
+    "discovered_year": 2016,
+    "primary_source": "SBI fraud declaration + CBI ECIR/05/HIU/2015",
+    "loss_estimate_inr": 90000000000.0,
+    "notes": "₹9,000 cr loan default; promoter declared fugitive economic offender 2019."
+  }
+]

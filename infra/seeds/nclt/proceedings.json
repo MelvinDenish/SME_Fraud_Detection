@@ -25,5 +25,14 @@
     "status": "filed",
     "amount_claimed": 18000000.0,
     "bench": "NCLT Mumbai"
+  },
+  {
+    "case_number": "C.P. (IB) 4258/MB/2019",
+    "cin": "L65910MH1984PLC032662",
+    "petition_type": "CIRP",
+    "filing_date": "2019-11-29",
+    "status": "admitted",
+    "amount_claimed": 870310000000.0,
+    "bench": "NCLT Mumbai"
   }
 ]

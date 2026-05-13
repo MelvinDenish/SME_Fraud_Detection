@@ -14,5 +14,21 @@
     "amount": 850000000.0,
     "declared_date": "2019-02-22",
     "source": "CIBIL"
+  },
+  {
+    "cin": "L65910MH1984PLC032662",
+    "din": "00028528",
+    "bank_name": "Union Bank of India",
+    "amount": 29390000000.0,
+    "declared_date": "2020-06-09",
+    "source": "RBI"
+  },
+  {
+    "cin": "L65910MH1984PLC032662",
+    "din": "00028530",
+    "bank_name": "State Bank of India",
+    "amount": 73620000000.0,
+    "declared_date": "2020-07-18",
+    "source": "RBI"
   }
 ]
