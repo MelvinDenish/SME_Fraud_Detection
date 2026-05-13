@@ -70,7 +70,10 @@ _FIELD_PATTERNS: list[tuple[str, re.Pattern[str]]] = [
 ]
 
 _CIN_PATTERN = re.compile(r"\b([LU]\d{5}[A-Z]{2}\d{4}[A-Z]{3}\d{6})\b")
-_YEAR_PATTERN = re.compile(r"(?:financial\s+year|fy|year\s+ended)[^0-9]{0,30}((?:19|20)\d{2})", re.I)
+# `.{0,50}?` (lazy any-char) tolerates intervening digits like the day in
+# 'Year ended March 31, 2023' — older `[^0-9]{0,30}` stalled on the '31' and
+# fell through to a stray comparison year reference (PRD Day 7 parser fix).
+_YEAR_PATTERN = re.compile(r"(?:financial\s+year|fy|year\s+ended).{0,50}?((?:19|20)\d{2})", re.I)
 _AUDIT_OPINION_PATTERN = re.compile(
     r"(opinion[\s\S]{20,800}?)(?:basis\s+for\s+opinion|emphasis\s+of\s+matter|key\s+audit\s+matters|to\s+the\s+members|annexure)",
     re.I,
