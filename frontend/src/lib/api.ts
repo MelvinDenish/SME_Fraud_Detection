@@ -56,6 +56,20 @@ export interface UploadAck {
   extra: Record<string, unknown>;
 }
 
+// PRD §10 Day-21 — DC improvement preview before submission.
+export interface UploadPreview {
+  cin: string;
+  current_data_confidence: number;
+  state: {
+    n_financials: number;
+    has_gst_upload: boolean;
+    has_bank_upload: boolean;
+  };
+  if_financials_added: number;
+  if_gst_added: number;
+  if_bank_added: number;
+}
+
 const API_BASE = "/api";
 const TOKEN_KEY = "sentinelg.jwt";
 
@@ -134,6 +148,7 @@ export const api = {
     postJson<UploadAck>(`/upload/gst/${cin}`, payload),
   uploadBank: (cin: string, creditsTotal: number) =>
     postJson<UploadAck>(`/upload/bank/${cin}`, { credits_total: creditsTotal }),
+  uploadPreview: (cin: string) => getJson<UploadPreview>(`/upload/${cin}/preview`),
 };
 
 // PRD §7.2 band colour palette — kept here so every page renders the same hue.

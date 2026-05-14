@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
-import { DEMO_CINS, UploadAck, api } from "../lib/api";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { DEMO_CINS, UploadAck, UploadPreview, api } from "../lib/api";
 
 const cardStyle: React.CSSProperties = {
   background: "white",
@@ -13,6 +13,30 @@ const btnStyle: React.CSSProperties = {
   padding: "0.5rem 1rem", border: 0, background: "#0f172a", color: "white",
   borderRadius: 4, cursor: "pointer",
 };
+
+// PRD §10 Day-21 — show analyst what each upload buys before they submit.
+function DcBadge({ current, projected }: { current: number; projected: number }) {
+  const delta = projected - current;
+  const noBump = delta === 0;
+  return (
+    <div style={{
+      display: "inline-flex", alignItems: "center", gap: 6,
+      padding: ".25rem .55rem",
+      background: noBump ? "#f1f5f9" : "#dbeafe",
+      borderLeft: `3px solid ${noBump ? "#94a3b8" : "#2563eb"}`,
+      borderRadius: 4, fontSize: ".82rem",
+      marginTop: ".4rem", marginBottom: ".25rem",
+    }}>
+      <strong>DataConfidence:</strong>
+      <span>{current}%</span>
+      <span style={{ color: "#64748b" }}>&rarr;</span>
+      <span style={{ fontWeight: 600 }}>{projected}%</span>
+      <span style={{ color: noBump ? "#64748b" : "#1d4ed8" }}>
+        {noBump ? "no change" : `+${delta} pts`}
+      </span>
+    </div>
+  );
+}
 
 function AckBanner({ ack }: { ack: UploadAck | undefined }) {
   if (!ack) return null;
@@ -34,10 +58,13 @@ function AckBanner({ ack }: { ack: UploadAck | undefined }) {
   );
 }
 
-function FinancialsForm({ cin }: { cin: string }) {
+function FinancialsForm({ cin, preview, onUploaded }: {
+  cin: string; preview: UploadPreview | undefined; onUploaded: () => void;
+}) {
   const [file, setFile] = useState<File | null>(null);
   const mutation = useMutation({
     mutationFn: () => api.uploadFinancials(cin, file!),
+    onSuccess: onUploaded,
   });
   return (
     <div style={cardStyle}>
@@ -46,6 +73,10 @@ function FinancialsForm({ cin }: { cin: string }) {
         pdfplumber pulls the FS row + forensics into the per-CIN overlay
         (Day-7 hardened parser + Day-11 paren-negative / crore-unit support).
       </p>
+      {preview && (
+        <DcBadge current={preview.current_data_confidence}
+                 projected={preview.if_financials_added} />
+      )}
       <form
         onSubmit={(e) => { e.preventDefault(); if (file) mutation.mutate(); }}
         style={{ display: "flex", gap: 8, alignItems: "center" }}
@@ -67,7 +98,9 @@ function FinancialsForm({ cin }: { cin: string }) {
   );
 }
 
-function GstForm({ cin }: { cin: string }) {
+function GstForm({ cin, preview, onUploaded }: {
+  cin: string; preview: UploadPreview | undefined; onUploaded: () => void;
+}) {
   const [gstin, setGstin] = useState("27AAACX1234A1Z5");
   const [pan, setPan] = useState("AAACX1234A");
   const [turnover, setTurnover] = useState("100000");
@@ -81,6 +114,7 @@ function GstForm({ cin }: { cin: string }) {
       aggregate_turnover: Number(turnover),
       tax_paid_ytd: 0,
     }),
+    onSuccess: onUploaded,
   });
   return (
     <div style={cardStyle}>
@@ -89,6 +123,10 @@ function GstForm({ cin }: { cin: string }) {
         Triggers Module 2 #1 (Revenue vs GST Turnover) when the upload
         diverges &gt; 5% from the company's P&amp;L revenue.
       </p>
+      {preview && (
+        <DcBadge current={preview.current_data_confidence}
+                 projected={preview.if_gst_added} />
+      )}
       <form
         onSubmit={(e) => { e.preventDefault(); mutation.mutate(); }}
         style={{ display: "grid", gridTemplateColumns: "auto 1fr auto 1fr", gap: 8, alignItems: "center" }}
@@ -112,11 +150,20 @@ function GstForm({ cin }: { cin: string }) {
   );
 }
 
-function BankForm({ cin }: { cin: string }) {
+function BankForm({ cin, preview, onUploaded }: {
+  cin: string; preview: UploadPreview | undefined; onUploaded: () => void;
+}) {
   const [credits, setCredits] = useState("250000000");
   const mutation = useMutation({
     mutationFn: () => api.uploadBank(cin, Number(credits)),
+    onSuccess: onUploaded,
   });
+  // PRD §7.1 ladder note: bank only bumps DC once GST is on file. Show the
+  // analyst the dependency explicitly so they don't think the endpoint is broken.
+  const bankNeedsGst =
+    preview !== undefined &&
+    preview.if_bank_added === preview.current_data_confidence &&
+    !preview.state.has_gst_upload;
   return (
     <div style={cardStyle}>
       <h3 style={{ marginTop: 0 }}>Bank credits total</h3>
@@ -124,6 +171,17 @@ function BankForm({ cin }: { cin: string }) {
         Triggers Module 2 #7 (Bank Credits vs Revenue) when the reconstructed
         bank credits diverge &gt; 20% from the company's P&amp;L revenue.
       </p>
+      {preview && (
+        <DcBadge current={preview.current_data_confidence}
+                 projected={preview.if_bank_added} />
+      )}
+      {bankNeedsGst && (
+        <p style={{ color: "#92400e", margin: ".25rem 0 .5rem", fontSize: ".8rem" }}>
+          Note: PRD §7.1 ladder requires a GST overlay before bank evidence
+          counts toward DC. Submit the bank total anyway — it still feeds
+          Module 2 check #7 — but DC won't change until GST is on file.
+        </p>
+      )}
       <form
         onSubmit={(e) => { e.preventDefault(); mutation.mutate(); }}
         style={{ display: "flex", gap: 8, alignItems: "center" }}
@@ -141,16 +199,49 @@ function BankForm({ cin }: { cin: string }) {
   );
 }
 
+function PreviewCard({ preview }: { preview: UploadPreview | undefined }) {
+  if (!preview) return null;
+  const { state, current_data_confidence } = preview;
+  return (
+    <div style={cardStyle}>
+      <h3 style={{ marginTop: 0, marginBottom: ".5rem" }}>
+        Current DataConfidence: <span style={{ color: "#1d4ed8" }}>{current_data_confidence}%</span>
+      </h3>
+      <div style={{
+        display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: ".5rem",
+        fontSize: ".85rem", color: "#475569",
+      }}>
+        <span>Financials on file: <strong style={{ color: "#0f172a" }}>{state.n_financials}</strong></span>
+        <span>GST overlay: <strong style={{ color: state.has_gst_upload ? "#15803d" : "#94a3b8" }}>
+          {state.has_gst_upload ? "yes" : "—"}
+        </strong></span>
+        <span>Bank overlay: <strong style={{ color: state.has_bank_upload ? "#15803d" : "#94a3b8" }}>
+          {state.has_bank_upload ? "yes" : "—"}
+        </strong></span>
+      </div>
+    </div>
+  );
+}
+
 export default function UploadPage() {
   const [cin, setCin] = useState(DEMO_CINS.xyzGarments);
+  const qc = useQueryClient();
+  const previewQuery = useQuery({
+    queryKey: ["upload-preview", cin],
+    queryFn: () => api.uploadPreview(cin),
+    enabled: cin.length > 0,
+  });
+  const refetchPreview = () => {
+    qc.invalidateQueries({ queryKey: ["upload-preview", cin] });
+  };
   return (
     <div style={{ display: "grid", gap: "1rem" }}>
       <header>
         <h1 style={{ margin: 0 }}>Upload evidence</h1>
         <p style={{ color: "#475569", margin: ".25rem 0 0" }}>
           Three /upload/* endpoints stash overlays for the next /analyse
-          request. Useful when an MCA filing is incomplete and the analyst
-          wants to add bank/GST evidence by hand.
+          request. The badge on each form shows the DataConfidence bump
+          this upload would buy (PRD §7.1 ladder, Day-21 preview).
         </p>
       </header>
       <div style={cardStyle}>
@@ -172,9 +263,15 @@ export default function UploadPage() {
           ))}
         </div>
       </div>
-      <FinancialsForm cin={cin} />
-      <GstForm cin={cin} />
-      <BankForm cin={cin} />
+      {previewQuery.error && (
+        <div style={{ ...cardStyle, color: "crimson" }}>
+          Preview failed: {(previewQuery.error as Error).message}
+        </div>
+      )}
+      <PreviewCard preview={previewQuery.data} />
+      <FinancialsForm cin={cin} preview={previewQuery.data} onUploaded={refetchPreview} />
+      <GstForm cin={cin} preview={previewQuery.data} onUploaded={refetchPreview} />
+      <BankForm cin={cin} preview={previewQuery.data} onUploaded={refetchPreview} />
     </div>
   );
 }

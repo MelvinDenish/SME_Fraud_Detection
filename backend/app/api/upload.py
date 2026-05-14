@@ -24,7 +24,9 @@ from fastapi import APIRouter, File, HTTPException, UploadFile, status
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from backend.app.api.upload_store import get_upload_store
+from backend.app.ingest.data_confidence import compute_data_confidence
 from backend.app.ingest.gst import RawGSTEntity
+from backend.app.ingest.schemas import CompanyBundle, RawFinancialStatement
 from backend.app.ingest.sources import FixtureSource
 from backend.app.parse.pdf_parser import parse_financial_pdf
 
@@ -51,6 +53,25 @@ class UploadAck(BaseModel):
     extra: dict = Field(default_factory=dict)
 
 
+class UploadPreviewState(BaseModel):
+    """Snapshot of overlay coverage that drives the DC ladder (PRD §7.1)."""
+
+    n_financials: int
+    has_gst_upload: bool
+    has_bank_upload: bool
+
+
+class UploadPreview(BaseModel):
+    """Day-21 DC improvement preview — what each upload would do to DC."""
+
+    cin: str
+    current_data_confidence: int
+    state: UploadPreviewState
+    if_financials_added: int
+    if_gst_added: int
+    if_bank_added: int
+
+
 async def _require_known_cin(cin: str) -> None:
     bundle = await _fixture_source.fetch_bundle(cin)
     if bundle is None:
@@ -58,6 +79,51 @@ async def _require_known_cin(cin: str) -> None:
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"CIN {cin} not registered in source-of-truth — upload after MCA lookup",
         )
+
+
+def _project_dc(bundle: CompanyBundle, *, add_financial_year: bool = False,
+                add_gst: bool = False, add_bank: bool = False) -> int:
+    """Hypothetical DC after one upload — mutates a bundle copy, never the real one."""
+    fs_list = list(bundle.financials)
+    if add_financial_year:
+        existing_years = {f.year for f in fs_list}
+        next_year = (max(existing_years) + 1) if existing_years else 2024
+        # compute_data_confidence only counts financial rows — all non-key
+        # fields default to zero on RawFinancialStatement, so a stub row is fine.
+        fs_list = fs_list + [RawFinancialStatement(
+            cin=bundle.company.cin, year=next_year,
+        )]
+    projected = bundle.model_copy(update={
+        "financials": fs_list,
+        "has_gst_upload": bundle.has_gst_upload or add_gst,
+        "has_bank_upload": bundle.has_bank_upload or add_bank,
+    })
+    return compute_data_confidence(projected)
+
+
+@router.get("/{cin}/preview", response_model=UploadPreview)
+async def upload_preview(cin: str) -> UploadPreview:
+    """PRD §10 Day-21 — show the analyst what each upload would do to DataConfidence."""
+    bundle = await _fixture_source.fetch_bundle(cin)
+    if bundle is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"CIN {cin} not registered in source-of-truth",
+        )
+    overlay = get_upload_store().get(cin)
+    merged = overlay.merge_into(bundle)
+    return UploadPreview(
+        cin=cin,
+        current_data_confidence=compute_data_confidence(merged),
+        state=UploadPreviewState(
+            n_financials=len(merged.financials),
+            has_gst_upload=merged.has_gst_upload,
+            has_bank_upload=merged.has_bank_upload,
+        ),
+        if_financials_added=_project_dc(merged, add_financial_year=True),
+        if_gst_added=_project_dc(merged, add_gst=True),
+        if_bank_added=_project_dc(merged, add_bank=True),
+    )
 
 
 @router.post("/financials/{cin}", response_model=UploadAck)

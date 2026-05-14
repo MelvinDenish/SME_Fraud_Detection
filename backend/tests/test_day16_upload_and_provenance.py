@@ -167,3 +167,47 @@ def test_analyse_payload_surfaces_propagation_band(client: TestClient) -> None:
 def test_provenance_unknown_cin_returns_404(client: TestClient) -> None:
     resp = client.get("/analyse/U99999XX9999PTC999999/provenance")
     assert resp.status_code == 404
+
+
+# --- Day-21: /upload/{cin}/preview ----------------------------------------
+def test_upload_preview_shows_current_dc_and_projections(client: TestClient) -> None:
+    """PRD §10 Day-21: 'Upload Portal with DataConfidence improvement preview.'
+
+    XYZ Garments fixture ships 2+ years FS with no GST/bank uploads, so the
+    baseline DC is 65. Adding GST should project to 80; adding bank only
+    keeps it at 65 (per PRD §7.1 ladder — bank requires GST to register)."""
+    resp = client.get("/upload/U14101MH2019PTC298765/preview")
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["cin"] == "U14101MH2019PTC298765"
+    assert body["current_data_confidence"] == 65
+    assert body["state"]["has_gst_upload"] is False
+    assert body["state"]["has_bank_upload"] is False
+    assert body["state"]["n_financials"] >= 2
+    assert body["if_gst_added"] == 80
+    assert body["if_bank_added"] == 65         # bank alone — no DC bump per ladder
+    assert body["if_financials_added"] == 65   # already 2+ years; tier capped
+
+
+def test_upload_preview_reflects_existing_overlay(client: TestClient) -> None:
+    """A GST upload in this session should change subsequent preview projections."""
+    client.post("/upload/gst/U14101MH2019PTC298765", json={
+        "gstin": "27AAACX1234A1Z5",
+        "pan": "AAACX1234A",
+        "cin": "U14101MH2019PTC298765",
+        "registration_date": "2019-04-01",
+        "is_cancelled": False,
+        "taxpayer_type": "regular",
+        "aggregate_turnover": 1_200_000.0,
+        "tax_paid_ytd": 50_000.0,
+    })
+    body = client.get("/upload/U14101MH2019PTC298765/preview").json()
+    assert body["current_data_confidence"] == 80
+    assert body["state"]["has_gst_upload"] is True
+    # GST is in; bank upload is now the next ladder step (80 -> 92).
+    assert body["if_bank_added"] == 92
+
+
+def test_upload_preview_unknown_cin_returns_404(client: TestClient) -> None:
+    resp = client.get("/upload/U99999XX9999PTC999999/preview")
+    assert resp.status_code == 404
