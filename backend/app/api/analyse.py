@@ -20,6 +20,7 @@ from fastapi import APIRouter, HTTPException, status
 
 from backend.app.api.upload_store import get_upload_store
 from backend.app.ingest.benchmarks import BSEFixtureBenchmark
+from backend.app.ingest.composite import CompositeCompanySource
 from backend.app.ingest.nclt import NCLTFixtureSource
 from backend.app.ingest.sources import FixtureSource
 from backend.app.ingest.wilful_defaulter import WilfulDefaulterFixtureSource
@@ -30,6 +31,11 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/analyse", tags=["analyse"])
 
+# Day-17 switches /analyse to the CompositeCompanySource which tries MCA21
+# V3 first and falls back to the FixtureSource seeds on key absence / 404.
+# Belief-propagation edges still come from the FixtureSource list (it's the
+# only enumerable surface — MCA21 has no "list all CINs" endpoint).
+_company_source = CompositeCompanySource()
 _fixture_source = FixtureSource()
 _benchmark_source = BSEFixtureBenchmark()
 _nclt_source = NCLTFixtureSource()
@@ -81,7 +87,7 @@ async def _propagation_lift(cin: str, seed_score: float) -> tuple[str, float]:
 @router.get("/{cin}")
 async def analyse(cin: str) -> dict:
     """PRD §7.1 dual-output payload for one CIN, with upload overlay folded in."""
-    bundle = await _fixture_source.fetch_bundle(cin)
+    bundle = await _company_source.fetch_bundle(cin)
     if bundle is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -110,7 +116,7 @@ async def provenance(cin: str) -> dict:
     Day-16 wires this from the live RiskScorer output. Day-20 swaps in
     Neo4j-backed traversal once the scorer writes FraudSignal nodes.
     """
-    bundle = await _fixture_source.fetch_bundle(cin)
+    bundle = await _company_source.fetch_bundle(cin)
     if bundle is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
