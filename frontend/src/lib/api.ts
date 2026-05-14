@@ -57,9 +57,19 @@ export interface UploadAck {
 }
 
 const API_BASE = "/api";
+const TOKEN_KEY = "sentinelg.jwt";
+
+function bearerHeader(): HeadersInit {
+  try {
+    const tok = localStorage.getItem(TOKEN_KEY);
+    return tok ? { Authorization: `Bearer ${tok}` } : {};
+  } catch {
+    return {};
+  }
+}
 
 async function getJson<T>(path: string): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`);
+  const res = await fetch(`${API_BASE}${path}`, { headers: bearerHeader() });
   if (!res.ok) {
     const body = await res.text().catch(() => "");
     throw new Error(`GET ${path} -> ${res.status}: ${body || res.statusText}`);
@@ -70,7 +80,7 @@ async function getJson<T>(path: string): Promise<T> {
 async function postJson<T>(path: string, body: unknown): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...bearerHeader() },
     body: JSON.stringify(body),
   });
   if (!res.ok) {
@@ -83,12 +93,35 @@ async function postJson<T>(path: string, body: unknown): Promise<T> {
 async function postFile<T>(path: string, file: File): Promise<T> {
   const form = new FormData();
   form.append("file", file);
-  const res = await fetch(`${API_BASE}${path}`, { method: "POST", body: form });
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: "POST", body: form, headers: bearerHeader(),
+  });
   if (!res.ok) {
     const text = await res.text().catch(() => "");
     throw new Error(`POST ${path} -> ${res.status}: ${text || res.statusText}`);
   }
   return (await res.json()) as T;
+}
+
+/** Download a PDF report. Triggers a save-as in the user's browser. */
+export async function downloadReport(cin: string): Promise<{ reportId: string | null; generatedAt: string | null }> {
+  const res = await fetch(`${API_BASE}/report/${cin}`, { headers: bearerHeader() });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`GET /report/${cin} -> ${res.status}: ${text || res.statusText}`);
+  }
+  const blob = await res.blob();
+  const reportId = res.headers.get("x-report-id");
+  const generatedAt = res.headers.get("x-report-generated-at");
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `sentinel-g-${cin}-${reportId?.slice(0, 8) ?? "report"}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  return { reportId, generatedAt };
 }
 
 export const api = {

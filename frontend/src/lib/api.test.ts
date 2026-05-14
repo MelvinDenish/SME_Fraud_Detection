@@ -65,7 +65,7 @@ describe("api.analyse", () => {
     }));
     globalThis.fetch = stub as unknown as typeof fetch;
     const got = await api.analyse(DEMO_CINS.ilfs);
-    expect(stub).toHaveBeenCalledWith(`/api/analyse/${DEMO_CINS.ilfs}`);
+    expect(stub.mock.calls[0][0]).toBe(`/api/analyse/${DEMO_CINS.ilfs}`);
     expect(got.risk_band).toBe("CRITICAL");
     expect(got.fraud_risk_score).toBe(75);
   });
@@ -86,7 +86,7 @@ describe("api.provenance", () => {
     }));
     globalThis.fetch = stub as unknown as typeof fetch;
     const got = await api.provenance(DEMO_CINS.ilfs);
-    expect(stub).toHaveBeenCalledWith(`/api/analyse/${DEMO_CINS.ilfs}/provenance`);
+    expect(stub.mock.calls[0][0]).toBe(`/api/analyse/${DEMO_CINS.ilfs}/provenance`);
     expect(got.signal_count).toBe(0);
   });
 });

@@ -7,6 +7,7 @@ import {
   DEMO_CINS,
   SEVERITY_PALETTE,
   api,
+  downloadReport,
 } from "../lib/api";
 
 const cardStyle: React.CSSProperties = {
@@ -153,11 +154,40 @@ export default function Dashboard() {
           <ScoreCard data={query.data} />
           <ModuleBreakdown data={query.data} />
           <EvidenceList data={query.data} />
-          <p style={{ textAlign: "right" }}>
-            <Link to={`/graph/${query.data.cin}`}>View evidence graph →</Link>
-          </p>
+          <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
+            <PdfExportButton cin={query.data.cin} />
+            <Link to={`/graph/${query.data.cin}`} style={{ alignSelf: "center" }}>
+              View evidence graph →
+            </Link>
+          </div>
         </>
       )}
     </div>
+  );
+}
+
+function PdfExportButton({ cin }: { cin: string }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  return (
+    <span style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
+      <button
+        onClick={async () => {
+          setError(null);
+          setBusy(true);
+          try { await downloadReport(cin); }
+          catch (e) { setError((e as Error).message); }
+          finally { setBusy(false); }
+        }}
+        disabled={busy}
+        style={{
+          padding: "0.5rem 1rem", border: 0, background: "#1e3a8a",
+          color: "white", borderRadius: 4, cursor: busy ? "wait" : "pointer",
+        }}
+      >
+        {busy ? "Rendering PDF…" : "Export PDF report"}
+      </button>
+      {error && <span style={{ color: "crimson", fontSize: ".8rem" }}>{error}</span>}
+    </span>
   );
 }
