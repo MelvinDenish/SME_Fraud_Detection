@@ -19,6 +19,7 @@ import logging
 from fastapi import APIRouter, HTTPException, status
 
 from backend.app.api.upload_store import get_upload_store
+from backend.app.api.validators import CIN_PATH
 from backend.app.ingest.benchmarks import BSEFixtureBenchmark
 from backend.app.ingest.composite import CompositeCompanySource
 from backend.app.ingest.nclt import NCLTFixtureSource
@@ -85,7 +86,7 @@ async def _propagation_lift(cin: str, seed_score: float) -> tuple[str, float]:
 
 
 @router.get("/{cin}")
-async def analyse(cin: str) -> dict:
+async def analyse(cin: CIN_PATH) -> dict:
     """PRD §7.1 dual-output payload for one CIN, with upload overlay folded in."""
     bundle = await _company_source.fetch_bundle(cin)
     if bundle is None:
@@ -104,7 +105,7 @@ async def analyse(cin: str) -> dict:
 
 
 @router.get("/{cin}/provenance")
-async def provenance(cin: str) -> dict:
+async def provenance(cin: CIN_PATH) -> dict:
     """Return the evidence chain in graph form: nodes + TRIGGERED_BY edges.
 
     Output shape:

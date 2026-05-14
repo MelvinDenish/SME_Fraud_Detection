@@ -36,6 +36,7 @@ from reportlab.platypus import (
 )
 
 from backend.app.api.upload_store import get_upload_store
+from backend.app.api.validators import CIN_PATH
 from backend.app.auth.deps import get_current_user
 from backend.app.ingest.benchmarks import BSEFixtureBenchmark
 from backend.app.ingest.composite import CompositeCompanySource
@@ -171,7 +172,7 @@ def _render_pdf(report_dict: dict, report_uuid: str, generated_at: datetime) -> 
 
 @router.get("/{cin}")
 async def get_report(
-    cin: str,
+    cin: CIN_PATH,
     _user: dict = Depends(get_current_user),
 ) -> StreamingResponse:
     """Render the PRD §7.1 payload for {cin} as a PDF. Auth-required."""

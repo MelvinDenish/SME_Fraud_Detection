@@ -25,6 +25,14 @@ class Settings(BaseSettings):
     jwt_expiry_hours: int = 24
     rate_limit_per_min: int = 10
 
+    # PRD §10 Day 24 — CORS lockdown. Comma-separated origin list; defaults
+    # cover the Vite dev server. Production override via CORS_ALLOWED_ORIGINS.
+    cors_allowed_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
+
+    @property
+    def cors_origin_list(self) -> list[str]:
+        return [o.strip() for o in self.cors_allowed_origins.split(",") if o.strip()]
+
     neo4j_uri: str = "bolt://localhost:7687"
     neo4j_user: str = "neo4j"
     neo4j_password: str = "sentinel_dev_pwd"

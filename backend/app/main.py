@@ -10,6 +10,7 @@ from backend.app.api.upload import router as upload_router
 from backend.app.auth.routes import router as auth_router
 from backend.app.config import get_settings
 from backend.app.deps import get_driver, lifespan
+from backend.app.middleware.rate_limit import RateLimitMiddleware
 
 
 def create_app() -> FastAPI:
@@ -21,13 +22,20 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
+    # PRD §10 Day 24 — settings-driven origin list (no wildcards, no
+    # automatic localhost-in-prod). `CORS_ALLOWED_ORIGINS` env var picks
+    # up the Vercel preview/prod URLs in deployed environments.
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"] if settings.app_env == "dev" else [],
+        allow_origins=settings.cors_origin_list,
         allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_methods=["GET", "POST", "OPTIONS"],
+        allow_headers=["Authorization", "Content-Type", "X-Report-Id"],
     )
+
+    # PRD §10 Day 24 — 10 req/min per JWT (per-IP fallback for anonymous
+    # requests). Returns 429 with Retry-After on breach.
+    app.add_middleware(RateLimitMiddleware, limit_per_min=settings.rate_limit_per_min)
 
     app.include_router(auth_router)
     app.include_router(analyse_router)

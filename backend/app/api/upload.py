@@ -24,6 +24,7 @@ from fastapi import APIRouter, File, HTTPException, UploadFile, status
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from backend.app.api.upload_store import get_upload_store
+from backend.app.api.validators import CIN_PATH
 from backend.app.ingest.data_confidence import compute_data_confidence
 from backend.app.ingest.gst import RawGSTEntity
 from backend.app.ingest.schemas import CompanyBundle, RawFinancialStatement
@@ -102,7 +103,7 @@ def _project_dc(bundle: CompanyBundle, *, add_financial_year: bool = False,
 
 
 @router.get("/{cin}/preview", response_model=UploadPreview)
-async def upload_preview(cin: str) -> UploadPreview:
+async def upload_preview(cin: CIN_PATH) -> UploadPreview:
     """PRD §10 Day-21 — show the analyst what each upload would do to DataConfidence."""
     bundle = await _fixture_source.fetch_bundle(cin)
     if bundle is None:
@@ -127,7 +128,7 @@ async def upload_preview(cin: str) -> UploadPreview:
 
 
 @router.post("/financials/{cin}", response_model=UploadAck)
-async def upload_financials(cin: str, file: UploadFile = File(...)) -> UploadAck:
+async def upload_financials(cin: CIN_PATH, file: UploadFile = File(...)) -> UploadAck:
     """Accept an AOC-4 PDF and overlay it onto the fixture bundle."""
     await _require_known_cin(cin)
     if not file.filename or not file.filename.lower().endswith(".pdf"):
@@ -174,7 +175,7 @@ async def upload_financials(cin: str, file: UploadFile = File(...)) -> UploadAck
 
 
 @router.post("/gst/{cin}", response_model=UploadAck)
-async def upload_gst(cin: str, payload: dict) -> UploadAck:
+async def upload_gst(cin: CIN_PATH, payload: dict) -> UploadAck:
     """Accept a RawGSTEntity JSON body and overlay it."""
     await _require_known_cin(cin)
     payload = dict(payload)  # tolerate Pydantic-strict callers
@@ -202,7 +203,7 @@ async def upload_gst(cin: str, payload: dict) -> UploadAck:
 
 
 @router.post("/bank/{cin}", response_model=UploadAck)
-async def upload_bank(cin: str, payload: BankCreditsIn) -> UploadAck:
+async def upload_bank(cin: CIN_PATH, payload: BankCreditsIn) -> UploadAck:
     """Accept a bank-reconstruction summary {credits_total}."""
     await _require_known_cin(cin)
     get_upload_store().upsert_bank(cin, payload.credits_total)
