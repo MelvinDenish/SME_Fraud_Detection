@@ -1,33 +1,57 @@
-import { useQuery } from "@tanstack/react-query";
+import { NavLink, Route, Routes, Navigate } from "react-router-dom";
+import Dashboard from "./pages/Dashboard";
+import GraphExplorer from "./pages/GraphExplorer";
+import ITCCarousel from "./pages/ITCCarousel";
+import Evergreening from "./pages/Evergreening";
+import UploadPage from "./pages/Upload";
 
-interface HealthResponse {
-  status: string;
-  version: string;
-  env: string;
-}
+const navStyle: React.CSSProperties = {
+  display: "flex",
+  gap: "1rem",
+  padding: "1rem 2rem",
+  background: "#0f172a",
+  color: "white",
+  position: "sticky",
+  top: 0,
+  zIndex: 10,
+};
 
-async function fetchHealth(): Promise<HealthResponse> {
-  const res = await fetch("/api/health");
-  if (!res.ok) throw new Error(`Health check failed: ${res.status}`);
-  return res.json();
+const linkBase: React.CSSProperties = {
+  color: "white",
+  textDecoration: "none",
+  padding: "0.25rem 0.5rem",
+  borderRadius: 4,
+};
+
+function navLinkStyle({ isActive }: { isActive: boolean }): React.CSSProperties {
+  return isActive
+    ? { ...linkBase, background: "#1e3a8a" }
+    : linkBase;
 }
 
 export default function App() {
-  const { data, isLoading, error } = useQuery({ queryKey: ["health"], queryFn: fetchHealth });
-
   return (
-    <main style={{ fontFamily: "system-ui, sans-serif", padding: "2rem", maxWidth: 720 }}>
-      <h1>Sentinel-G</h1>
-      <p>SME Financial Fraud Detection · HackHazards '26</p>
-      <hr />
-      <h2>Backend health</h2>
-      {isLoading && <p>Checking…</p>}
-      {error && <p style={{ color: "crimson" }}>{(error as Error).message}</p>}
-      {data && (
-        <pre style={{ background: "#f4f4f4", padding: "1rem", borderRadius: 8 }}>
-          {JSON.stringify(data, null, 2)}
-        </pre>
-      )}
-    </main>
+    <div style={{ fontFamily: "system-ui, sans-serif", minHeight: "100vh", background: "#f1f5f9" }}>
+      <nav style={navStyle}>
+        <strong style={{ marginRight: "auto" }}>Sentinel-G</strong>
+        <NavLink to="/dashboard" style={navLinkStyle}>Dashboard</NavLink>
+        <NavLink to="/graph" style={navLinkStyle}>Graph Explorer</NavLink>
+        <NavLink to="/itc" style={navLinkStyle}>ITC Carousel</NavLink>
+        <NavLink to="/evergreening" style={navLinkStyle}>Evergreening</NavLink>
+        <NavLink to="/upload" style={navLinkStyle}>Upload</NavLink>
+      </nav>
+      <main style={{ padding: "2rem", maxWidth: 1100, margin: "0 auto" }}>
+        <Routes>
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/graph" element={<GraphExplorer />} />
+          <Route path="/graph/:cin" element={<GraphExplorer />} />
+          <Route path="/itc" element={<ITCCarousel />} />
+          <Route path="/evergreening" element={<Evergreening />} />
+          <Route path="/upload" element={<UploadPage />} />
+          <Route path="*" element={<p>Not found</p>} />
+        </Routes>
+      </main>
+    </div>
   );
 }
