@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from backend.app import __version__
 from backend.app.api.analyse import router as analyse_router
+from backend.app.api.upload import router as upload_router
 from backend.app.auth.routes import router as auth_router
 from backend.app.config import get_settings
 from backend.app.deps import get_driver, lifespan
@@ -29,6 +30,7 @@ def create_app() -> FastAPI:
 
     app.include_router(auth_router)
     app.include_router(analyse_router)
+    app.include_router(upload_router)
 
     @app.get("/health", tags=["meta"])
     async def health() -> dict[str, str]:

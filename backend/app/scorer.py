@@ -35,6 +35,7 @@ from typing import Any
 
 from backend.app.ingest.benchmarks import BenchmarkPoint
 from backend.app.ingest.data_confidence import compute_data_confidence
+from backend.app.ingest.gst import RawGSTEntity
 from backend.app.ingest.nclt import RawNCLTProceeding
 from backend.app.ingest.schemas import CompanyBundle
 from backend.app.ingest.wilful_defaulter import RawWilfulDefaulter
@@ -86,6 +87,10 @@ class ScoringContext:
     benchmarks: list[BenchmarkPoint] = field(default_factory=list)
     nclt: list[RawNCLTProceeding] = field(default_factory=list)
     wilful: list[RawWilfulDefaulter] = field(default_factory=list)
+    # Day-16 upload overlay — populated by the /analyse handler so M2 sees
+    # the user-supplied GST / bank-statement evidence on a per-call basis.
+    gst_entity: RawGSTEntity | None = None
+    bank_credits_total: float | None = None
 
 
 @dataclass
@@ -103,6 +108,10 @@ class RiskReport:
     skipped_modules: list[dict[str, str]]
     p_fraud_calibrated: float | None = None
     p_fraud_interval: tuple[float, float] | None = None
+    # Day-16: belief-propagation lift from neighbouring CINs in the same
+    # SharedAttribute cluster. Defaults to LOW for stand-alone runs.
+    propagation_band: str = "LOW"
+    propagation_score: float = 0.0
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -135,6 +144,8 @@ class RiskReport:
             "module_breakdown": {k: round(v, 2) for k, v in self.module_breakdown.items()},
             "override_applied": self.override_applied,
             "skipped_modules": self.skipped_modules,
+            "propagation_band": self.propagation_band,
+            "propagation_score": round(self.propagation_score, 2),
         }
 
 
@@ -164,7 +175,12 @@ async def _run_m2(bundle: CompanyBundle, ctx: ScoringContext) -> ModuleResult:
         previous=prev,
         cwip_history=fs_sorted[-3:] if len(fs_sorted) >= 3 else None,
         cersai_charges=list(bundle.charges),
-        bank_credits_total=curr.revenue * 1.04 if bundle.has_bank_upload else None,
+        gst_entity=ctx.gst_entity,
+        bank_credits_total=(
+            ctx.bank_credits_total
+            if ctx.bank_credits_total is not None
+            else (curr.revenue * 1.04 if bundle.has_bank_upload else None)
+        ),
     )
     return await asyncio.to_thread(m02_cross_statement.run, inputs)
 
