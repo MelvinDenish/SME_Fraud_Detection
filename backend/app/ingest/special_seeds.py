@@ -129,10 +129,22 @@ class RawCarouselGSTEntity(BaseModel):
     pan: str
     registration_date: date
     is_cancelled: bool = False
+    cancellation_date: date | None = None  # PRD §4.4 P10 — cancelled GSTIN still claiming ITC
     taxpayer_type: Literal["regular", "composition", "casual", "sez", "isd"] = "regular"
     aggregate_turnover: float = Field(default=0.0, ge=0.0)
     tax_paid_ytd: float = Field(default=0.0, ge=0.0)
     is_missing_trader: bool = False  # tax_paid/itc_generated < 0.05 per PRD §4.4 P9
+    # Day-23: optional CIN back-link, used by P12 (multi-hop ITC + director overlap)
+    cin: str | None = None
+
+
+class CarouselDirectorOverlap(BaseModel):
+    """Day-23 P12 evidence: shared directors connecting ring GSTINs to outside CINs."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    description: str = ""
+    shared_directors: list[dict] = Field(default_factory=list)
 
 
 class ITCCarouselSeed(BaseModel):
@@ -145,6 +157,7 @@ class ITCCarouselSeed(BaseModel):
     gst_entities: list[RawCarouselGSTEntity]
     itc_claims: list[RawITCClaim]
     edges: list[RawClaimsITCFrom]
+    director_overlap: CarouselDirectorOverlap | None = None
 
 
 def load_itc_carousel(path: Path | None = None) -> ITCCarouselSeed:
