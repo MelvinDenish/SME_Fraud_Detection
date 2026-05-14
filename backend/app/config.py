@@ -37,6 +37,15 @@ class Settings(BaseSettings):
     cersai_api_key: str = "PLACEHOLDER_CERSAI_KEY"
     bse_sme_api_key: str = "PLACEHOLDER_BSE_KEY"
 
+    # PRD §10 Day 20 — live source-side polling. asyncio.create_task pattern
+    # (PRD §2.1 compliant). Disabled in tests to keep them deterministic.
+    scheduler_enabled: bool = True
+    scheduler_mca21_refresh_sec: int = 86_400      # 24h
+    scheduler_cersai_refresh_sec: int = 86_400     # 24h
+    scheduler_nclt_poll_sec: int = 86_400          # 24h
+    scheduler_wilful_poll_sec: int = 30 * 86_400   # 30 days (PRD: "Monthly refresh")
+    scheduler_shared_attr_sec: int = 3_600         # 1h
+
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
