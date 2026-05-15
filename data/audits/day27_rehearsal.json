@@ -9,14 +9,14 @@
       "evidence_signal_count": 18,
       "provenance_signal_count": 18,
       "report_bytes": 6048,
-      "report_id": "8f8e5219-d49e-4f52-b2f2-33ecc387b720"
+      "report_id": "a3001906-96eb-42fc-8027-885f6388deed"
     },
     "timings_sec": {
-      "analyse": 0.1746130000000221,
-      "provenance": 0.005433700000025965,
-      "report": 0.07684080000001359
+      "analyse": 0.015090799999597948,
+      "provenance": 0.005911799999012146,
+      "report": 0.05843280000044615
     },
-    "total_sec": 0.25688750000006166,
+    "total_sec": 0.07943539999905624,
     "ok": true,
     "band_match": true
   },
@@ -29,15 +29,15 @@
       "data_confidence": 80,
       "evidence_signal_count": 11,
       "provenance_signal_count": 11,
-      "report_bytes": 5891,
-      "report_id": "4ff38950-1d44-44f9-a193-b51a891d1c59"
+      "report_bytes": 5890,
+      "report_id": "b33b2329-89c4-454b-8a10-6562cdcdd864"
     },
     "timings_sec": {
-      "analyse": 0.008065999999985252,
-      "provenance": 0.004899099999988721,
-      "report": 0.03115730000001804
+      "analyse": 0.03387440000005881,
+      "provenance": 0.005069700000603916,
+      "report": 0.029873999999836087
     },
-    "total_sec": 0.04412239999999201,
+    "total_sec": 0.06881810000049882,
     "ok": true,
     "band_match": true
   },
@@ -53,14 +53,14 @@
           "evidence_signal_count": 3,
           "provenance_signal_count": 3,
           "report_bytes": 3989,
-          "report_id": "7664a90d-30e6-4ef3-97f3-dc0fb02b1f6c"
+          "report_id": "ab494a71-2c31-4e53-bfa2-7a50e5140533"
         },
         "timings_sec": {
-          "analyse": 0.006877299999928255,
-          "provenance": 0.003855499999986023,
-          "report": 0.021302100000070823
+          "analyse": 0.007315799999560113,
+          "provenance": 0.0038451000000350177,
+          "report": 0.02410749999944528
         },
-        "total_sec": 0.0320348999999851,
+        "total_sec": 0.03526839999904041,
         "ok": true,
         "band_match": true
       },
@@ -74,14 +74,14 @@
           "evidence_signal_count": 4,
           "provenance_signal_count": 4,
           "report_bytes": 4698,
-          "report_id": "1561d1d7-e978-47b0-9c34-160b4f1d6a9a"
+          "report_id": "3be94f47-eded-4b05-ba6f-fdd5f18cd59a"
         },
         "timings_sec": {
-          "analyse": 0.006828400000017609,
-          "provenance": 0.0035154999999349457,
-          "report": 0.02348979999999301
+          "analyse": 0.008196000000680215,
+          "provenance": 0.003823900000497815,
+          "report": 0.027137699999002507
         },
-        "total_sec": 0.033833699999945566,
+        "total_sec": 0.03915760000018054,
         "ok": true,
         "band_match": true
       },
@@ -94,15 +94,15 @@
           "data_confidence": 45,
           "evidence_signal_count": 3,
           "provenance_signal_count": 3,
-          "report_bytes": 4012,
-          "report_id": "592388e2-c849-4323-8ff5-bbfd4e9363d4"
+          "report_bytes": 4010,
+          "report_id": "c7384ac5-8ea5-45fb-a6a3-fa23557874aa"
         },
         "timings_sec": {
-          "analyse": 0.007309599999985039,
-          "provenance": 0.0037535000000161745,
-          "report": 0.020255499999962012
+          "analyse": 0.007401700000627898,
+          "provenance": 0.004080699998667114,
+          "report": 0.02276759999949718
         },
-        "total_sec": 0.031318599999963226,
+        "total_sec": 0.03424999999879219,
         "ok": true,
         "band_match": true
       }
@@ -116,7 +116,7 @@
       "ok": true
     }
   },
-  "total_elapsed_sec": 6.2550818999999365,
+  "total_elapsed_sec": 2.5266197999990254,
   "total_budget_sec": 180.0,
   "pass": true
 }
