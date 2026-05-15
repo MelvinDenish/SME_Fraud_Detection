@@ -70,7 +70,14 @@ export interface UploadPreview {
   if_bank_added: number;
 }
 
-const API_BASE = "/api";
+// Dev: defaults to "/api" so Vite's proxy in vite.config.ts handles routing
+// to localhost:8000 with the /api prefix stripped. Production builds set
+// VITE_API_BASE to the absolute backend URL (e.g. https://sentinel-g.duckdns.org)
+// — Day-28 Oracle deploy. The resulting fetch call hits the FastAPI route
+// directly, no proxy involved.
+const API_BASE =
+  (import.meta.env.VITE_API_BASE as string | undefined)?.replace(/\/$/, "") ??
+  "/api";
 const TOKEN_KEY = "sentinelg.jwt";
 
 function bearerHeader(): HeadersInit {
