@@ -9,14 +9,14 @@
       "evidence_signal_count": 18,
       "provenance_signal_count": 18,
       "report_bytes": 6048,
-      "report_id": "5fd0bdde-66f7-432e-a075-b4b0a6f2a1ac"
+      "report_id": "8f8e5219-d49e-4f52-b2f2-33ecc387b720"
     },
     "timings_sec": {
-      "analyse": 0.02031600000918843,
-      "provenance": 0.009142299997620285,
-      "report": 0.07414569999673404
+      "analyse": 0.1746130000000221,
+      "provenance": 0.005433700000025965,
+      "report": 0.07684080000001359
     },
-    "total_sec": 0.10360400000354275,
+    "total_sec": 0.25688750000006166,
     "ok": true,
     "band_match": true
   },
@@ -29,15 +29,15 @@
       "data_confidence": 80,
       "evidence_signal_count": 11,
       "provenance_signal_count": 11,
-      "report_bytes": 5890,
-      "report_id": "da403ae3-9574-4dd8-b301-db3803c3f124"
+      "report_bytes": 5891,
+      "report_id": "4ff38950-1d44-44f9-a193-b51a891d1c59"
     },
     "timings_sec": {
-      "analyse": 0.010565899996436201,
-      "provenance": 0.0063535000081174076,
-      "report": 0.04312400000344496
+      "analyse": 0.008065999999985252,
+      "provenance": 0.004899099999988721,
+      "report": 0.03115730000001804
     },
-    "total_sec": 0.06004340000799857,
+    "total_sec": 0.04412239999999201,
     "ok": true,
     "band_match": true
   },
@@ -52,15 +52,15 @@
           "data_confidence": 65,
           "evidence_signal_count": 3,
           "provenance_signal_count": 3,
-          "report_bytes": 3988,
-          "report_id": "16577f2c-951e-49e0-a230-aa76b0cc6e15"
+          "report_bytes": 3989,
+          "report_id": "7664a90d-30e6-4ef3-97f3-dc0fb02b1f6c"
         },
         "timings_sec": {
-          "analyse": 0.010114200005773455,
-          "provenance": 0.005721500012441538,
-          "report": 0.03394559999287594
+          "analyse": 0.006877299999928255,
+          "provenance": 0.003855499999986023,
+          "report": 0.021302100000070823
         },
-        "total_sec": 0.049781300011090934,
+        "total_sec": 0.0320348999999851,
         "ok": true,
         "band_match": true
       },
@@ -73,15 +73,15 @@
           "data_confidence": 45,
           "evidence_signal_count": 4,
           "provenance_signal_count": 4,
-          "report_bytes": 4693,
-          "report_id": "9d0236c0-9df4-479b-88fa-501a36134a30"
+          "report_bytes": 4698,
+          "report_id": "1561d1d7-e978-47b0-9c34-160b4f1d6a9a"
         },
         "timings_sec": {
-          "analyse": 0.009776199993211776,
-          "provenance": 0.005862499994691461,
-          "report": 0.03815990001021419
+          "analyse": 0.006828400000017609,
+          "provenance": 0.0035154999999349457,
+          "report": 0.02348979999999301
         },
-        "total_sec": 0.053798599998117425,
+        "total_sec": 0.033833699999945566,
         "ok": true,
         "band_match": true
       },
@@ -95,14 +95,14 @@
           "evidence_signal_count": 3,
           "provenance_signal_count": 3,
           "report_bytes": 4012,
-          "report_id": "0da3648f-c782-4577-9b1f-96c4b91c6d99"
+          "report_id": "592388e2-c849-4323-8ff5-bbfd4e9363d4"
         },
         "timings_sec": {
-          "analyse": 0.010148500005016103,
-          "provenance": 0.0045886000007158145,
-          "report": 0.031118600003537722
+          "analyse": 0.007309599999985039,
+          "provenance": 0.0037535000000161745,
+          "report": 0.020255499999962012
         },
-        "total_sec": 0.04585570000926964,
+        "total_sec": 0.031318599999963226,
         "ok": true,
         "band_match": true
       }
@@ -116,7 +116,7 @@
       "ok": true
     }
   },
-  "total_elapsed_sec": 3.004224599993904,
+  "total_elapsed_sec": 6.2550818999999365,
   "total_budget_sec": 180.0,
   "pass": true
 }
