@@ -28,10 +28,6 @@ import logging
 from typing import Iterable
 
 from backend.app.ingest.cersai import CERSAIFixtureSource
-from backend.app.ingest.opencorporates import (
-    OpenCorporatesKeyMissingError,
-    OpenCorporatesSource,
-)
 from backend.app.ingest.schemas import CompanyBundle, RawCharge
 from backend.app.ingest.sources import (
     CERSAIScraper,
@@ -52,24 +48,19 @@ class CompositeCompanySource:
     def __init__(
         self,
         primary: MCA21V3Source | None = None,
-        secondary: OpenCorporatesSource | None = None,
         fallback: CompanySource | None = None,
         cersai: CERSAIScraper | CERSAIFixtureSource | None = None,
     ) -> None:
         self.primary = primary or MCA21V3Source()
-        # PRD §10 free-source add-on (Phase A): OpenCorporates as the
-        # second-tier primary. Skipped if its key is in placeholder mode.
-        self.secondary = secondary or OpenCorporatesSource()
         self.fallback = fallback or FixtureSource()
         self.cersai = cersai or CERSAIFixtureSource()
 
     async def fetch_bundle(self, cin: str) -> CompanyBundle | None:
-        # Tier 1 — paid MCA21 V3 (full bundle + charges).
         primary_bundle: CompanyBundle | None = None
         try:
             primary_bundle = await self.primary.fetch_bundle(cin)
         except MCA21KeyMissingError:
-            logger.debug("MCA21 has no real key; trying %s", self.secondary.name)
+            logger.debug("MCA21 has no real key; falling through to %s", self.fallback.name)
         except Exception as exc:  # network errors, parse failures, etc.
             logger.warning("MCA21 fetch failed for %s: %s", cin, exc)
 
@@ -85,29 +76,6 @@ class CompositeCompanySource:
                 primary_bundle = primary_bundle.model_copy(update={"charges": merged})
             return primary_bundle
 
-        # Tier 2 — OpenCorporates (free auth-key, master + directors only).
-        secondary_bundle: CompanyBundle | None = None
-        try:
-            secondary_bundle = await self.secondary.fetch_bundle(cin)
-        except OpenCorporatesKeyMissingError:
-            logger.debug(
-                "OpenCorporates has no real key; falling through to %s",
-                self.fallback.name,
-            )
-        except Exception as exc:
-            logger.warning("OpenCorporates fetch failed for %s: %s", cin, exc)
-
-        if secondary_bundle is not None:
-            # OpenCorporates doesn't publish charges; the CERSAI tier still
-            # gets a chance to layer them on the bundle.
-            extras = await self._extra_charges(cin)
-            if extras:
-                secondary_bundle = secondary_bundle.model_copy(
-                    update={"charges": list(extras)},
-                )
-            return secondary_bundle
-
-        # Tier 3 — FixtureSource (offline demo backbone).
         return await self.fallback.fetch_bundle(cin)
 
     async def list_available_cins(self) -> list[str]:

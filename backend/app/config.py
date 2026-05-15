@@ -45,13 +45,6 @@ class Settings(BaseSettings):
     cersai_api_key: str = "PLACEHOLDER_CERSAI_KEY"
     bse_sme_api_key: str = "PLACEHOLDER_BSE_KEY"
 
-    # PRD §10 free-source add-on: OpenCorporates as second-tier primary
-    # in CompositeCompanySource (between paid MCA21 V3 and FixtureSource).
-    # Free signup at opencorporates.com/users/sign_up; 1000 req/day on
-    # the auth-key tier. Placeholder mode raises OpenCorporatesKeyMissingError
-    # so the composite skips this tier cleanly.
-    opencorporates_api_key: str = "PLACEHOLDER_OPENCORPORATES_KEY"
-
     # PRD §10 Day 20 — live source-side polling. asyncio.create_task pattern
     # (PRD §2.1 compliant). Disabled in tests to keep them deterministic.
     scheduler_enabled: bool = True

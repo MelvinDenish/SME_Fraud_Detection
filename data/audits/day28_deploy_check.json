@@ -9,19 +9,19 @@
       "label": "secret_scan",
       "ok": true,
       "rc": 0,
-      "elapsed_sec": 0.3951817999986815,
+      "elapsed_sec": 0.5557609999996203,
       "tail": []
     },
     {
       "label": "seed_dry_run",
       "ok": true,
       "rc": 0,
-      "elapsed_sec": 0.578358599999774,
+      "elapsed_sec": 0.6050135999976192,
       "tail": [
         "  elapsed_seconds          0.01",
         "  prd_budget_seconds       60",
         "================================================================",
-        "2026-05-15 23:52:16,899 INFO seed | Fixture assembly took 0.01 s"
+        "2026-05-15 14:46:53,283 INFO seed | Fixture assembly took 0.01 s"
       ],
       "under_60s_budget": true
     }
