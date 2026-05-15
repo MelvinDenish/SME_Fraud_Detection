@@ -2,12 +2,15 @@ import { useQueries } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { AnalyseResponse, BAND_PALETTE, api } from "../lib/api";
 
-// The fixture set ships three synthetic ITC-carousel nodes (PRD §10 Day 6).
-// They share addresses and bank branches so the M10 hypergraph fires.
+// Three CINs from the WD / NCLT seed set that map to ITC-style risk:
+// each /analyse call lands at CRITICAL via the Day-12 override path so
+// the carousel page lights up end-to-end on cold fixtures. The 7-node
+// synthetic ring at infra/seeds/itc_carousel/ring.json renders alongside
+// in the Graph Explorer; this view shows the SME-side of the carousel.
 const CAROUSEL_CINS: { cin: string; role: string }[] = [
-  { cin: "U74999DL2012PTC230001", role: "Node A — Issuer" },
-  { cin: "U74999DL2012PTC230002", role: "Node B — Recipient" },
-  { cin: "U74999DL2012PTC230003", role: "Missing Trader C" },
+  { cin: "U27109MH2018PTC312456", role: "Node A — Issuer (PNB WD-flagged)" },
+  { cin: "U46101MH2017PTC289123", role: "Node B — Recipient (Canara WD-flagged)" },
+  { cin: "U46190MH2019PTC295432", role: "Node C — Conduit (suit filed)" },
 ];
 
 const cardStyle: React.CSSProperties = {

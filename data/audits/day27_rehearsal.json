@@ -1,0 +1,122 @@
+{
+  "scenario_1_ilfs": {
+    "cin": "U45201MH2005PTC155294",
+    "expected_band": "CRITICAL",
+    "headline": {
+      "fraud_risk_score": 75.0,
+      "risk_band": "CRITICAL",
+      "data_confidence": 92,
+      "evidence_signal_count": 18,
+      "provenance_signal_count": 18,
+      "report_bytes": 6048,
+      "report_id": "5fd0bdde-66f7-432e-a075-b4b0a6f2a1ac"
+    },
+    "timings_sec": {
+      "analyse": 0.02031600000918843,
+      "provenance": 0.009142299997620285,
+      "report": 0.07414569999673404
+    },
+    "total_sec": 0.10360400000354275,
+    "ok": true,
+    "band_match": true
+  },
+  "scenario_2_amtek": {
+    "cin": "U27101MH2010PTC215432",
+    "expected_band": "CRITICAL",
+    "headline": {
+      "fraud_risk_score": 75.0,
+      "risk_band": "CRITICAL",
+      "data_confidence": 80,
+      "evidence_signal_count": 11,
+      "provenance_signal_count": 11,
+      "report_bytes": 5890,
+      "report_id": "da403ae3-9574-4dd8-b301-db3803c3f124"
+    },
+    "timings_sec": {
+      "analyse": 0.010565899996436201,
+      "provenance": 0.0063535000081174076,
+      "report": 0.04312400000344496
+    },
+    "total_sec": 0.06004340000799857,
+    "ok": true,
+    "band_match": true
+  },
+  "scenario_3_itc_carousel": {
+    "cards": [
+      {
+        "cin": "U27109MH2018PTC312456",
+        "expected_band": "CRITICAL",
+        "headline": {
+          "fraud_risk_score": 75.0,
+          "risk_band": "CRITICAL",
+          "data_confidence": 65,
+          "evidence_signal_count": 3,
+          "provenance_signal_count": 3,
+          "report_bytes": 3988,
+          "report_id": "16577f2c-951e-49e0-a230-aa76b0cc6e15"
+        },
+        "timings_sec": {
+          "analyse": 0.010114200005773455,
+          "provenance": 0.005721500012441538,
+          "report": 0.03394559999287594
+        },
+        "total_sec": 0.049781300011090934,
+        "ok": true,
+        "band_match": true
+      },
+      {
+        "cin": "U46101MH2017PTC289123",
+        "expected_band": "CRITICAL",
+        "headline": {
+          "fraud_risk_score": 75.0,
+          "risk_band": "CRITICAL",
+          "data_confidence": 45,
+          "evidence_signal_count": 4,
+          "provenance_signal_count": 4,
+          "report_bytes": 4693,
+          "report_id": "9d0236c0-9df4-479b-88fa-501a36134a30"
+        },
+        "timings_sec": {
+          "analyse": 0.009776199993211776,
+          "provenance": 0.005862499994691461,
+          "report": 0.03815990001021419
+        },
+        "total_sec": 0.053798599998117425,
+        "ok": true,
+        "band_match": true
+      },
+      {
+        "cin": "U46190MH2019PTC295432",
+        "expected_band": "CRITICAL",
+        "headline": {
+          "fraud_risk_score": 75.0,
+          "risk_band": "CRITICAL",
+          "data_confidence": 45,
+          "evidence_signal_count": 3,
+          "provenance_signal_count": 3,
+          "report_bytes": 4012,
+          "report_id": "0da3648f-c782-4577-9b1f-96c4b91c6d99"
+        },
+        "timings_sec": {
+          "analyse": 0.010148500005016103,
+          "provenance": 0.0045886000007158145,
+          "report": 0.031118600003537722
+        },
+        "total_sec": 0.04585570000926964,
+        "ok": true,
+        "band_match": true
+      }
+    ],
+    "ring_fixture": {
+      "ring_id": "SYN-ITC-RING-001",
+      "node_count": 7,
+      "edge_count": 7,
+      "claim_count": 8,
+      "director_overlap_present": true,
+      "ok": true
+    }
+  },
+  "total_elapsed_sec": 3.004224599993904,
+  "total_budget_sec": 180.0,
+  "pass": true
+}
