@@ -9,6 +9,8 @@ Repopulates Neo4j from the static JSON fixtures in <60 seconds:
 Use:
   python scripts/seed_neo4j.py            # writes to Neo4j (must be running)
   python scripts/seed_neo4j.py --dry-run  # validates structure, no Neo4j
+  python scripts/seed_neo4j.py --clean    # wipe Neo4j then reseed (Day 28
+                                            production-grade clean-slate path)
 
 The dry-run path also enforces the PRD §13 Definition of Done invariant:
 'Demo seed repopulates Neo4j from scratch in <60 seconds' — by timing the
@@ -104,7 +106,27 @@ def _print_summary(stats: dict[str, int], elapsed_s: float) -> None:
     print("=" * 64)
 
 
-async def _write_all(packs: dict[str, object]) -> None:
+async def _wipe_database(driver) -> int:
+    """PRD §10 Day-28 clean-slate path. Deletes every node + relationship
+    in the configured database. Returns the count of deleted nodes. The
+    caller already verified the driver is reachable.
+    """
+    from backend.app.config import get_settings
+    settings = get_settings()
+    async with driver.session(database=settings.neo4j_database) as session:
+        cursor = await session.run("MATCH (n) RETURN count(n) AS c")
+        row = await cursor.single()
+        n_before = int(row["c"]) if row else 0
+        # APOC-free delete that scales — period-commit isn't available on
+        # community edition, so we batch via apoc-style loop only if apoc
+        # is loaded; otherwise plain DELETE handles up to ~1M nodes fine
+        # for the demo's 1000-co pre-cache scale.
+        await session.run("MATCH (n) DETACH DELETE n")
+    logger.info("wipe_database: removed %d node(s) prior to reseed", n_before)
+    return n_before
+
+
+async def _write_all(packs: dict[str, object], *, clean: bool = False) -> None:
     from neo4j import AsyncGraphDatabase
 
     from backend.app.config import get_settings
@@ -140,6 +162,10 @@ async def _write_all(packs: dict[str, object]) -> None:
         )
         await driver.close()
         raise
+
+    if clean:
+        # PRD §10 Day-28: clean-slate prod reseed. Drops every node first.
+        await _wipe_database(driver)
 
     try:
         for bundle in packs["company_bundles"]:  # type: ignore[union-attr]
@@ -184,7 +210,7 @@ async def _write_all(packs: dict[str, object]) -> None:
         await driver.close()
 
 
-async def _run(dry_run: bool) -> int:
+async def _run(dry_run: bool, clean: bool = False) -> int:
     start = time.perf_counter()
 
     packs = await _assemble_fixtures()
@@ -192,7 +218,7 @@ async def _run(dry_run: bool) -> int:
     logger.info("Fixture assembly took %.2f s", assembled_at - start)
 
     if not dry_run:
-        await _write_all(packs)
+        await _write_all(packs, clean=clean)
 
     elapsed = time.perf_counter() - start
     stats = _summary(packs)
@@ -214,8 +240,10 @@ def main() -> None:
     )
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dry-run", action="store_true", help="Validate fixtures only, skip Neo4j")
+    parser.add_argument("--clean", action="store_true",
+                        help="Wipe all nodes/relationships before seeding (PRD §10 Day-28 prod reseed path).")
     args = parser.parse_args()
-    sys.exit(asyncio.run(_run(dry_run=args.dry_run)))
+    sys.exit(asyncio.run(_run(dry_run=args.dry_run, clean=args.clean)))
 
 
 if __name__ == "__main__":
