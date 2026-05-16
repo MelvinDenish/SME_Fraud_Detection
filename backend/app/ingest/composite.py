@@ -28,6 +28,7 @@ import logging
 from typing import Iterable
 
 from backend.app.ingest.cersai import CERSAIFixtureSource
+from backend.app.ingest.data_gov_in import DataGovInBulkSource
 from backend.app.ingest.mca_public import (
     MCAPublicFetcherNotConfiguredError,
     MCAPublicScraper,
@@ -55,6 +56,7 @@ class CompositeCompanySource:
         secondary: MCAPublicScraper | None = None,
         fallback: CompanySource | None = None,
         cersai: CERSAIScraper | CERSAIFixtureSource | None = None,
+        bulk_universe: DataGovInBulkSource | None = None,
     ) -> None:
         self.primary = primary or MCA21V3Source()
         # PRD §10 free-source plan, Phase A — MCA Public Portal scraper.
@@ -65,6 +67,11 @@ class CompositeCompanySource:
         self.secondary = secondary or MCAPublicScraper()
         self.fallback = fallback or FixtureSource()
         self.cersai = cersai or CERSAIFixtureSource()
+        # PRD §10 free-source plan, Phase C — data.gov.in bulk MCA dump.
+        # Provides `list_available_cins()` with the full annual universe
+        # when the operator has run `--refresh`. With an empty cache_dir
+        # this source returns [] and the composite falls back to fixture.
+        self.bulk_universe = bulk_universe or DataGovInBulkSource()
 
     async def fetch_bundle(self, cin: str) -> CompanyBundle | None:
         # Tier 1 — paid MCA21 V3 (full bundle including financials).
@@ -114,8 +121,19 @@ class CompositeCompanySource:
         return bundle.model_copy(update={"charges": merged})
 
     async def list_available_cins(self) -> list[str]:
-        # MCA21 has no enumeration; fall back to fixture's list.
-        return await self.fallback.list_available_cins()
+        # Bulk universe first (data.gov.in CSV cache), fixture as backbone.
+        # MCA21 has no enumeration endpoint; the public scraper has no
+        # listing capability either. We union both lists so demo CINs
+        # remain reachable even after a real CSV refresh is loaded.
+        try:
+            bulk = await self.bulk_universe.list_available_cins()
+        except Exception as exc:
+            logger.warning("data.gov.in bulk list failed: %s", exc)
+            bulk = []
+        fallback = await self.fallback.list_available_cins()
+        if not bulk:
+            return fallback
+        return sorted(set(bulk) | set(fallback))
 
     async def _extra_charges(self, cin: str) -> Iterable[RawCharge]:
         if self.cersai is None:
