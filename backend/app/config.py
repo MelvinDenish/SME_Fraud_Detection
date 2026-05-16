@@ -45,6 +45,12 @@ class Settings(BaseSettings):
     cersai_api_key: str = "PLACEHOLDER_CERSAI_KEY"
     bse_sme_api_key: str = "PLACEHOLDER_BSE_KEY"
 
+    # PRD §10 free-source plan, Phase A — MCA Public Portal scraper.
+    # Replaces both paid MCA21 V3 and CERSAI with free Playwright scraping
+    # of mca.gov.in. The session-dir holds the captcha-bootstrap cookies;
+    # gitignored so they never leak into a commit. See docs/INGEST_MCA_PUBLIC.md.
+    mca_public_session_dir: str = "./.mca_session"
+
     # PRD §10 Day 20 — live source-side polling. asyncio.create_task pattern
     # (PRD §2.1 compliant). Disabled in tests to keep them deterministic.
     scheduler_enabled: bool = True

@@ -28,6 +28,10 @@ import logging
 from typing import Iterable
 
 from backend.app.ingest.cersai import CERSAIFixtureSource
+from backend.app.ingest.mca_public import (
+    MCAPublicFetcherNotConfiguredError,
+    MCAPublicScraper,
+)
 from backend.app.ingest.schemas import CompanyBundle, RawCharge
 from backend.app.ingest.sources import (
     CERSAIScraper,
@@ -48,35 +52,66 @@ class CompositeCompanySource:
     def __init__(
         self,
         primary: MCA21V3Source | None = None,
+        secondary: MCAPublicScraper | None = None,
         fallback: CompanySource | None = None,
         cersai: CERSAIScraper | CERSAIFixtureSource | None = None,
     ) -> None:
         self.primary = primary or MCA21V3Source()
+        # PRD §10 free-source plan, Phase A — MCA Public Portal scraper.
+        # `MCAPublicScraper()` with no fetcher raises
+        # MCAPublicFetcherNotConfiguredError on first call; composite
+        # treats that as 'skip this tier' (same as MCA21KeyMissingError).
+        # Production wiring injects MCAPublicPlaywrightFetcher.
+        self.secondary = secondary or MCAPublicScraper()
         self.fallback = fallback or FixtureSource()
         self.cersai = cersai or CERSAIFixtureSource()
 
     async def fetch_bundle(self, cin: str) -> CompanyBundle | None:
+        # Tier 1 — paid MCA21 V3 (full bundle including financials).
         primary_bundle: CompanyBundle | None = None
         try:
             primary_bundle = await self.primary.fetch_bundle(cin)
         except MCA21KeyMissingError:
-            logger.debug("MCA21 has no real key; falling through to %s", self.fallback.name)
+            logger.debug("MCA21 has no real key; trying %s", self.secondary.name)
         except Exception as exc:  # network errors, parse failures, etc.
             logger.warning("MCA21 fetch failed for %s: %s", cin, exc)
 
         if primary_bundle is not None:
-            extras = await self._extra_charges(cin)
-            if extras:
-                merged = list(primary_bundle.charges)
-                seen = {c.charge_id for c in merged}
-                for c in extras:
-                    if c.charge_id not in seen:
-                        merged.append(c)
-                        seen.add(c.charge_id)
-                primary_bundle = primary_bundle.model_copy(update={"charges": merged})
-            return primary_bundle
+            return await self._fold_extra_charges(primary_bundle, cin)
 
+        # Tier 2 — free MCA Public Portal Playwright scrape (master +
+        # signatories + charges). No financials.
+        secondary_bundle: CompanyBundle | None = None
+        try:
+            secondary_bundle = await self.secondary.fetch_bundle(cin)
+        except MCAPublicFetcherNotConfiguredError:
+            logger.debug(
+                "MCA public scraper has no fetcher; falling through to %s",
+                self.fallback.name,
+            )
+        except Exception as exc:
+            logger.warning("MCA public scrape failed for %s: %s", cin, exc)
+
+        if secondary_bundle is not None:
+            return await self._fold_extra_charges(secondary_bundle, cin)
+
+        # Tier 3 — FixtureSource (offline demo backbone).
         return await self.fallback.fetch_bundle(cin)
+
+    async def _fold_extra_charges(
+        self, bundle: CompanyBundle, cin: str,
+    ) -> CompanyBundle:
+        """Merge any extra CERSAI charges onto a freshly-fetched bundle."""
+        extras = await self._extra_charges(cin)
+        if not extras:
+            return bundle
+        merged = list(bundle.charges)
+        seen = {c.charge_id for c in merged}
+        for c in extras:
+            if c.charge_id not in seen:
+                merged.append(c)
+                seen.add(c.charge_id)
+        return bundle.model_copy(update={"charges": merged})
 
     async def list_available_cins(self) -> list[str]:
         # MCA21 has no enumeration; fall back to fixture's list.

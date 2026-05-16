@@ -74,6 +74,10 @@ infra/.neo4j-data/
 infra/.neo4j-logs/
 infra/.neo4j-plugins/
 
+# --- MCA Public scraper session cache (Phase A free-source ingestion) -----
+# Captcha-bootstrapped session cookies — never commit, they expire anyway.
+.mca_session/
+
 # --- Misc -------------------------------------------------------------------
 .docx_extract/
 *.tmp
