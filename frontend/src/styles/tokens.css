@@ -1,0 +1,176 @@
+/* Sentinel-G design tokens — Editorial / Investigative aesthetic.
+ * The visual language deliberately evokes long-form financial journalism
+ * (FT Investigations, The Economist Briefing, Bloomberg Businessweek) over
+ * a generic SaaS dashboard. Parchment canvas, deep ink type, gold hairline
+ * rules, serif display, sans body, mono for numerics. Risk-band hues from
+ * lib/api.ts are tuned to live legibly on this paper. */
+
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Public+Sans:ital,wght@0,300..800;1,400..700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+:root {
+  /* Type stack — characterful, not generic. */
+  --font-display: 'Fraunces', 'Georgia', serif;
+  --font-body: 'Public Sans', 'Helvetica Neue', sans-serif;
+  --font-mono: 'JetBrains Mono', 'IBM Plex Mono', ui-monospace, monospace;
+
+  /* Type scale — projected-screen-readable; primary numbers ≥ 18 px. */
+  --t-eyebrow: 0.72rem;     /* 11.5px — all-caps marginalia */
+  --t-body: 1rem;           /* 16px */
+  --t-meta: 0.875rem;       /* 14px — caption / labels */
+  --t-h3: 1.35rem;          /* 21.6px — card headers */
+  --t-h2: 2rem;             /* 32px — section headers */
+  --t-h1: 2.8rem;           /* 44.8px — page title */
+  --t-hero: 5.5rem;         /* 88px — primary score numeral */
+
+  /* Editorial canvas — warm parchment over deep ink, not slate-on-white. */
+  --paper: #f3ead2;             /* warm parchment */
+  --paper-elevated: #ece1c1;    /* tinted card surface */
+  --paper-deep: #ddd0ab;        /* gutter / inset */
+  --ink: #0e0d0a;               /* slightly warm near-black */
+  --ink-2: #2a2620;             /* secondary copy */
+  --ink-3: #585045;             /* tertiary / muted */
+  --ink-4: #8a7d68;             /* meta / disabled */
+  --rule: #1a1a1a;              /* hairline structural rule (~0.5px ink) */
+  --rule-soft: #c6b890;         /* paper-tone divider */
+  --accent-gold: #a07127;       /* editorial accent — section glyphs, marks */
+  --accent-gold-soft: #d4b56e;  /* highlight tint */
+
+  /* Risk-band hues (mirror lib/api.ts, named for CSS consumers). */
+  --risk-critical: #7f1d1d;
+  --risk-high: #b45309;
+  --risk-medium: #a16207;
+  --risk-low: #15803d;
+
+  /* Shadows — paper-on-paper, not synthetic SaaS depth. */
+  --shadow-rule: 0 1px 0 var(--rule);
+  --shadow-card: 0 1px 0 var(--rule-soft), 0 18px 32px -28px rgba(14,13,10,0.55);
+  --shadow-deep: 0 1px 0 var(--rule), 0 30px 60px -28px rgba(14,13,10,0.75);
+
+  /* Spacing — 8-step ratio. */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+  --s-7: 48px;
+  --s-8: 64px;
+  --s-9: 96px;
+
+  /* Motion — one orchestrated reveal, never gratuitous. */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.7, 0, 0.3, 1);
+  --d-quick: 180ms;
+  --d-base: 320ms;
+  --d-reveal: 640ms;
+}
+
+/* Reset chrome to the editorial canvas. */
+html, body, #root {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-feature-settings: 'ss01', 'cv11';
+  letter-spacing: 0.005em;
+  margin: 0;
+  min-height: 100vh;
+}
+
+/* Newspaper-style grain. Subtle — only readable against full-bleed
+ * surfaces, never compromises legibility. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' seed='3'/><feColorMatrix values='0 0 0 0 0.06 0 0 0 0 0.05 0 0 0 0 0.04 0 0 0 0.045 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  mix-blend-mode: multiply;
+  opacity: 0.55;
+}
+
+#root > * {
+  position: relative;
+  z-index: 2;
+}
+
+/* Typography defaults. */
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  font-weight: 460;
+  font-variation-settings: 'opsz' 96, 'SOFT' 30, 'WONK' 0;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  color: var(--ink);
+  margin: 0;
+}
+
+h1 { font-size: var(--t-h1); }
+h2 { font-size: var(--t-h2); }
+h3 { font-size: var(--t-h3); letter-spacing: -0.01em; }
+
+p { color: var(--ink-2); line-height: 1.55; margin: 0; }
+
+code, .mono, .num {
+  font-family: var(--font-mono);
+  font-feature-settings: 'tnum', 'zero';
+}
+
+/* All-caps editorial marginalia (small-caps eyebrow label). */
+.eyebrow {
+  font-family: var(--font-body);
+  font-size: var(--t-eyebrow);
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+/* Hairline gold rule, the editorial section separator. */
+.rule-gold {
+  height: 1px;
+  width: 100%;
+  background: linear-gradient(to right, transparent, var(--accent-gold) 8%, var(--accent-gold) 92%, transparent);
+}
+
+/* Hairline ink rule, structural. */
+.rule-ink {
+  height: 1px;
+  width: 100%;
+  background: var(--rule);
+}
+
+/* Editorial drop-cap utility — first FraudSignal in evidence chain. */
+.dropcap::first-letter {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 3.1em;
+  float: left;
+  line-height: 0.88;
+  padding: 4px 8px 0 0;
+  color: var(--accent-gold);
+  font-variation-settings: 'opsz' 144, 'SOFT' 20, 'WONK' 1;
+}
+
+/* Reduce motion when the OS asks. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Focus outlines — gold halo, never blurred-out. */
+:focus-visible {
+  outline: 2px solid var(--accent-gold);
+  outline-offset: 2px;
+}
+
+/* Buttons inherit family but never the generic look. */
+button {
+  font-family: inherit;
+  font-feature-settings: inherit;
+}
