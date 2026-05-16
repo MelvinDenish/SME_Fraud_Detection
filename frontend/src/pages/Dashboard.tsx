@@ -61,6 +61,11 @@ function CountUp({
   const mv = useMotionValue(0);
   const rounded = useTransform(mv, (v: number) => v.toFixed(decimals));
   useEffect(() => {
+    // Reset to 0 each time `value` changes so a rapid CIN switch always
+    // counts up from zero rather than from the in-flight position of the
+    // prior (still-running) animation. Without this, double-clicking demo
+    // chips makes the hero numeral jump to a mid-value and crawl from there.
+    mv.set(0);
     const controls = animate(mv, value, { duration, ease: [0.16, 1, 0.3, 1] });
     return () => controls.stop();
   }, [mv, value, duration]);

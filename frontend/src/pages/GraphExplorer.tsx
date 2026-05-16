@@ -175,12 +175,15 @@ export default function GraphExplorer() {
     };
   }, [nodes, links]);
 
-  // Zoom-to-fit — derived from the live node positions every render. We
-  // pad the bounding box so the outermost labels never clip.
-  const viewBox = useMemo(() => {
-    if (nodes.length === 0) return `0 0 ${WIDTH} ${HEIGHT}`;
-    const xs = nodes.map((n) => n.x ?? WIDTH / 2);
-    const ys = nodes.map((n) => n.y ?? HEIGHT / 2);
+  // Zoom-to-fit — derived from the live node positions. We recompute every
+  // render rather than memoising on `nodes.length`: x/y are populated by
+  // the simulation post-mount and only known after the first tick. The
+  // tick-driven re-render rate is bounded by d3's alphaDecay, so the camera
+  // settles naturally without jitter at the ~20-node demo scale.
+  const xs = nodes.map((n) => n.x).filter((v): v is number => typeof v === "number");
+  const ys = nodes.map((n) => n.y).filter((v): v is number => typeof v === "number");
+  const viewBox = (() => {
+    if (xs.length === 0 || ys.length === 0) return `0 0 ${WIDTH} ${HEIGHT}`;
     const minX = Math.min(...xs) - 60;
     const minY = Math.min(...ys) - 50;
     const maxX = Math.max(...xs) + 60;
@@ -188,9 +191,8 @@ export default function GraphExplorer() {
     const w = Math.max(WIDTH, maxX - minX);
     const h = Math.max(HEIGHT, maxY - minY);
     return `${minX} ${minY} ${w} ${h}`;
-    // Recompute when the node count changes; per-tick recomputation would
-    // jitter the frame; the bounding box stabilises quickly anyway.
-  }, [nodes.length]);
+  })();
+  const vbParts = viewBox.split(" ");
 
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -384,10 +386,10 @@ export default function GraphExplorer() {
 
               {/* Subtle grain over the canvas. */}
               <rect
-                x={viewBox.split(" ")[0]}
-                y={viewBox.split(" ")[1]}
-                width={viewBox.split(" ")[2]}
-                height={viewBox.split(" ")[3]}
+                x={vbParts[0]}
+                y={vbParts[1]}
+                width={vbParts[2]}
+                height={vbParts[3]}
                 fill="url(#paper-grain)"
                 pointerEvents="none"
               />
