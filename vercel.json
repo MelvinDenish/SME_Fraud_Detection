@@ -1,0 +1,10 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "vite",
+  "buildCommand": "cd frontend && npm install && npm run build",
+  "outputDirectory": "frontend/dist",
+  "installCommand": "echo deferred",
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "https://sentinel-g.duckdns.org/$1" }
+  ]
+}
