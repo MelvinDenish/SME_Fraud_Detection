@@ -9,27 +9,39 @@ import UploadPage from "./pages/Upload";
 import Reports from "./pages/Reports";
 import Login from "./pages/Login";
 
+// Editorial masthead — dark ink band sitting over the parchment canvas.
+// Type tokens cascade from styles/tokens.css; no font override here.
+
 const navStyle: React.CSSProperties = {
   display: "flex",
-  gap: "1rem",
-  padding: "1rem 2rem",
-  background: "#0f172a",
-  color: "white",
+  gap: "var(--s-4)",
+  padding: "var(--s-4) var(--s-7)",
+  background: "var(--ink)",
+  color: "var(--paper)",
   position: "sticky",
   top: 0,
   zIndex: 10,
   alignItems: "center",
+  borderBottom: "1px solid var(--accent-gold)",
 };
 
 const linkBase: React.CSSProperties = {
-  color: "white",
+  color: "var(--paper)",
   textDecoration: "none",
-  padding: "0.25rem 0.5rem",
-  borderRadius: 4,
+  padding: "6px 10px",
+  fontFamily: "var(--font-body)",
+  fontSize: "0.78rem",
+  letterSpacing: "0.18em",
+  textTransform: "uppercase",
+  fontWeight: 600,
+  borderBottom: "1px solid transparent",
+  transition: "border-color var(--d-quick) var(--ease-out), color var(--d-quick)",
 };
 
 function navLinkStyle({ isActive }: { isActive: boolean }): React.CSSProperties {
-  return isActive ? { ...linkBase, background: "#1e3a8a" } : linkBase;
+  return isActive
+    ? { ...linkBase, borderBottomColor: "var(--accent-gold)", color: "var(--accent-gold-soft)" }
+    : linkBase;
 }
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
@@ -47,30 +59,104 @@ function AuthControls() {
     return <NavLink to="/login" style={navLinkStyle}>Log in</NavLink>;
   }
   return (
-    <span style={{ display: "flex", gap: 8, alignItems: "center", fontSize: ".85rem" }}>
-      <span style={{ color: "#cbd5e1" }}>{user?.email ?? "…"}</span>
+    <span
+      style={{
+        display: "flex",
+        gap: 12,
+        alignItems: "center",
+        fontSize: "0.78rem",
+      }}
+    >
+      <span
+        style={{
+          color: "var(--paper-deep)",
+          fontFamily: "var(--font-mono)",
+          letterSpacing: 0,
+          textTransform: "none",
+        }}
+      >
+        {user?.email ?? "…"}
+      </span>
       <button
         onClick={logout}
-        style={{ padding: "0.3rem 0.6rem", background: "#334155", color: "white", border: 0, borderRadius: 4, cursor: "pointer" }}
-      >Log out</button>
+        style={{
+          padding: "5px 12px",
+          background: "transparent",
+          color: "var(--paper)",
+          border: "1px solid var(--paper-deep)",
+          fontFamily: "var(--font-body)",
+          fontWeight: 600,
+          letterSpacing: "0.14em",
+          textTransform: "uppercase",
+          fontSize: "0.7rem",
+          cursor: "pointer",
+        }}
+      >
+        Log out
+      </button>
     </span>
+  );
+}
+
+function Masthead() {
+  return (
+    <NavLink
+      to="/dashboard"
+      style={{
+        marginRight: "auto",
+        textDecoration: "none",
+        display: "flex",
+        alignItems: "baseline",
+        gap: "var(--s-3)",
+      }}
+    >
+      <span
+        style={{
+          fontFamily: "var(--font-display)",
+          fontWeight: 500,
+          fontVariationSettings: "'opsz' 144, 'SOFT' 30, 'WONK' 1",
+          fontSize: "1.5rem",
+          color: "var(--paper)",
+          letterSpacing: "-0.02em",
+        }}
+      >
+        Sentinel<span style={{ color: "var(--accent-gold)" }}>·</span>G
+      </span>
+      <span
+        style={{
+          fontFamily: "var(--font-body)",
+          fontSize: "0.65rem",
+          letterSpacing: "0.32em",
+          textTransform: "uppercase",
+          color: "var(--paper-deep)",
+        }}
+      >
+        Forensic Desk
+      </span>
+    </NavLink>
   );
 }
 
 export default function App() {
   return (
-    <div style={{ fontFamily: "system-ui, sans-serif", minHeight: "100vh", background: "#f1f5f9" }}>
+    <div style={{ minHeight: "100vh", background: "var(--paper)" }}>
       <nav style={navStyle}>
-        <strong style={{ marginRight: "auto" }}>Sentinel-G</strong>
-        <NavLink to="/dashboard" style={navLinkStyle}>Dashboard</NavLink>
-        <NavLink to="/graph" style={navLinkStyle}>Graph Explorer</NavLink>
-        <NavLink to="/itc" style={navLinkStyle}>ITC Carousel</NavLink>
+        <Masthead />
+        <NavLink to="/dashboard" style={navLinkStyle}>Dossier</NavLink>
+        <NavLink to="/graph" style={navLinkStyle}>Graph</NavLink>
+        <NavLink to="/itc" style={navLinkStyle}>ITC Ring</NavLink>
         <NavLink to="/evergreening" style={navLinkStyle}>Evergreening</NavLink>
         <NavLink to="/upload" style={navLinkStyle}>Upload</NavLink>
         <NavLink to="/reports" style={navLinkStyle}>Reports</NavLink>
         <AuthControls />
       </nav>
-      <main style={{ padding: "2rem", maxWidth: 1100, margin: "0 auto" }}>
+      <main
+        style={{
+          padding: "var(--s-7) var(--s-6) var(--s-9)",
+          maxWidth: 1180,
+          margin: "0 auto",
+        }}
+      >
         <Routes>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/login" element={<Login />} />
