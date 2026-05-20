@@ -137,9 +137,14 @@ async def _run_concurrency_stress() -> dict:
 
     from backend.app.api.analyse import router as analyse_router
     from backend.app.auth.jwt import create_access_token
+    from backend.tests.conftest import bypass_auth
 
     app = FastAPI()
     app.include_router(analyse_router)
+    # F4: /analyse is now auth-gated. The stress test's intent is to load
+    # the compute path, not exercise auth, so we override the dep with a
+    # stub user dict — same pattern as backend/tests/conftest.py.
+    bypass_auth(app)
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://stress.local") as client:

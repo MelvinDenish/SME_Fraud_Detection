@@ -16,10 +16,11 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from backend.app.api.upload_store import get_upload_store
 from backend.app.api.validators import CIN_PATH
+from backend.app.auth.deps import get_current_user
 from backend.app.ingest.benchmarks import BSEFixtureBenchmark
 from backend.app.ingest.composite import CompositeCompanySource
 from backend.app.ingest.nclt import NCLTFixtureSource
@@ -86,8 +87,15 @@ async def _propagation_lift(cin: str, seed_score: float) -> tuple[str, float]:
 
 
 @router.get("/{cin}")
-async def analyse(cin: CIN_PATH) -> dict:
-    """PRD §7.1 dual-output payload for one CIN, with upload overlay folded in."""
+async def analyse(
+    cin: CIN_PATH,
+    _user: dict = Depends(get_current_user),
+) -> dict:
+    """PRD §7.1 dual-output payload for one CIN, with upload overlay folded in.
+
+    Auth-gated (Day-19 JWT) — mirrors /report/{cin}. Bypass on this endpoint
+    was filed as F4 in docs/LOCAL_TEST_REPORT.md.
+    """
     bundle = await _company_source.fetch_bundle(cin)
     if bundle is None:
         raise HTTPException(
@@ -105,7 +113,10 @@ async def analyse(cin: CIN_PATH) -> dict:
 
 
 @router.get("/{cin}/provenance")
-async def provenance(cin: CIN_PATH) -> dict:
+async def provenance(
+    cin: CIN_PATH,
+    _user: dict = Depends(get_current_user),
+) -> dict:
     """Return the evidence chain in graph form: nodes + TRIGGERED_BY edges.
 
     Output shape:

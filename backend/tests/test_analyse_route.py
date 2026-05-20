@@ -5,12 +5,14 @@ from __future__ import annotations
 from fastapi.testclient import TestClient
 
 from backend.app.api.analyse import router
+from backend.tests.conftest import bypass_auth
 
 
 def _client() -> TestClient:
     from fastapi import FastAPI
     app = FastAPI()
     app.include_router(router)
+    bypass_auth(app)  # F4: /analyse now requires get_current_user
     return TestClient(app)
 
 

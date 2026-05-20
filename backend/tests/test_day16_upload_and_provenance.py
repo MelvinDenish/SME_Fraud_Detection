@@ -33,9 +33,11 @@ def _make_pdf_bytes(body_lines: list[str]) -> bytes:
 
 @pytest.fixture
 def client() -> TestClient:
+    from backend.tests.conftest import bypass_auth
     app = FastAPI()
     app.include_router(analyse_router)
     app.include_router(upload_router)
+    bypass_auth(app)  # F4: /analyse now requires get_current_user
     # Each test starts from a clean overlay state.
     get_upload_store().reset()
     return TestClient(app)

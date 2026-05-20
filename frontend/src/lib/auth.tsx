@@ -85,8 +85,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(resp.access_token);
   }, []);
 
-  const register = useCallback(async (email: string, password: string, role: string = "analyst") => {
-    await postAuth("/auth/register", { email, password, role });
+  const register = useCallback(async (email: string, password: string, role?: string) => {
+    // Omit `role` from the body when caller doesn't supply one — the backend
+    // (backend/app/auth/models.py UserRole) only accepts
+    // {credit_officer, investigator, auditor, admin} and defaults to
+    // credit_officer. Sending an arbitrary string like "analyst" returns 422.
+    const body: Record<string, unknown> = { email, password };
+    if (role) body.role = role;
+    await postAuth("/auth/register", body);
     await login(email, password);
   }, [login]);
 

@@ -38,7 +38,10 @@ export default function Login() {
   const from = (location.state as { from?: string } | null)?.from ?? "/dashboard";
 
   const [mode, setMode] = useState<"login" | "register">("login");
-  const [email, setEmail] = useState("analyst@sentinel-g.local");
+  // Blank by default — backend EmailStr (pydantic email-validator) rejects
+  // `.local` / `.test` TLDs as reserved-use, so a prefilled
+  // `analyst@sentinel-g.local` made the form unusable out of the box (F1).
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -81,6 +84,7 @@ export default function Login() {
         onChange={(e) => setEmail(e.target.value)}
         required
         autoComplete="email"
+        placeholder="you@example.com"
         style={inputStyle}
       />
       <label htmlFor="password">Password</label>

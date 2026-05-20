@@ -50,6 +50,18 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         logger.warning("lifespan: Neo4j connect failed (%s) — running degraded", exc)
         _driver = None
 
+    # Apply schema constraints + indexes on every startup. Idempotent
+    # (every statement uses IF NOT EXISTS). Without this, the User.email
+    # unique constraint defined in graph/schema.py:23 is never created
+    # in the running DB, and duplicate registrations slip through
+    # (filed as F3 in docs/LOCAL_TEST_REPORT.md).
+    if _driver is not None:
+        try:
+            from backend.app.graph.schema import apply_schema
+            await apply_schema()
+        except Exception as exc:  # noqa: BLE001 — still serve if schema fails
+            logger.warning("lifespan: apply_schema failed (%s) — constraints may be missing", exc)
+
     if _driver is not None and settings.scheduler_enabled:
         # Local import keeps the FastAPI cold-start cost off the import graph.
         from backend.app.ingest.scheduler import ScraperScheduler
