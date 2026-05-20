@@ -29,7 +29,7 @@ on output from the prior one.
 
 ```bash
 npm i -g @railway/cli
-railway login                       # opens browser
+railway login                       # opens browser   
 ```
 
 In the Railway web console (railway.app → New Project → Empty Project):
