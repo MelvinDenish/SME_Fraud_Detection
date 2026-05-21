@@ -39,6 +39,7 @@ from backend.app.modules.m11_anomaly import (
     financial_feature_row,
     graph_feature_row,
 )
+from ml.detectors.d3_tgn import D3TGN, TGNConfig
 from ml.detectors.d4_lof import D4LOF
 from ml.detectors.d5_mamba import (
     FEATURE_DIM as D5_FEATURE_DIM,
@@ -70,9 +71,11 @@ class AnalyticsCache:
     # M10 cache — full batch result, indexed by CIN
     m10_results: dict[str, "ModuleResult"] = field(default_factory=dict)
 
-    # Detector outputs cached at build time. D4/D5/D6 wired; D3 (TGN) still
-    # deferred — it needs an event-stream constructor that maps the live
-    # bundle's transactions to the trained TGN's node-id space.
+    # Detector outputs cached at build time — all four real detectors wired.
+    # D1 (CatBoost) + D2 (β-VAE) were deleted upstream as unimplemented stubs.
+    d3_tgn: D3TGN | None = None
+    d3_node_id_by_cin: dict[str, int] = field(default_factory=dict)
+    d3_scores_by_cin: dict[str, float] = field(default_factory=dict)
     d4_scores_by_cin: dict[str, float] = field(default_factory=dict)
     d5_model: TemporalConvolutionalNet | None = None
     d5_scores_by_cin: dict[str, float] = field(default_factory=dict)
@@ -207,13 +210,22 @@ def build_cache(
             logger.warning("analytics_cache: D5 load/predict failed (%s) — d5 slot stays zero", exc)
             cache.d5_model = None
 
+    # ---- D3 (TGN): train fresh on the bundle pool's event stream + embed --
+    # No persisted artefact — the Day-7 d3_tgn.pt was a 50-synthetic-node
+    # smoke check whose node-id space doesn't map to real CINs. Training
+    # fresh here is fast (~2s on the fixture pool), gives us a real
+    # per-CIN embedding, and stays consistent with the bundles M10/M11
+    # also see.
+    _build_d3(cache, bundles)
+
     logger.info(
         "analytics_cache: built from %d bundles — graph_bg=%d financial_bg=%d "
-        "m10_hits=%d d4=%d d5=%d d6=%d",
+        "m10_hits=%d d3=%d d4=%d d5=%d d6=%d",
         len(bundles),
         cache.background_graph.shape[0],
         cache.background_financials.shape[0],
         len(cache.m10_results),
+        len(cache.d3_scores_by_cin),
         len(cache.d4_scores_by_cin),
         len(cache.d5_scores_by_cin),
         len(cache.d6_scores_by_cin),
@@ -221,21 +233,121 @@ def build_cache(
     return cache
 
 
+def _build_d3(cache: AnalyticsCache, bundles: list[CompanyBundle]) -> None:
+    """Construct (src, dst, t, msg), train TGN, embed every CIN node, write
+    min-max-normalised L2 embedding norms into cache.d3_scores_by_cin.
+
+    Node-ID layout (deterministic):
+       0 .. N_cin-1            company nodes (sorted CIN order)
+       N_cin .. N_cin+N_len-1  lender pseudo-nodes (one per unique charge holder)
+       last block              fiscal-year pseudo-nodes (one per (cin,year) FS row)
+
+    Events:
+       (cin_node, lender_node, charge_creation_epoch, tanh(amount/scale))
+       (cin_node, year_node,   fs_year_end_epoch,     tanh(revenue/scale))
+    """
+    if not bundles:
+        return
+
+    cin_to_id: dict[str, int] = {b.company.cin: i for i, b in enumerate(sorted(bundles, key=lambda b: b.company.cin))}
+    cache.d3_node_id_by_cin = cin_to_id
+    n_cins = len(cin_to_id)
+
+    lender_to_id: dict[str, int] = {}
+    next_node = n_cins
+    src_list: list[int] = []
+    dst_list: list[int] = []
+    t_list: list[int] = []
+    msg_list: list[float] = []
+
+    # Amount-normalisation scale: median of all observed amounts (avoids any
+    # single mega-charge dominating the [-1, 1] msg encoding).
+    all_amounts: list[float] = []
+    for b in bundles:
+        for c in b.charges:
+            all_amounts.append(abs(c.amount))
+        for fs in b.financials:
+            all_amounts.append(abs(fs.revenue))
+    if not all_amounts:
+        return
+    scale = float(np.median([a for a in all_amounts if a > 0]) or 1.0)
+
+    for b in bundles:
+        cid = cin_to_id[b.company.cin]
+        for charge in b.charges:
+            lid = lender_to_id.get(charge.lender_name)
+            if lid is None:
+                lid = next_node
+                lender_to_id[charge.lender_name] = lid
+                next_node += 1
+            src_list.append(cid)
+            dst_list.append(lid)
+            t_list.append(int(__import__("datetime").datetime.combine(
+                charge.creation_date, __import__("datetime").time()).timestamp()))
+            msg_list.append(float(np.tanh(charge.amount / scale)))
+        for fs in b.financials:
+            yid = next_node
+            next_node += 1
+            src_list.append(cid)
+            dst_list.append(yid)
+            ye = __import__("datetime").date(fs.year, 3, 31)
+            t_list.append(int(__import__("datetime").datetime.combine(
+                ye, __import__("datetime").time()).timestamp()))
+            msg_list.append(float(np.tanh(fs.revenue / scale)))
+
+    if len(src_list) < 4:
+        logger.info("analytics_cache: D3 skipped — only %d events, need >=4", len(src_list))
+        return
+
+    num_nodes = next_node
+    try:
+        cfg = TGNConfig(num_nodes=num_nodes)
+        tgn = D3TGN(cfg, device="cpu")
+        tgn.fit(
+            np.asarray(src_list, dtype=np.int64),
+            np.asarray(dst_list, dtype=np.int64),
+            np.asarray(t_list, dtype=np.int64),
+            np.asarray(msg_list, dtype=np.float32),
+            epochs=2,
+            batch_size=32,
+        )
+        cin_ids = np.asarray(list(cin_to_id.values()), dtype=np.int64)
+        emb = tgn.embed(cin_ids)
+        norms = np.linalg.norm(emb, axis=1)
+        if float(norms.max() - norms.min()) < 1e-9:
+            scores = np.zeros_like(norms)
+        else:
+            scores = (norms - norms.min()) / (norms.max() - norms.min())
+        for cin, s in zip(cin_to_id.keys(), scores):
+            cache.d3_scores_by_cin[cin] = float(s)
+        cache.d3_tgn = tgn
+    except Exception as exc:  # pragma: no cover — defensive (e.g. torch_geometric kernels)
+        logger.warning("analytics_cache: D3 train/embed failed (%s) — d3 slot stays zero", exc)
+        cache.d3_tgn = None
+        cache.d3_scores_by_cin = {}
+
+
 def compute_target_detector_scores(
     cin: str, bundle: CompanyBundle, cache: AnalyticsCache,
-) -> tuple[float, float, float]:
-    """Return (d4_score, d5_score, d6_score) for a CIN.
+) -> tuple[float, float, float, float]:
+    """Return (d3_score, d4_score, d5_score, d6_score) for a CIN.
 
     Fast-path: dict lookup when the CIN was in the cache build set. Slow-path
-    (uploads / new CINs): compute fresh from the loaded model. Zeros when the
-    cache or target rows are missing — never raises.
+    (uploads / new CINs): compute fresh from the loaded model where cheap.
+    Zeros when the cache or target rows are missing — never raises.
     """
+    pre_d3 = cache.d3_scores_by_cin.get(cin)
     pre_d4 = cache.d4_scores_by_cin.get(cin)
     pre_d5 = cache.d5_scores_by_cin.get(cin)
     pre_d6 = cache.d6_scores_by_cin.get(cin)
-    if pre_d4 is not None and pre_d5 is not None and pre_d6 is not None:
-        return pre_d4, pre_d5, pre_d6
+    if pre_d3 is not None and pre_d4 is not None and pre_d5 is not None and pre_d6 is not None:
+        return pre_d3, pre_d4, pre_d5, pre_d6
 
+    # D3 has no cheap slow-path — embedding an unseen CIN requires the
+    # inductive fallback inside D3TGN.embed (mean of seen-node embeddings),
+    # which is not useful on its own. Zero is the honest fallback for CINs
+    # outside the cache build set.
+    d3_out: float = pre_d3 if pre_d3 is not None else 0.0
     d4_out: float = pre_d4 if pre_d4 is not None else 0.0
     d5_out: float = pre_d5 if pre_d5 is not None else 0.0
     d6_out: float = pre_d6 if pre_d6 is not None else 0.0
@@ -281,7 +393,7 @@ def compute_target_detector_scores(
                     d5_out = float(cache.d5_model(xt, mt).cpu().numpy()[0])
             except Exception as exc:  # pragma: no cover — defensive
                 logger.warning("analytics_cache: D5 slow-path failed for %s (%s)", cin, exc)
-    return d4_out, d5_out, d6_out
+    return d3_out, d4_out, d5_out, d6_out
 
 
 async def get_or_build(bundles_provider) -> AnalyticsCache:

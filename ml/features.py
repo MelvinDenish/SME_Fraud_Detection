@@ -60,10 +60,12 @@ MODULE_KEYS: tuple[str, ...] = (
 )
 
 # Detector outputs appended to the feature vector when an analytics_cache
-# is supplied. D3 (TGN) deferred — it needs an event-stream constructor
-# that maps live bundle transactions to the trained TGN's node-id space
-# (PRD §9 Phase 3 work).
-DETECTOR_KEYS: tuple[str, ...] = ("d4_score", "d5_score", "d6_score")
+# is supplied. All four real detectors are wired: D3 trains fresh on the
+# bundle pool's event stream inside analytics_cache.build_cache; D4 fits
+# LOF on graph features; D5 loads a persisted TCN; D6 trains a small
+# autoencoder during cache build. D1 + D2 were deleted upstream as
+# unimplemented stubs.
+DETECTOR_KEYS: tuple[str, ...] = ("d3_score", "d4_score", "d5_score", "d6_score")
 
 FEATURE_NAMES: tuple[str, ...] = tuple(
     f"{mod}_{feat}" for mod in MODULE_KEYS for feat in _PER_MODULE_FEATURES
@@ -210,6 +212,7 @@ def build_feature_vector(bundle: CompanyBundle, ctx: FeatureContext) -> np.ndarr
     # Detector slots — populated when the analytics_cache is present; zero
     # otherwise. Order must match DETECTOR_KEYS so FEATURE_NAMES stays
     # consistent at train/infer.
+    d3_score = 0.0
     d4_score = 0.0
     d5_score = 0.0
     d6_score = 0.0
@@ -217,10 +220,10 @@ def build_feature_vector(bundle: CompanyBundle, ctx: FeatureContext) -> np.ndarr
         # Avoid circular import at module top — the analytics_cache imports
         # ml/features via ml/l05_graph_features indirectly through D6.
         from backend.app.analytics_cache import compute_target_detector_scores
-        d4_score, d5_score, d6_score = compute_target_detector_scores(
+        d3_score, d4_score, d5_score, d6_score = compute_target_detector_scores(
             bundle.company.cin, bundle, ctx.analytics_cache,
         )
-    flat.extend([d4_score, d5_score, d6_score])
+    flat.extend([d3_score, d4_score, d5_score, d6_score])
     return np.asarray(flat, dtype=np.float32)
 
 
