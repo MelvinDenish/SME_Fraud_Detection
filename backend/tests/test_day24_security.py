@@ -36,9 +36,11 @@ ROOT = Path(__file__).resolve().parents[2]
 def client_no_rate_limit() -> TestClient:
     """Bare app with the public routers but no rate limit so the CIN-422
     test isn't accidentally throttled by repeated negative cases."""
+    from backend.tests.conftest import bypass_auth
     app = FastAPI()
     app.include_router(analyse_router)
     app.include_router(upload_router)
+    bypass_auth(app)  # F4: /analyse now requires get_current_user
     return TestClient(app)
 
 

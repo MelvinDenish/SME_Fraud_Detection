@@ -1,16 +1,59 @@
 import { useState } from "react";
 import { DEMO_CINS, downloadReport } from "../lib/api";
 
-const cardStyle: React.CSSProperties = {
-  background: "white",
-  borderRadius: 8,
-  padding: "1.25rem 1.5rem",
-  boxShadow: "0 1px 2px rgba(15,23,42,.07)",
+const eyebrow: React.CSSProperties = {
+  fontFamily: "var(--font-body)",
+  fontSize: "var(--t-eyebrow)",
+  letterSpacing: "0.28em",
+  textTransform: "uppercase",
+  color: "var(--accent-gold)",
+  fontWeight: 700,
 };
 
-const btnStyle: React.CSSProperties = {
-  padding: "0.5rem 1rem", border: 0, background: "#0f172a", color: "white",
-  borderRadius: 4, cursor: "pointer",
+const cardStyle: React.CSSProperties = {
+  background: "var(--paper-elevated)",
+  padding: "var(--s-6)",
+  borderTop: "1px solid var(--rule)",
+  borderBottom: "1px solid var(--rule-soft)",
+  boxShadow: "var(--shadow-card)",
+};
+
+const inputStyle: React.CSSProperties = {
+  flex: 1,
+  padding: "var(--s-3) var(--s-4)",
+  border: "1px solid var(--rule-soft)",
+  borderRadius: 0,
+  background: "var(--paper)",
+  color: "var(--ink)",
+  fontFamily: "var(--font-mono)",
+  fontSize: "var(--t-meta)",
+  outline: "none",
+};
+
+const primaryBtn: React.CSSProperties = {
+  padding: "var(--s-3) var(--s-5)",
+  border: 0,
+  background: "var(--ink)",
+  color: "var(--paper)",
+  fontFamily: "var(--font-body)",
+  fontSize: "var(--t-eyebrow)",
+  letterSpacing: "0.22em",
+  textTransform: "uppercase",
+  fontWeight: 700,
+  cursor: "pointer",
+  borderRadius: 0,
+};
+
+const chipBtn: React.CSSProperties = {
+  padding: "var(--s-2) var(--s-3)",
+  background: "var(--paper)",
+  color: "var(--ink-2)",
+  border: "1px solid var(--rule-soft)",
+  fontFamily: "var(--font-mono)",
+  fontSize: "var(--t-eyebrow)",
+  letterSpacing: "0.06em",
+  cursor: "pointer",
+  borderRadius: 0,
 };
 
 interface ReportLog {
@@ -39,70 +82,138 @@ export default function Reports() {
   };
 
   return (
-    <div style={{ display: "grid", gap: "1rem" }}>
-      <header>
-        <h1 style={{ margin: 0 }}>Reports</h1>
-        <p style={{ color: "#475569", margin: ".25rem 0 0" }}>
-          Render the PRD §7.1 dual-output as a single-page PDF — UUID +
-          UTC timestamp + disclaimer baked in. Auth-required: the backend
-          rejects anonymous calls with 401.
+    <div style={{ display: "grid", gap: "var(--s-6)", maxWidth: 960 }}>
+      <header style={{ borderBottom: "1px solid var(--rule)", paddingBottom: "var(--s-5)" }}>
+        <p style={{ ...eyebrow, margin: 0, marginBottom: "var(--s-2)" }}>
+          Evidence Export · PRD §7.1 Dual-Output Dossier
+        </p>
+        <h1 style={{
+          fontFamily: "var(--font-display)",
+          fontSize: "var(--t-h1)",
+          fontWeight: 500,
+          color: "var(--ink)",
+          margin: 0,
+          letterSpacing: "-0.01em",
+        }}>
+          Reports
+        </h1>
+        <div style={{ height: 1, background: "var(--accent-gold)", width: 56, margin: "var(--s-4) 0" }} aria-hidden />
+        <p style={{
+          color: "var(--ink-2)",
+          margin: 0,
+          fontFamily: "var(--font-body)",
+          fontSize: "var(--t-body)",
+          maxWidth: "60ch",
+          lineHeight: 1.6,
+        }}>
+          Render the dual-output as a single-page PDF — UUID + UTC timestamp +
+          disclaimer baked in. Restricted to auditor / investigator / admin
+          roles; credit-officer accounts cannot export dossiers.
         </p>
       </header>
 
-      <div style={cardStyle}>
+      <article style={cardStyle}>
+        <p style={{ ...eyebrow, margin: 0, marginBottom: "var(--s-4)" }}>Render</p>
         <form
           onSubmit={(e) => { e.preventDefault(); trigger(cin.trim().toUpperCase()); }}
-          style={{ display: "flex", gap: 8, alignItems: "center" }}
+          style={{ display: "flex", gap: "var(--s-3)", alignItems: "stretch" }}
         >
-          <label htmlFor="report-cin" style={{ fontWeight: 600 }}>CIN</label>
           <input
             id="report-cin"
             value={cin}
             onChange={(e) => setCin(e.target.value)}
-            style={{ flex: 1, padding: "0.5rem 0.75rem", border: "1px solid #cbd5e1", borderRadius: 4 }}
+            placeholder="CIN"
+            aria-label="CIN to render"
+            style={inputStyle}
           />
-          <button type="submit" disabled={busy} style={btnStyle}>
+          <button type="submit" disabled={busy} style={primaryBtn}>
             {busy ? "Rendering…" : "Download PDF"}
           </button>
         </form>
-        <div style={{ display: "flex", gap: 6, marginTop: 8, flexWrap: "wrap" }}>
-          {Object.entries(DEMO_CINS).map(([k, v]) => (
-            <button
-              key={k}
-              type="button"
-              onClick={() => { setCin(v); trigger(v); }}
-              disabled={busy}
-              style={{ padding: "0.4rem 0.6rem", fontSize: ".75rem", background: "#e2e8f0", border: 0, borderRadius: 4, cursor: "pointer" }}
-            >{k}</button>
-          ))}
+
+        <div style={{ marginTop: "var(--s-5)" }}>
+          <p style={{ ...eyebrow, margin: 0, marginBottom: "var(--s-3)", color: "var(--ink-3)" }}>
+            Quick targets
+          </p>
+          <div style={{ display: "flex", gap: "var(--s-2)", flexWrap: "wrap" }}>
+            {Object.entries(DEMO_CINS).map(([k, v]) => (
+              <button
+                key={k}
+                type="button"
+                onClick={() => { setCin(v); trigger(v); }}
+                disabled={busy}
+                style={chipBtn}
+              >{k}</button>
+            ))}
+          </div>
         </div>
+
         {error && (
-          <p style={{ color: "crimson", marginTop: ".75rem" }}>{error}</p>
+          <p style={{
+            color: "var(--risk-critical)",
+            marginTop: "var(--s-5)",
+            marginBottom: 0,
+            fontFamily: "var(--font-body)",
+            fontSize: "var(--t-meta)",
+            paddingLeft: "var(--s-3)",
+            borderLeft: "2px solid var(--risk-critical)",
+          }}>{error}</p>
         )}
-      </div>
+      </article>
 
       {log.length > 0 && (
-        <div style={cardStyle}>
-          <h3 style={{ marginTop: 0 }}>Recently exported</h3>
+        <article style={cardStyle}>
+          <p style={{ ...eyebrow, margin: 0, marginBottom: "var(--s-4)" }}>Recently exported</p>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
-              <tr style={{ textAlign: "left", borderBottom: "1px solid #e2e8f0" }}>
-                <th style={{ padding: ".5rem 0" }}>CIN</th>
-                <th>Report ID</th>
-                <th>Generated (UTC)</th>
+              <tr style={{
+                textAlign: "left",
+                borderBottom: "1px solid var(--rule)",
+              }}>
+                <th style={{
+                  padding: "var(--s-3) 0",
+                  fontFamily: "var(--font-body)",
+                  fontSize: "var(--t-eyebrow)",
+                  letterSpacing: "0.18em",
+                  textTransform: "uppercase",
+                  color: "var(--ink-3)",
+                  fontWeight: 600,
+                }}>CIN</th>
+                <th style={{
+                  fontFamily: "var(--font-body)",
+                  fontSize: "var(--t-eyebrow)",
+                  letterSpacing: "0.18em",
+                  textTransform: "uppercase",
+                  color: "var(--ink-3)",
+                  fontWeight: 600,
+                }}>Report ID</th>
+                <th style={{
+                  fontFamily: "var(--font-body)",
+                  fontSize: "var(--t-eyebrow)",
+                  letterSpacing: "0.18em",
+                  textTransform: "uppercase",
+                  color: "var(--ink-3)",
+                  fontWeight: 600,
+                }}>Generated (UTC)</th>
               </tr>
             </thead>
             <tbody>
               {log.map((row, i) => (
-                <tr key={`${row.reportId}-${i}`} style={{ borderBottom: "1px solid #f1f5f9" }}>
-                  <td style={{ padding: ".4rem 0" }}><code>{row.cin}</code></td>
-                  <td><code style={{ fontSize: ".8rem" }}>{row.reportId ?? "—"}</code></td>
-                  <td>{row.generatedAt ?? "—"}</td>
+                <tr key={`${row.reportId}-${i}`} style={{ borderBottom: "1px solid var(--rule-soft)" }}>
+                  <td style={{ padding: "var(--s-3) 0", fontFamily: "var(--font-mono)", fontSize: "var(--t-meta)", color: "var(--ink)" }}>
+                    {row.cin}
+                  </td>
+                  <td style={{ fontFamily: "var(--font-mono)", fontSize: "var(--t-eyebrow)", color: "var(--ink-2)" }}>
+                    {row.reportId ?? "—"}
+                  </td>
+                  <td style={{ fontFamily: "var(--font-mono)", fontSize: "var(--t-meta)", color: "var(--ink-2)" }}>
+                    {row.generatedAt ?? "—"}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div>
+        </article>
       )}
     </div>
   );

@@ -20,20 +20,27 @@ import tempfile
 from datetime import date
 from pathlib import Path
 
-from fastapi import APIRouter, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from backend.app.api.upload_store import get_upload_store
 from backend.app.api.validators import CIN_PATH
+from backend.app.auth.deps import require_roles
+
+# All /upload/* routes mutate the per-CIN overlay. RBAC: credit_officer
+# (frontline triage), investigator (forensic deep-dive), and admin can
+# upload; auditors (read-only role) cannot. Applied via router-level
+# dependencies so every route below inherits the gate.
+_UPLOAD_AUTH = Depends(require_roles("credit_officer", "investigator", "admin"))
 from backend.app.ingest.data_confidence import compute_data_confidence
-from backend.app.ingest.gst import RawGSTEntity
+from backend.app.ingest.gst import RawGSTEntity, pan_from_gstin
 from backend.app.ingest.schemas import CompanyBundle, RawFinancialStatement
 from backend.app.ingest.sources import FixtureSource
 from backend.app.parse.pdf_parser import parse_financial_pdf
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/upload", tags=["upload"])
+router = APIRouter(prefix="/upload", tags=["upload"], dependencies=[_UPLOAD_AUTH])
 
 _fixture_source = FixtureSource()
 
@@ -176,11 +183,36 @@ async def upload_financials(cin: CIN_PATH, file: UploadFile = File(...)) -> Uplo
 
 @router.post("/gst/{cin}", response_model=UploadAck)
 async def upload_gst(cin: CIN_PATH, payload: dict) -> UploadAck:
-    """Accept a RawGSTEntity JSON body and overlay it."""
+    """Accept a GST entity payload and overlay it for the next /analyse call.
+
+    Expected JSON shape (F6 fix — LOCAL_TEST_REPORT.md §F6):
+
+        {
+          "gstin": "27AAACX1234A1Z5",        # required — 15-char GSTIN
+          "pan": "AAACX1234A",                # optional — derived from GSTIN[2:12] if omitted
+          "registration_date": "2019-04-01",  # optional — defaults to today
+          "is_cancelled": false,              # optional
+          "taxpayer_type": "regular",         # optional — one of regular/composition/casual/sez/isd
+          "aggregate_turnover": 5200000.0,    # optional — annual turnover INR
+          "tax_paid_ytd": 312000.0            # optional — tax remitted YTD INR
+        }
+
+    `cin` is taken from the URL path; sending a different cin in the body
+    returns 400. The intuitive `{gstin, aggregate_turnover}` minimal form
+    now works because `pan` is auto-derived and `registration_date`
+    defaults — both used to be required.
+    """
     await _require_known_cin(cin)
     payload = dict(payload)  # tolerate Pydantic-strict callers
     payload.setdefault("cin", cin)
     payload.setdefault("registration_date", date.today().isoformat())
+    gstin = payload.get("gstin")
+    if isinstance(gstin, str) and "pan" not in payload:
+        try:
+            payload["pan"] = pan_from_gstin(gstin)
+        except ValueError:
+            # Let Pydantic surface the precise GSTIN validation message below.
+            pass
     try:
         entity = RawGSTEntity.model_validate(payload)
     except ValidationError as exc:

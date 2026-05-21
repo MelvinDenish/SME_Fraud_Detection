@@ -21,7 +21,9 @@ def _client_with_user_override() -> TestClient:
     # exhaustively in backend/tests/test_auth.py.
     app.dependency_overrides[get_current_user] = lambda: {
         "user_id": "test-user", "email": "tester@example.com",
-        "role": "analyst", "is_active": True,
+        # admin so /report's RBAC (auditor/investigator/admin) passes;
+        # role-specific RBAC behaviour is covered separately in test_auth.py.
+        "role": "admin", "is_active": True,
     }
     return TestClient(app)
 

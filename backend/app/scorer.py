@@ -42,11 +42,19 @@ from backend.app.ingest.wilful_defaulter import RawWilfulDefaulter
 from backend.app.modules import (
     m01_beneish,
     m02_cross_statement,
+    m03_benford,
+    m04_graph_patterns,
     m05_peer_deviation,
     m06_temporal,
     m07_auditor_nlp,
     m08_document_forensics,
     m09_nclt_defaulter,
+    m11_anomaly,
+)
+from backend.app.modules.m11_anomaly import (
+    AnomalyInputs,
+    financial_feature_row,
+    graph_feature_row,
 )
 from backend.app.modules.base import FraudSignal, ModuleResult, Severity, clamp_score
 from backend.app.modules.m02_cross_statement import CrossStatementInputs
@@ -67,16 +75,26 @@ CRITICAL_FLAG_FLOOR_SCORE = 60.0
 # PRD §7.4 ensemble-disagreement threshold (any two modules differ by > 30 pts)
 ENSEMBLE_DISAGREEMENT_DELTA = 30.0
 
-# Tier-1 module weights (PRD §7.2) — modules summed and clamped to [0, 100]
+# Tier-1 module weights (PRD §7.2) — modules summed and clamped to [0, 100].
+# M3/M4 wired 2026-05-21 to close the orphaned-modules gap (LOCAL_TEST_REPORT
+# finding §3.2). M10 needs cross-company batch infra and M11 needs feature
+# matrices; both stay declared here so the aggregate scaler reserves headroom
+# for them when they're wired. The aggregate formula in _aggregate_score
+# re-scales by sum_W / total_weight_running, so partial coverage doesn't
+# penalise — but reserving the weight prevents fixture scores from shifting
+# when M10/M11 light up later.
 _MODULE_WEIGHTS: dict[str, float] = {
     "m01_beneish":          0.15,
     "m02_cross_statement":  0.20,
+    "m03_benford":          0.05,
+    "m04_graph_patterns":   0.10,
     "m05_peer_deviation":   0.10,
     "m06_temporal":         0.10,
     "m07_auditor_nlp":      0.10,
     "m08_document_forensics": 0.05,
     "m09_nclt_defaulter":   0.20,
-    "m11_anomaly":          0.10,
+    "m10_hypergraph_shell": 0.05,   # reserved — wired in cross-company batch pipeline (TODO)
+    "m11_anomaly":          0.10,   # reserved — wired once L0.5 feature pipeline produces matrices (TODO)
 }
 
 
@@ -91,6 +109,14 @@ class ScoringContext:
     # the user-supplied GST / bank-statement evidence on a per-call basis.
     gst_entity: RawGSTEntity | None = None
     bank_credits_total: float | None = None
+    # Neo4j driver — required by M4 (graph patterns) Cypher queries. None when
+    # the graph isn't reachable; M4 then skips with a clear reason instead of
+    # raising. Tests that don't need M4 can leave this unset.
+    driver: Any | None = None
+    # Precomputed analytics cache — population-view artefacts M10 (hypergraph
+    # shell, batch-mode) and M11 (anomaly, background-fit) both need to fire.
+    # See backend/app/analytics_cache.py. None means M10/M11 skip cleanly.
+    analytics_cache: Any | None = None
 
 
 @dataclass
@@ -185,6 +211,35 @@ async def _run_m2(bundle: CompanyBundle, ctx: ScoringContext) -> ModuleResult:
     return await asyncio.to_thread(m02_cross_statement.run, inputs)
 
 
+async def _run_m3(bundle: CompanyBundle) -> ModuleResult:
+    fs_list = sorted(bundle.financials, key=lambda f: f.year)
+    if not fs_list:
+        return ModuleResult.skipped_for(
+            "m03_benford", bundle.company.cin, None, "No financials",
+        )
+    return await asyncio.to_thread(
+        m03_benford.run, fs_list, nic_code=bundle.company.nic_code,
+    )
+
+
+async def _run_m4(bundle: CompanyBundle, ctx: ScoringContext) -> ModuleResult:
+    """All 17 PRD §4.4 graph patterns. Requires a live Neo4j driver — when
+    ctx.driver is None (tests, offline scoring) we skip cleanly."""
+    if ctx.driver is None:
+        return ModuleResult.skipped_for(
+            "m04_graph_patterns", bundle.company.cin, None,
+            "Neo4j driver unavailable — graph patterns require live graph",
+        )
+    try:
+        return await m04_graph_patterns.run(ctx.driver, bundle.company.cin)
+    except Exception as exc:
+        logger.warning("m04_graph_patterns failed for %s: %s", bundle.company.cin, exc)
+        return ModuleResult.skipped_for(
+            "m04_graph_patterns", bundle.company.cin, None,
+            f"Graph pattern execution error: {exc!r}",
+        )
+
+
 async def _run_m5(bundle: CompanyBundle, ctx: ScoringContext) -> ModuleResult:
     fs_sorted = sorted(bundle.financials, key=lambda f: f.year)
     if not fs_sorted:
@@ -238,6 +293,79 @@ async def _run_m9(bundle: CompanyBundle, ctx: ScoringContext) -> ModuleResult:
     )
 
 
+async def _run_m10(bundle: CompanyBundle, ctx: ScoringContext) -> ModuleResult:
+    """Read M10's batch result for this CIN out of the analytics cache.
+
+    M10 fires on cross-company shared-attribute clusters (PRD §4.10) — running
+    it per-request with a single bundle would never find anything. The cache
+    runs the batch over the fixture pool once at startup; per-request we just
+    look up the precomputed result.
+    """
+    cin = bundle.company.cin
+    if ctx.analytics_cache is None:
+        return ModuleResult.skipped_for(
+            "m10_hypergraph_shell", cin, None,
+            "Analytics cache not built — M10 requires cross-company batch precompute",
+        )
+    pre = ctx.analytics_cache.m10_results.get(cin)
+    if pre is not None:
+        return pre
+    # CIN not in the fixture pool, or no shell-cluster signal — return a
+    # well-formed empty result so the aggregate sees a 0 instead of a skip.
+    return ModuleResult(
+        module_name="m10_hypergraph_shell",
+        cin=cin, year=None, score=0.0, signals=[],
+    )
+
+
+async def _run_m11(bundle: CompanyBundle, ctx: ScoringContext) -> ModuleResult:
+    """LOF + IsolationForest on this CIN's 7-D graph row + 20-D financial row.
+
+    Backgrounds are precomputed once from the fixture pool. The target's
+    feature rows come from the cache when the CIN is in the pool; CINs not
+    in the pool (uploads / arbitrary lookups) skip cleanly with a reason.
+    """
+    cin = bundle.company.cin
+    if ctx.analytics_cache is None:
+        return ModuleResult.skipped_for(
+            "m11_anomaly", cin, None,
+            "Analytics cache not built — M11 requires precomputed background",
+        )
+
+    cache = ctx.analytics_cache
+    graph_row = None
+    financial_row = None
+    gf = cache.graph_feature_by_cin.get(cin)
+    if gf is not None:
+        graph_row = graph_feature_row(gf)
+    fr = cache.financial_row_by_cin.get(cin)
+    if fr is not None:
+        financial_row = fr
+    elif bundle.financials:
+        # Target wasn't in the fixture pool but we have its FS — compute fresh.
+        fs_sorted = sorted(bundle.financials, key=lambda f: f.year)
+        financial_row = financial_feature_row(fs_sorted[-1])
+
+    if graph_row is None and financial_row is None:
+        return ModuleResult.skipped_for(
+            "m11_anomaly", cin, None,
+            "No feature rows available for CIN — neither graph nor financial",
+        )
+
+    return await asyncio.to_thread(
+        m11_anomaly.run,
+        AnomalyInputs(
+            cin=cin,
+            year=sorted(bundle.financials, key=lambda f: f.year)[-1].year
+                 if bundle.financials else None,
+            financial_row=financial_row,
+            graph_row=graph_row,
+            background_financials=cache.background_financials,
+            background_graph=cache.background_graph,
+        ),
+    )
+
+
 # --- Public orchestration --------------------------------------------------
 def _max_module_severity(results: list[ModuleResult]) -> Severity | None:
     severities = [r.max_severity for r in results if r.max_severity is not None]
@@ -272,16 +400,36 @@ def _aggregate_score(results: list[ModuleResult]) -> float:
 
 
 async def score(bundle: CompanyBundle, ctx: ScoringContext) -> RiskReport:
-    """Fan-out across Tier-1 modules, apply overrides, build the dual-output."""
-    results: list[ModuleResult] = await asyncio.gather(
+    """Fan-out across Tier-1 modules, apply overrides, build the dual-output.
+
+    The meta-learner (F1a/F1b/F1c) is invoked alongside the Tier-1 fan-out so
+    `p_fraud_calibrated` + `p_fraud_interval` reflect the same bundle that
+    fed the rule modules. When artefacts aren't present those fields stay
+    null (PRD §7.1 explicitly allows that fallback).
+    """
+    from backend.app.ml_inference import compute_calibrated_probability
+
+    module_task = asyncio.gather(
         _run_m1(bundle),
         _run_m2(bundle, ctx),
+        _run_m3(bundle),
+        _run_m4(bundle, ctx),
         _run_m5(bundle, ctx),
         _run_m6(bundle),
         _run_m7(bundle),
         _run_m8(bundle),
         _run_m9(bundle, ctx),
+        _run_m10(bundle, ctx),
+        _run_m11(bundle, ctx),
     )
+    meta_task = compute_calibrated_probability(
+        bundle,
+        benchmarks=ctx.benchmarks,
+        nclt=ctx.nclt,
+        wilful=ctx.wilful,
+        analytics_cache=ctx.analytics_cache,
+    )
+    results, meta_pred = await asyncio.gather(module_task, meta_task)
     evidence: list[FraudSignal] = []
     breakdown: dict[str, float] = {}
     skipped: list[dict[str, str]] = []
@@ -313,6 +461,8 @@ async def score(bundle: CompanyBundle, ctx: ScoringContext) -> RiskReport:
         module_breakdown=breakdown,
         override_applied=override_applied,
         skipped_modules=skipped,
+        p_fraud_calibrated=meta_pred.p_fraud,
+        p_fraud_interval=meta_pred.interval,
     )
 
 

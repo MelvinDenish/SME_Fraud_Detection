@@ -106,7 +106,38 @@ async def _build_dataset(synthetic_count: int, seed: int) -> tuple[
     benchmarks = await BSEFixtureBenchmark().fetch_all()
     nclt = await NCLTFixtureSource().fetch_all()
     wilful = await WilfulDefaulterFixtureSource().fetch_all()
-    ctx = FeatureContext(benchmarks=benchmarks, nclt=nclt, wilful=wilful)
+
+    # ---- D5 (TCN) training pass --------------------------------------------
+    # Done BEFORE the analytics_cache so cache.build can load the freshly-
+    # saved artefact and compute per-CIN D5 scores in the same pass. Without
+    # this the d5_score feature slot is always zero at training time, which
+    # creates a train/infer asymmetry the meta-learner would mis-weight.
+    import torch
+    from ml.detectors.d5_mamba import build_sequences_from_company_bundles, smoke_train_tcn
+    seq_batch = build_sequences_from_company_bundles(bundles)
+    seq_labels = np.zeros(len(seq_batch.cins), dtype=np.int32)
+    cin_to_label = {b.company.cin: int(lbl) for b, lbl in zip(bundles, labels)}
+    for i, c in enumerate(seq_batch.cins):
+        seq_labels[i] = cin_to_label.get(c, 0)
+    if int(seq_labels.sum()) >= 1 and len(seq_batch.cins) >= 4:
+        d5_model, d5_loss = smoke_train_tcn(seq_batch, seq_labels, epochs=10, seed=seed)
+        ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
+        torch.save(d5_model.state_dict(), str(ARTIFACT_DIR / "d5_tcn.pt"))
+        print(f"  D5/TCN trained on n={len(seq_batch.cins)} sequences "
+              f"({int(seq_labels.sum())} positive) — final BCE loss {d5_loss:.4f}")
+    else:
+        print("  D5/TCN training skipped — need >=1 positive label and >=4 sequences")
+
+    # Build the analytics_cache over the full bundle set (fixtures + synthetic)
+    # so train-time M10/M11/D4/D5/D6 features come from the same population
+    # view the inference path's cache will see at /analyse time.
+    from backend.app.analytics_cache import build_cache, reset_for_tests
+    reset_for_tests()
+    cache = build_cache(bundles)
+    ctx = FeatureContext(
+        benchmarks=benchmarks, nclt=nclt, wilful=wilful,
+        analytics_cache=cache,
+    )
 
     X, cins_in_order = build_feature_matrix(bundles, ctx)
     y = np.asarray(labels, dtype=np.int32)

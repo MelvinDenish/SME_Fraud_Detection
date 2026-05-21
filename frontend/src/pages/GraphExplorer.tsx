@@ -169,7 +169,20 @@ export default function GraphExplorer() {
         "collide",
         forceCollide<GraphNode>((d) => (d.kind === "company" ? 38 : 22)),
       );
-    sim.on("tick", () => setTick((t) => t + 1));
+    // Throttle React re-renders to one per animation frame (~60 fps).
+    // d3-force fires ticks faster than the browser can repaint, and our SVG
+    // tree is hundreds of JSX nodes wide — without rAF gating, large
+    // provenance graphs (~100+ nodes) freeze the main thread. Per
+    // LOCAL_TEST_REPORT §4.5.
+    let pending = false;
+    sim.on("tick", () => {
+      if (pending) return;
+      pending = true;
+      requestAnimationFrame(() => {
+        pending = false;
+        setTick((t) => t + 1);
+      });
+    });
     return () => {
       sim.stop();
     };

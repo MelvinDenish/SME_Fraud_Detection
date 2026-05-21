@@ -2,11 +2,32 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { BAND_PALETTE, DEMO_CINS, api } from "../lib/api";
 
+const eyebrow: React.CSSProperties = {
+  fontFamily: "var(--font-body)",
+  fontSize: "var(--t-eyebrow)",
+  letterSpacing: "0.28em",
+  textTransform: "uppercase",
+  color: "var(--accent-gold)",
+  fontWeight: 700,
+};
+
 const cardStyle: React.CSSProperties = {
-  background: "white",
-  borderRadius: 8,
-  padding: "1.25rem 1.5rem",
-  boxShadow: "0 1px 2px rgba(15,23,42,.07)",
+  background: "var(--paper-elevated)",
+  padding: "var(--s-7) var(--s-6)",
+  borderTop: "1px solid var(--rule)",
+  borderBottom: "1px solid var(--rule-soft)",
+  boxShadow: "var(--shadow-card)",
+};
+
+const metaLabel: React.CSSProperties = {
+  fontFamily: "var(--font-body)",
+  fontSize: "var(--t-eyebrow)",
+  letterSpacing: "0.18em",
+  textTransform: "uppercase",
+  color: "var(--ink-3)",
+  margin: 0,
+  marginBottom: "var(--s-1)",
+  fontWeight: 600,
 };
 
 export default function Evergreening() {
@@ -14,64 +35,188 @@ export default function Evergreening() {
     queryKey: ["analyse", DEMO_CINS.dhfl],
     queryFn: () => api.analyse(DEMO_CINS.dhfl),
   });
+  const band = query.data ? BAND_PALETTE[query.data.risk_band] : null;
 
   return (
-    <div style={{ display: "grid", gap: "1rem" }}>
-      <header>
-        <h1 style={{ margin: 0 }}>Bank-Loan Evergreening</h1>
-        <p style={{ color: "#475569", margin: ".25rem 0 0" }}>
-          DHFL canonical case (CIRP 2019-11-29). PRD §4.4 evergreening
-          patterns 13–17 + Module 9 NCLT/WD override should both fire,
-          promoting fraud_risk_score ≥ 75 regardless of Tier-1 weighting.
+    <div style={{ display: "grid", gap: "var(--s-6)", maxWidth: 960 }}>
+      <header style={{ borderBottom: "1px solid var(--rule)", paddingBottom: "var(--s-5)" }}>
+        <p style={{ ...eyebrow, margin: 0, marginBottom: "var(--s-2)" }}>
+          Investigation · Bank Loan Evergreening
+        </p>
+        <h1 style={{
+          fontFamily: "var(--font-display)",
+          fontSize: "var(--t-h1)",
+          fontWeight: 500,
+          color: "var(--ink)",
+          margin: 0,
+          letterSpacing: "-0.01em",
+        }}>
+          DHFL · CIRP 2019-11-29
+        </h1>
+        <div style={{ height: 1, background: "var(--accent-gold)", width: 56, margin: "var(--s-4) 0" }} aria-hidden />
+        <p style={{
+          color: "var(--ink-2)",
+          margin: 0,
+          fontFamily: "var(--font-body)",
+          fontSize: "var(--t-body)",
+          maxWidth: "60ch",
+          lineHeight: 1.6,
+        }}>
+          PRD §4.4 evergreening patterns 13–17 plus Module 9's NCLT / wilful-defaulter
+          override fire together. The fraud risk score is floored at 75 regardless of
+          Tier-1 weighting once the NCLT signal lands.
         </p>
       </header>
 
-      {query.isLoading && <p>Loading DHFL analysis…</p>}
-      {query.error && (
-        <div style={{ ...cardStyle, borderLeft: "6px solid #b91c1c" }}>
-          <strong>Lookup failed:</strong> {(query.error as Error).message}
-        </div>
+      {query.isLoading && (
+        <p style={{ color: "var(--ink-4)", fontFamily: "var(--font-body)", fontSize: "var(--t-meta)", margin: 0 }}>
+          Resolving DHFL evidence chain…
+        </p>
       )}
-      {query.data && (
-        <div style={{ ...cardStyle, borderLeft: `6px solid ${BAND_PALETTE[query.data.risk_band].bg}` }}>
-          <h2 style={{ margin: 0 }}>{query.data.cin}</h2>
-          <div style={{ display: "flex", gap: "2rem", margin: "0.75rem 0", flexWrap: "wrap" }}>
+      {query.error && (
+        <article style={{ ...cardStyle, borderLeft: `4px solid var(--risk-critical)` }}>
+          <p style={{ ...metaLabel, color: "var(--risk-critical)" }}>Lookup failed</p>
+          <p style={{ color: "var(--ink)", margin: 0, fontFamily: "var(--font-body)" }}>
+            {(query.error as Error).message}
+          </p>
+        </article>
+      )}
+
+      {query.data && band && (
+        <article style={cardStyle}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "var(--s-5)" }}>
             <div>
-              <div style={{ color: "#64748b", fontSize: ".85rem" }}>fraud_risk_score</div>
-              <div style={{ fontSize: "2rem", fontWeight: 600 }}>{query.data.fraud_risk_score.toFixed(1)}</div>
+              <p style={{ ...eyebrow, margin: 0, marginBottom: "var(--s-2)" }}>Subject CIN</p>
+              <code style={{
+                fontFamily: "var(--font-mono)",
+                fontSize: "var(--t-body)",
+                color: "var(--ink)",
+              }}>{query.data.cin}</code>
+            </div>
+            <span style={{
+              background: band.bg, color: band.fg,
+              padding: "var(--s-2) var(--s-4)",
+              fontFamily: "var(--font-body)",
+              fontSize: "var(--t-eyebrow)",
+              letterSpacing: "0.18em",
+              textTransform: "uppercase",
+              fontWeight: 700,
+            }}>{query.data.risk_band}</span>
+          </div>
+
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(4, 1fr)",
+            gap: "var(--s-5)",
+            marginTop: "var(--s-6)",
+            paddingTop: "var(--s-5)",
+            borderTop: "1px solid var(--rule-soft)",
+          }}>
+            <div>
+              <p style={metaLabel}>Fraud risk</p>
+              <p style={{
+                fontFamily: "var(--font-display)",
+                fontSize: "var(--t-h2)",
+                fontWeight: 500,
+                color: "var(--ink)",
+                margin: 0,
+              }}>{query.data.fraud_risk_score.toFixed(1)}</p>
             </div>
             <div>
-              <div style={{ color: "#64748b", fontSize: ".85rem" }}>risk_band</div>
-              <div><span style={{
-                background: BAND_PALETTE[query.data.risk_band].bg,
-                color: BAND_PALETTE[query.data.risk_band].fg,
-                padding: "0.25rem 0.75rem", borderRadius: 999, fontWeight: 600,
-              }}>{query.data.risk_band}</span></div>
+              <p style={metaLabel}>Override</p>
+              <p style={{
+                fontFamily: "var(--font-body)",
+                fontSize: "var(--t-h3)",
+                color: "var(--ink)",
+                margin: 0,
+              }}>{query.data.override_applied ? "NCLT / WD" : "—"}</p>
             </div>
             <div>
-              <div style={{ color: "#64748b", fontSize: ".85rem" }}>override_applied</div>
-              <div style={{ fontSize: "1.25rem" }}>{query.data.override_applied ? "✓ NCLT/WD" : "—"}</div>
+              <p style={metaLabel}>Data conf.</p>
+              <p style={{
+                fontFamily: "var(--font-mono)",
+                fontSize: "var(--t-h3)",
+                color: "var(--ink)",
+                margin: 0,
+              }}>{query.data.data_confidence}%</p>
             </div>
             <div>
-              <div style={{ color: "#64748b", fontSize: ".85rem" }}>data_confidence</div>
-              <div style={{ fontSize: "1.25rem" }}>{query.data.data_confidence}%</div>
+              <p style={metaLabel}>Signals</p>
+              <p style={{
+                fontFamily: "var(--font-mono)",
+                fontSize: "var(--t-h3)",
+                color: "var(--ink)",
+                margin: 0,
+              }}>{query.data.evidence_chain.length}</p>
             </div>
           </div>
-          <h3>Evidence summary</h3>
-          <ul>
+
+          <h2 style={{
+            fontFamily: "var(--font-display)",
+            fontSize: "var(--t-h3)",
+            fontWeight: 500,
+            color: "var(--ink)",
+            margin: "var(--s-6) 0 var(--s-4)",
+            paddingBottom: "var(--s-3)",
+            borderBottom: "1px solid var(--rule-soft)",
+          }}>
+            Evidence summary
+          </h2>
+          <ul style={{ margin: 0, padding: 0, listStyle: "none" }}>
             {query.data.evidence_chain.slice(0, 8).map((s) => (
-              <li key={s.signal_id} style={{ marginBottom: ".5rem" }}>
-                <code>{s.signal_type}</code> · {s.evidence_string}
+              <li key={s.signal_id} style={{
+                marginBottom: "var(--s-4)",
+                paddingLeft: "var(--s-4)",
+                borderLeft: "2px solid var(--rule-soft)",
+              }}>
+                <p style={{
+                  fontFamily: "var(--font-mono)",
+                  fontSize: "var(--t-eyebrow)",
+                  color: "var(--accent-gold)",
+                  letterSpacing: "0.08em",
+                  margin: 0,
+                  marginBottom: "var(--s-1)",
+                  fontWeight: 600,
+                }}>{s.signal_type}</p>
+                <p style={{
+                  fontFamily: "var(--font-body)",
+                  fontSize: "var(--t-meta)",
+                  color: "var(--ink-2)",
+                  margin: 0,
+                  lineHeight: 1.5,
+                }}>{s.evidence_string}</p>
               </li>
             ))}
             {query.data.evidence_chain.length > 8 && (
-              <li style={{ color: "#64748b" }}>… and {query.data.evidence_chain.length - 8} more</li>
+              <li style={{
+                color: "var(--ink-4)",
+                fontFamily: "var(--font-body)",
+                fontSize: "var(--t-meta)",
+                marginTop: "var(--s-3)",
+              }}>
+                … and {query.data.evidence_chain.length - 8} more signals in the chain.
+              </li>
             )}
           </ul>
-          <p>
-            <Link to={`/graph/${query.data.cin}`}>Open in Graph Explorer →</Link>
-          </p>
-        </div>
+          <Link
+            to={`/graph/${query.data.cin}`}
+            style={{
+              display: "inline-block",
+              marginTop: "var(--s-6)",
+              fontFamily: "var(--font-body)",
+              fontSize: "var(--t-eyebrow)",
+              letterSpacing: "0.18em",
+              textTransform: "uppercase",
+              fontWeight: 600,
+              color: "var(--accent-gold)",
+              textDecoration: "none",
+              borderBottom: "1px solid var(--accent-gold)",
+              paddingBottom: 2,
+            }}
+          >
+            Open in graph explorer →
+          </Link>
+        </article>
       )}
     </div>
   );

@@ -90,7 +90,11 @@ async def _build_client():
     app = FastAPI()
     app.include_router(analyse_router)
     app.include_router(report_router)
-    app.dependency_overrides[get_current_user] = lambda: {"id": "demo", "is_active": True}
+    app.dependency_overrides[get_current_user] = lambda: {
+        "id": "demo", "is_active": True,
+        # role required by /report's RBAC gate (auditor/investigator/admin).
+        "role": "admin",
+    }
 
     transport = ASGITransport(app=app)
     token = create_access_token("demo-user")

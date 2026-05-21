@@ -168,18 +168,45 @@ async def _write_all(packs: dict[str, object], *, clean: bool = False) -> None:
         await _wipe_database(driver)
 
     try:
+        # Collect the set of CINs that actually have backing Company fixtures.
+        # NCLT / wilful-defaulter / CERSAI upserts MATCH the Company node, so
+        # rows referencing CINs without a fixture would otherwise blow up.
+        # Day 23 expanded these auxiliary sets faster than the company
+        # fixtures, so we filter to known CINs here at write-time. Production
+        # ingest paths populate Companies via MCA21/CompositeSource before
+        # the auxiliary upserts, so this filter is a no-op in prod.
+        known_cins: set[str] = set()
         for bundle in packs["company_bundles"]:  # type: ignore[union-attr]
             await write_bundle(driver, bundle)
+            known_cins.add(bundle.company.cin)
         for p in packs["benchmarks"]:  # type: ignore[union-attr]
             await upsert_industry_benchmark(driver, p)
         for g in packs["gst_entities"]:  # type: ignore[union-attr]
             await upsert_gst_entity(driver, g)
+        nclt_skipped = 0
         for n in packs["nclt"]:  # type: ignore[union-attr]
+            if n.cin not in known_cins:
+                nclt_skipped += 1
+                continue
             await upsert_nclt_proceeding(driver, n)
+        if nclt_skipped:
+            logger.info("Skipped %d NCLT rows without backing Company fixtures", nclt_skipped)
+        wilful_skipped = 0
         for w in packs["wilful"]:  # type: ignore[union-attr]
+            if w.cin not in known_cins:
+                wilful_skipped += 1
+                continue
             await upsert_wilful_defaulter(driver, w)
+        if wilful_skipped:
+            logger.info("Skipped %d wilful-defaulter rows without backing Company fixtures", wilful_skipped)
+        cersai_skipped = 0
         for c in packs["cersai"]:  # type: ignore[union-attr]
+            if c.cin not in known_cins:
+                cersai_skipped += 1
+                continue
             await upsert_charge(driver, c)
+        if cersai_skipped:
+            logger.info("Skipped %d CERSAI rows without backing Company fixtures", cersai_skipped)
 
         dhfl = packs["dhfl"]
         for co in dhfl.companies:  # type: ignore[attr-defined]

@@ -2,36 +2,97 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { DEMO_CINS, UploadAck, UploadPreview, api } from "../lib/api";
 
+const eyebrow: React.CSSProperties = {
+  fontFamily: "var(--font-body)",
+  fontSize: "var(--t-eyebrow)",
+  letterSpacing: "0.28em",
+  textTransform: "uppercase",
+  color: "var(--accent-gold)",
+  fontWeight: 700,
+};
+
 const cardStyle: React.CSSProperties = {
-  background: "white",
-  borderRadius: 8,
-  padding: "1.25rem 1.5rem",
-  boxShadow: "0 1px 2px rgba(15,23,42,.07)",
+  background: "var(--paper-elevated)",
+  padding: "var(--s-6)",
+  borderTop: "1px solid var(--rule)",
+  borderBottom: "1px solid var(--rule-soft)",
+  boxShadow: "var(--shadow-card)",
 };
 
-const btnStyle: React.CSSProperties = {
-  padding: "0.5rem 1rem", border: 0, background: "#0f172a", color: "white",
-  borderRadius: 4, cursor: "pointer",
+const inputStyle: React.CSSProperties = {
+  padding: "var(--s-2) var(--s-3)",
+  border: "1px solid var(--rule-soft)",
+  borderRadius: 0,
+  background: "var(--paper)",
+  color: "var(--ink)",
+  fontFamily: "var(--font-mono)",
+  fontSize: "var(--t-meta)",
+  outline: "none",
 };
 
-// PRD §10 Day-21 — show analyst what each upload buys before they submit.
+const labelStyle: React.CSSProperties = {
+  fontFamily: "var(--font-body)",
+  fontSize: "var(--t-eyebrow)",
+  letterSpacing: "0.18em",
+  textTransform: "uppercase",
+  color: "var(--ink-3)",
+  fontWeight: 600,
+};
+
+const primaryBtn: React.CSSProperties = {
+  padding: "var(--s-3) var(--s-5)",
+  border: 0,
+  background: "var(--ink)",
+  color: "var(--paper)",
+  fontFamily: "var(--font-body)",
+  fontSize: "var(--t-eyebrow)",
+  letterSpacing: "0.22em",
+  textTransform: "uppercase",
+  fontWeight: 700,
+  cursor: "pointer",
+  borderRadius: 0,
+};
+
+const chipBtn: React.CSSProperties = {
+  padding: "var(--s-2) var(--s-3)",
+  background: "var(--paper)",
+  color: "var(--ink-2)",
+  border: "1px solid var(--rule-soft)",
+  fontFamily: "var(--font-mono)",
+  fontSize: "var(--t-eyebrow)",
+  letterSpacing: "0.06em",
+  cursor: "pointer",
+  borderRadius: 0,
+};
+
+const cardTitle: React.CSSProperties = {
+  fontFamily: "var(--font-display)",
+  fontSize: "var(--t-h3)",
+  fontWeight: 500,
+  color: "var(--ink)",
+  margin: 0,
+  marginBottom: "var(--s-2)",
+  letterSpacing: "-0.005em",
+};
+
 function DcBadge({ current, projected }: { current: number; projected: number }) {
   const delta = projected - current;
   const noBump = delta === 0;
   return (
     <div style={{
-      display: "inline-flex", alignItems: "center", gap: 6,
-      padding: ".25rem .55rem",
-      background: noBump ? "#f1f5f9" : "#dbeafe",
-      borderLeft: `3px solid ${noBump ? "#94a3b8" : "#2563eb"}`,
-      borderRadius: 4, fontSize: ".82rem",
-      marginTop: ".4rem", marginBottom: ".25rem",
+      display: "inline-flex", alignItems: "baseline", gap: "var(--s-2)",
+      padding: "var(--s-2) var(--s-3)",
+      background: "var(--paper)",
+      borderLeft: `3px solid ${noBump ? "var(--ink-4)" : "var(--accent-gold)"}`,
+      marginTop: "var(--s-3)", marginBottom: "var(--s-4)",
+      fontFamily: "var(--font-body)",
+      fontSize: "var(--t-meta)",
     }}>
-      <strong>DataConfidence:</strong>
-      <span>{current}%</span>
-      <span style={{ color: "#64748b" }}>&rarr;</span>
-      <span style={{ fontWeight: 600 }}>{projected}%</span>
-      <span style={{ color: noBump ? "#64748b" : "#1d4ed8" }}>
+      <span style={{ ...labelStyle, color: "var(--ink-3)" }}>Data conf.</span>
+      <span style={{ fontFamily: "var(--font-mono)", color: "var(--ink)" }}>{current}%</span>
+      <span style={{ color: "var(--ink-4)" }}>→</span>
+      <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--ink)" }}>{projected}%</span>
+      <span style={{ color: noBump ? "var(--ink-4)" : "var(--accent-gold)", fontSize: "var(--t-eyebrow)", letterSpacing: "0.08em" }}>
         {noBump ? "no change" : `+${delta} pts`}
       </span>
     </div>
@@ -40,21 +101,48 @@ function DcBadge({ current, projected }: { current: number; projected: number })
 
 function AckBanner({ ack }: { ack: UploadAck | undefined }) {
   if (!ack) return null;
+  const isOk = ack.accepted;
   return (
     <div style={{
-      marginTop: ".75rem",
-      padding: ".5rem .75rem",
-      background: ack.accepted ? "#dcfce7" : "#fee2e2",
-      borderLeft: `4px solid ${ack.accepted ? "#15803d" : "#b91c1c"}`,
-      borderRadius: 4,
+      marginTop: "var(--s-4)",
+      padding: "var(--s-3) var(--s-4)",
+      background: "var(--paper)",
+      borderLeft: `3px solid ${isOk ? "var(--risk-low)" : "var(--risk-critical)"}`,
     }}>
-      <strong>{ack.accepted ? "Accepted" : "Rejected"}</strong> · {ack.detail}
+      <p style={{
+        ...labelStyle,
+        color: isOk ? "var(--risk-low)" : "var(--risk-critical)",
+        margin: 0, marginBottom: "var(--s-1)",
+      }}>{isOk ? "Accepted" : "Rejected"}</p>
+      <p style={{ margin: 0, fontFamily: "var(--font-body)", fontSize: "var(--t-meta)", color: "var(--ink-2)" }}>
+        {ack.detail}
+      </p>
       {Object.keys(ack.extra).length > 0 && (
-        <pre style={{ margin: ".5rem 0 0", fontSize: ".8rem" }}>
+        <pre style={{
+          margin: "var(--s-3) 0 0",
+          fontFamily: "var(--font-mono)",
+          fontSize: "var(--t-eyebrow)",
+          color: "var(--ink-3)",
+          whiteSpace: "pre-wrap",
+        }}>
           {JSON.stringify(ack.extra, null, 2)}
         </pre>
       )}
     </div>
+  );
+}
+
+function ErrorLine({ message }: { message: string }) {
+  return (
+    <p style={{
+      color: "var(--risk-critical)",
+      marginTop: "var(--s-3)",
+      marginBottom: 0,
+      paddingLeft: "var(--s-3)",
+      borderLeft: "2px solid var(--risk-critical)",
+      fontFamily: "var(--font-body)",
+      fontSize: "var(--t-meta)",
+    }}>{message}</p>
   );
 }
 
@@ -67,34 +155,33 @@ function FinancialsForm({ cin, preview, onUploaded }: {
     onSuccess: onUploaded,
   });
   return (
-    <div style={cardStyle}>
-      <h3 style={{ marginTop: 0 }}>AOC-4 PDF</h3>
-      <p style={{ color: "#475569", marginTop: 0 }}>
+    <article style={cardStyle}>
+      <p style={{ ...eyebrow, margin: 0, marginBottom: "var(--s-2)" }}>1 · AOC-4 PDF</p>
+      <h2 style={cardTitle}>Financial statement</h2>
+      <p style={{ color: "var(--ink-3)", margin: 0, fontFamily: "var(--font-body)", fontSize: "var(--t-meta)", maxWidth: "60ch" }}>
         pdfplumber pulls the FS row + forensics into the per-CIN overlay
         (Day-7 hardened parser + Day-11 paren-negative / crore-unit support).
       </p>
       {preview && (
-        <DcBadge current={preview.current_data_confidence}
-                 projected={preview.if_financials_added} />
+        <DcBadge current={preview.current_data_confidence} projected={preview.if_financials_added} />
       )}
       <form
         onSubmit={(e) => { e.preventDefault(); if (file) mutation.mutate(); }}
-        style={{ display: "flex", gap: 8, alignItems: "center" }}
+        style={{ display: "flex", gap: "var(--s-3)", alignItems: "center", marginTop: "var(--s-3)" }}
       >
         <input
           type="file"
           accept="application/pdf"
           onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+          style={{ ...inputStyle, padding: "var(--s-2)" }}
         />
-        <button type="submit" disabled={!file || mutation.isPending} style={btnStyle}>
+        <button type="submit" disabled={!file || mutation.isPending} style={primaryBtn}>
           {mutation.isPending ? "Uploading…" : "Upload"}
         </button>
       </form>
-      {mutation.error && (
-        <p style={{ color: "crimson", marginTop: ".5rem" }}>{(mutation.error as Error).message}</p>
-      )}
+      {mutation.error && <ErrorLine message={(mutation.error as Error).message} />}
       <AckBanner ack={mutation.data} />
-    </div>
+    </article>
   );
 }
 
@@ -117,36 +204,40 @@ function GstForm({ cin, preview, onUploaded }: {
     onSuccess: onUploaded,
   });
   return (
-    <div style={cardStyle}>
-      <h3 style={{ marginTop: 0 }}>GST entity overlay</h3>
-      <p style={{ color: "#475569", marginTop: 0 }}>
-        Triggers Module 2 #1 (Revenue vs GST Turnover) when the upload
-        diverges &gt; 5% from the company's P&amp;L revenue.
+    <article style={cardStyle}>
+      <p style={{ ...eyebrow, margin: 0, marginBottom: "var(--s-2)" }}>2 · GST entity</p>
+      <h2 style={cardTitle}>GST overlay</h2>
+      <p style={{ color: "var(--ink-3)", margin: 0, fontFamily: "var(--font-body)", fontSize: "var(--t-meta)", maxWidth: "60ch" }}>
+        Triggers Module 2 #1 (Revenue vs GST Turnover) when the upload diverges
+        &gt; 5% from the company's P&amp;L revenue.
       </p>
       {preview && (
-        <DcBadge current={preview.current_data_confidence}
-                 projected={preview.if_gst_added} />
+        <DcBadge current={preview.current_data_confidence} projected={preview.if_gst_added} />
       )}
       <form
         onSubmit={(e) => { e.preventDefault(); mutation.mutate(); }}
-        style={{ display: "grid", gridTemplateColumns: "auto 1fr auto 1fr", gap: 8, alignItems: "center" }}
+        style={{
+          display: "grid",
+          gridTemplateColumns: "120px 1fr",
+          gap: "var(--s-3)",
+          alignItems: "center",
+          marginTop: "var(--s-3)",
+        }}
       >
-        <label>GSTIN</label>
-        <input value={gstin} onChange={(e) => setGstin(e.target.value)} style={{ padding: "0.4rem" }} />
-        <label>PAN</label>
-        <input value={pan} onChange={(e) => setPan(e.target.value)} style={{ padding: "0.4rem" }} />
-        <label>Aggregate turnover (₹)</label>
-        <input value={turnover} onChange={(e) => setTurnover(e.target.value)} style={{ padding: "0.4rem" }} />
+        <label style={labelStyle}>GSTIN</label>
+        <input value={gstin} onChange={(e) => setGstin(e.target.value)} style={inputStyle} />
+        <label style={labelStyle}>PAN</label>
+        <input value={pan} onChange={(e) => setPan(e.target.value)} style={inputStyle} />
+        <label style={labelStyle}>Aggregate turnover ₹</label>
+        <input value={turnover} onChange={(e) => setTurnover(e.target.value)} style={inputStyle} />
         <span />
-        <button type="submit" disabled={mutation.isPending} style={btnStyle}>
+        <button type="submit" disabled={mutation.isPending} style={{ ...primaryBtn, justifySelf: "start" }}>
           {mutation.isPending ? "Submitting…" : "Submit GST overlay"}
         </button>
       </form>
-      {mutation.error && (
-        <p style={{ color: "crimson", marginTop: ".5rem" }}>{(mutation.error as Error).message}</p>
-      )}
+      {mutation.error && <ErrorLine message={(mutation.error as Error).message} />}
       <AckBanner ack={mutation.data} />
-    </div>
+    </article>
   );
 }
 
@@ -158,44 +249,48 @@ function BankForm({ cin, preview, onUploaded }: {
     mutationFn: () => api.uploadBank(cin, Number(credits)),
     onSuccess: onUploaded,
   });
-  // PRD §7.1 ladder note: bank only bumps DC once GST is on file. Show the
-  // analyst the dependency explicitly so they don't think the endpoint is broken.
+  // PRD §7.1 ladder: bank only bumps DC once GST is on file. Surface the
+  // dependency so the analyst doesn't think the endpoint is broken.
   const bankNeedsGst =
     preview !== undefined &&
     preview.if_bank_added === preview.current_data_confidence &&
     !preview.state.has_gst_upload;
   return (
-    <div style={cardStyle}>
-      <h3 style={{ marginTop: 0 }}>Bank credits total</h3>
-      <p style={{ color: "#475569", marginTop: 0 }}>
+    <article style={cardStyle}>
+      <p style={{ ...eyebrow, margin: 0, marginBottom: "var(--s-2)" }}>3 · Bank credits</p>
+      <h2 style={cardTitle}>Bank credits total</h2>
+      <p style={{ color: "var(--ink-3)", margin: 0, fontFamily: "var(--font-body)", fontSize: "var(--t-meta)", maxWidth: "60ch" }}>
         Triggers Module 2 #7 (Bank Credits vs Revenue) when the reconstructed
         bank credits diverge &gt; 20% from the company's P&amp;L revenue.
       </p>
       {preview && (
-        <DcBadge current={preview.current_data_confidence}
-                 projected={preview.if_bank_added} />
+        <DcBadge current={preview.current_data_confidence} projected={preview.if_bank_added} />
       )}
       {bankNeedsGst && (
-        <p style={{ color: "#92400e", margin: ".25rem 0 .5rem", fontSize: ".8rem" }}>
-          Note: PRD §7.1 ladder requires a GST overlay before bank evidence
-          counts toward DC. Submit the bank total anyway — it still feeds
-          Module 2 check #7 — but DC won't change until GST is on file.
+        <p style={{
+          color: "var(--risk-high)",
+          margin: "var(--s-2) 0 var(--s-3)",
+          fontFamily: "var(--font-body)",
+          fontSize: "var(--t-eyebrow)",
+          letterSpacing: "0.04em",
+        }}>
+          Note: PRD §7.1 ladder requires GST overlay before bank evidence counts
+          toward DC. Submit anyway — Module 2 #7 still fires — but DC won't move
+          until GST is on file.
         </p>
       )}
       <form
         onSubmit={(e) => { e.preventDefault(); mutation.mutate(); }}
-        style={{ display: "flex", gap: 8, alignItems: "center" }}
+        style={{ display: "flex", gap: "var(--s-3)", alignItems: "center", marginTop: "var(--s-3)" }}
       >
-        <input value={credits} onChange={(e) => setCredits(e.target.value)} style={{ padding: "0.4rem", flex: 1 }} />
-        <button type="submit" disabled={mutation.isPending} style={btnStyle}>
+        <input value={credits} onChange={(e) => setCredits(e.target.value)} style={{ ...inputStyle, flex: 1 }} />
+        <button type="submit" disabled={mutation.isPending} style={primaryBtn}>
           {mutation.isPending ? "Submitting…" : "Submit bank total"}
         </button>
       </form>
-      {mutation.error && (
-        <p style={{ color: "crimson", marginTop: ".5rem" }}>{(mutation.error as Error).message}</p>
-      )}
+      {mutation.error && <ErrorLine message={(mutation.error as Error).message} />}
       <AckBanner ack={mutation.data} />
-    </div>
+    </article>
   );
 }
 
@@ -203,23 +298,49 @@ function PreviewCard({ preview }: { preview: UploadPreview | undefined }) {
   if (!preview) return null;
   const { state, current_data_confidence } = preview;
   return (
-    <div style={cardStyle}>
-      <h3 style={{ marginTop: 0, marginBottom: ".5rem" }}>
-        Current DataConfidence: <span style={{ color: "#1d4ed8" }}>{current_data_confidence}%</span>
-      </h3>
+    <article style={cardStyle}>
+      <p style={{ ...eyebrow, margin: 0, marginBottom: "var(--s-2)" }}>Overlay state</p>
+      <h2 style={cardTitle}>
+        Current DC <span style={{ color: "var(--accent-gold)" }}>{current_data_confidence}%</span>
+      </h2>
       <div style={{
-        display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: ".5rem",
-        fontSize: ".85rem", color: "#475569",
+        display: "grid",
+        gridTemplateColumns: "repeat(3, 1fr)",
+        gap: "var(--s-5)",
+        marginTop: "var(--s-3)",
+        paddingTop: "var(--s-4)",
+        borderTop: "1px solid var(--rule-soft)",
       }}>
-        <span>Financials on file: <strong style={{ color: "#0f172a" }}>{state.n_financials}</strong></span>
-        <span>GST overlay: <strong style={{ color: state.has_gst_upload ? "#15803d" : "#94a3b8" }}>
-          {state.has_gst_upload ? "yes" : "—"}
-        </strong></span>
-        <span>Bank overlay: <strong style={{ color: state.has_bank_upload ? "#15803d" : "#94a3b8" }}>
-          {state.has_bank_upload ? "yes" : "—"}
-        </strong></span>
+        <div>
+          <p style={labelStyle}>Financials</p>
+          <p style={{ fontFamily: "var(--font-mono)", fontSize: "var(--t-h3)", color: "var(--ink)", margin: "var(--s-1) 0 0" }}>
+            {state.n_financials}
+          </p>
+        </div>
+        <div>
+          <p style={labelStyle}>GST overlay</p>
+          <p style={{
+            fontFamily: "var(--font-body)",
+            fontSize: "var(--t-h3)",
+            color: state.has_gst_upload ? "var(--risk-low)" : "var(--ink-4)",
+            margin: "var(--s-1) 0 0",
+          }}>
+            {state.has_gst_upload ? "yes" : "—"}
+          </p>
+        </div>
+        <div>
+          <p style={labelStyle}>Bank overlay</p>
+          <p style={{
+            fontFamily: "var(--font-body)",
+            fontSize: "var(--t-h3)",
+            color: state.has_bank_upload ? "var(--risk-low)" : "var(--ink-4)",
+            margin: "var(--s-1) 0 0",
+          }}>
+            {state.has_bank_upload ? "yes" : "—"}
+          </p>
+        </div>
       </div>
-    </div>
+    </article>
   );
 }
 
@@ -235,38 +356,63 @@ export default function UploadPage() {
     qc.invalidateQueries({ queryKey: ["upload-preview", cin] });
   };
   return (
-    <div style={{ display: "grid", gap: "1rem" }}>
-      <header>
-        <h1 style={{ margin: 0 }}>Upload evidence</h1>
-        <p style={{ color: "#475569", margin: ".25rem 0 0" }}>
-          Three /upload/* endpoints stash overlays for the next /analyse
-          request. The badge on each form shows the DataConfidence bump
-          this upload would buy (PRD §7.1 ladder, Day-21 preview).
+    <div style={{ display: "grid", gap: "var(--s-6)", maxWidth: 960 }}>
+      <header style={{ borderBottom: "1px solid var(--rule)", paddingBottom: "var(--s-5)" }}>
+        <p style={{ ...eyebrow, margin: 0, marginBottom: "var(--s-2)" }}>
+          Evidence Intake · PRD §7.1 DataConfidence Ladder
+        </p>
+        <h1 style={{
+          fontFamily: "var(--font-display)",
+          fontSize: "var(--t-h1)",
+          fontWeight: 500,
+          color: "var(--ink)",
+          margin: 0,
+          letterSpacing: "-0.01em",
+        }}>
+          Upload evidence
+        </h1>
+        <div style={{ height: 1, background: "var(--accent-gold)", width: 56, margin: "var(--s-4) 0" }} aria-hidden />
+        <p style={{
+          color: "var(--ink-2)",
+          margin: 0,
+          fontFamily: "var(--font-body)",
+          fontSize: "var(--t-body)",
+          maxWidth: "60ch",
+          lineHeight: 1.6,
+        }}>
+          Three /upload/* endpoints stash overlays for the next /analyse request.
+          Each form shows the DataConfidence bump this upload would buy
+          (Day-21 preview).
         </p>
       </header>
-      <div style={cardStyle}>
-        <label htmlFor="upload-cin" style={{ fontWeight: 600 }}>Target CIN</label>
+
+      <article style={cardStyle}>
+        <p style={{ ...eyebrow, margin: 0, marginBottom: "var(--s-3)" }}>Target CIN</p>
         <input
           id="upload-cin"
           value={cin}
           onChange={(e) => setCin(e.target.value.trim().toUpperCase())}
-          style={{ width: "100%", padding: "0.5rem 0.75rem", border: "1px solid #cbd5e1", borderRadius: 4, marginTop: 4 }}
+          style={{ ...inputStyle, width: "100%", boxSizing: "border-box" }}
         />
-        <div style={{ display: "flex", gap: 6, marginTop: 6, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: "var(--s-2)", marginTop: "var(--s-3)", flexWrap: "wrap" }}>
           {Object.entries(DEMO_CINS).map(([k, v]) => (
             <button
               key={k}
               type="button"
               onClick={() => setCin(v)}
-              style={{ padding: "0.35rem 0.6rem", fontSize: ".75rem", background: "#e2e8f0", border: 0, borderRadius: 4, cursor: "pointer" }}
+              style={chipBtn}
             >{k}</button>
           ))}
         </div>
-      </div>
+      </article>
+
       {previewQuery.error && (
-        <div style={{ ...cardStyle, color: "crimson" }}>
-          Preview failed: {(previewQuery.error as Error).message}
-        </div>
+        <article style={{ ...cardStyle, borderLeft: "4px solid var(--risk-critical)" }}>
+          <p style={{ ...labelStyle, color: "var(--risk-critical)", margin: 0, marginBottom: "var(--s-1)" }}>Preview failed</p>
+          <p style={{ color: "var(--ink)", margin: 0, fontFamily: "var(--font-body)" }}>
+            {(previewQuery.error as Error).message}
+          </p>
+        </article>
       )}
       <PreviewCard preview={previewQuery.data} />
       <FinancialsForm cin={cin} preview={previewQuery.data} onUploaded={refetchPreview} />

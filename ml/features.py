@@ -15,6 +15,8 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from typing import TYPE_CHECKING
+
 from backend.app.ingest.benchmarks import BenchmarkPoint
 from backend.app.ingest.nclt import RawNCLTProceeding
 from backend.app.ingest.schemas import CompanyBundle
@@ -22,22 +24,48 @@ from backend.app.ingest.wilful_defaulter import RawWilfulDefaulter
 from backend.app.modules import (
     m01_beneish,
     m02_cross_statement,
+    m03_benford,
     m05_peer_deviation,
     m06_temporal,
     m07_auditor_nlp,
     m08_document_forensics,
     m09_nclt_defaulter,
+    m11_anomaly,
 )
 from backend.app.modules.base import ModuleResult, Severity
 from backend.app.modules.m02_cross_statement import CrossStatementInputs
 from backend.app.modules.m06_temporal import TemporalInputs
 from backend.app.modules.m09_nclt_defaulter import NCLTDefaulterInputs
+from backend.app.modules.m11_anomaly import (
+    AnomalyInputs,
+    financial_feature_row,
+    graph_feature_row,
+)
+
+if TYPE_CHECKING:  # pragma: no cover
+    from backend.app.analytics_cache import AnalyticsCache
 
 
 # Three features per module: score, max severity ordinal, signal count.
 _PER_MODULE_FEATURES = ("score", "max_severity", "signal_count")
 
-MODULE_KEYS: tuple[str, ...] = ("m1", "m2", "m5", "m6", "m7", "m8", "m9")
+# 2026-05-21: extended from 7 to 10 modules. M4 (graph patterns) is
+# deliberately excluded — its run() is async + requires a live Neo4j
+# driver, which day13_oof_retrain.py doesn't have. Including M4 with a
+# constant 0 at training time would create train/infer asymmetry that
+# would mislead F1a. The scorer still fires M4 at /analyse time; its
+# signal lives in fraud_risk_score, just not in this meta-feature slot.
+MODULE_KEYS: tuple[str, ...] = (
+    "m1", "m2", "m3", "m5", "m6", "m7", "m8", "m9", "m10", "m11",
+)
+
+# Detector outputs appended to the feature vector when an analytics_cache
+# is supplied. All four real detectors are wired: D3 trains fresh on the
+# bundle pool's event stream inside analytics_cache.build_cache; D4 fits
+# LOF on graph features; D5 loads a persisted TCN; D6 trains a small
+# autoencoder during cache build. D1 + D2 were deleted upstream as
+# unimplemented stubs.
+DETECTOR_KEYS: tuple[str, ...] = ("d3_score", "d4_score", "d5_score", "d6_score")
 
 FEATURE_NAMES: tuple[str, ...] = tuple(
     f"{mod}_{feat}" for mod in MODULE_KEYS for feat in _PER_MODULE_FEATURES
@@ -53,7 +81,7 @@ FEATURE_NAMES: tuple[str, ...] = tuple(
     "pat_latest",
     "going_concern_any",
     "adverse_any",
-)
+) + DETECTOR_KEYS
 
 
 @dataclass
@@ -63,6 +91,10 @@ class FeatureContext:
     benchmarks: list[BenchmarkPoint]
     nclt: list[RawNCLTProceeding]
     wilful: list[RawWilfulDefaulter]
+    # Optional — provides the M10/M11/D4/D6 backing population view. When
+    # None those slots are filled with zeros (still informative for the
+    # majority case in tests / lightweight feature extraction).
+    analytics_cache: "AnalyticsCache | None" = None
 
 
 def _module_triplet(result: ModuleResult | None) -> tuple[float, float, float]:
@@ -79,6 +111,7 @@ def _bundle_triplets(
     """Run each module on the bundle. Modules that can't score abstain."""
     triplets: dict[str, tuple[float, float, float]] = {}
     fs_sorted = sorted(bundle.financials, key=lambda f: f.year)
+    cin = bundle.company.cin
 
     if len(fs_sorted) >= 2:
         triplets["m1"] = _module_triplet(m01_beneish.run(fs_sorted[-1], fs_sorted[-2]))
@@ -93,6 +126,10 @@ def _bundle_triplets(
             current=curr, previous=prev, cwip_history=cwip_hist,
         ))
         triplets["m2"] = _module_triplet(m2)
+
+        triplets["m3"] = _module_triplet(m03_benford.run(
+            fs_sorted, nic_code=bundle.company.nic_code,
+        ))
 
         m5 = m05_peer_deviation.run(
             curr, prev,
@@ -109,7 +146,7 @@ def _bundle_triplets(
         triplets["m7"] = _module_triplet(m07_auditor_nlp.run(fs_sorted))
         triplets["m8"] = _module_triplet(m08_document_forensics.run_for_fs_list(fs_sorted))
     else:
-        for key in ("m2", "m5", "m6", "m7", "m8"):
+        for key in ("m2", "m3", "m5", "m6", "m7", "m8"):
             triplets[key] = (0.0, 0.0, 0.0)
 
     triplets["m9"] = _module_triplet(m09_nclt_defaulter.run(NCLTDefaulterInputs(
@@ -117,6 +154,35 @@ def _bundle_triplets(
         nclt_proceedings=ctx.nclt,
         wilful_declarations=ctx.wilful,
     )))
+
+    # M10 + M11 read from the analytics_cache (population-view artefacts).
+    # Without the cache they abstain — same fallback the scorer uses.
+    triplets["m10"] = (0.0, 0.0, 0.0)
+    triplets["m11"] = (0.0, 0.0, 0.0)
+    if ctx.analytics_cache is not None:
+        cache = ctx.analytics_cache
+        pre_m10 = cache.m10_results.get(cin)
+        if pre_m10 is not None:
+            triplets["m10"] = _module_triplet(pre_m10)
+        graph_row = None
+        financial_row = None
+        gf = cache.graph_feature_by_cin.get(cin)
+        if gf is not None:
+            graph_row = graph_feature_row(gf)
+        if cin in cache.financial_row_by_cin:
+            financial_row = cache.financial_row_by_cin[cin]
+        elif fs_sorted:
+            financial_row = financial_feature_row(fs_sorted[-1])
+        if graph_row is not None or financial_row is not None:
+            m11_result = m11_anomaly.run(AnomalyInputs(
+                cin=cin,
+                year=fs_sorted[-1].year if fs_sorted else None,
+                financial_row=financial_row,
+                graph_row=graph_row,
+                background_financials=cache.background_financials,
+                background_graph=cache.background_graph,
+            ))
+            triplets["m11"] = _module_triplet(m11_result)
 
     return triplets
 
@@ -143,6 +209,21 @@ def build_feature_vector(bundle: CompanyBundle, ctx: FeatureContext) -> np.ndarr
         1.0 if any(f.going_concern_flag for f in fs_sorted) else 0.0,
         1.0 if any(f.adverse_flag for f in fs_sorted) else 0.0,
     ])
+    # Detector slots — populated when the analytics_cache is present; zero
+    # otherwise. Order must match DETECTOR_KEYS so FEATURE_NAMES stays
+    # consistent at train/infer.
+    d3_score = 0.0
+    d4_score = 0.0
+    d5_score = 0.0
+    d6_score = 0.0
+    if ctx.analytics_cache is not None:
+        # Avoid circular import at module top — the analytics_cache imports
+        # ml/features via ml/l05_graph_features indirectly through D6.
+        from backend.app.analytics_cache import compute_target_detector_scores
+        d3_score, d4_score, d5_score, d6_score = compute_target_detector_scores(
+            bundle.company.cin, bundle, ctx.analytics_cache,
+        )
+    flat.extend([d3_score, d4_score, d5_score, d6_score])
     return np.asarray(flat, dtype=np.float32)
 
 
