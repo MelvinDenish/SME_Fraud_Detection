@@ -52,12 +52,17 @@ NIGRINI_MAD_THRESHOLD = 0.015
 KS_CRIT_FACTOR = 1.36
 
 
-def _is_nic_disabled(nic_code: str | None) -> bool:
-    if not nic_code:
+def _is_nic_disabled(nic_code: str | int | None) -> bool:
+    if nic_code is None:
         return False
-    # NIC codes in the seed are stored as digits like "27101" — first two digits
-    # are the 2-digit NIC section we filter on.
-    return nic_code[:2] in BENFORD_DISABLED_NICS
+    # CompanyBundle.company.nic_code is an int (e.g. 45201) per
+    # backend/app/ingest/schemas.py; older callsites passed pre-stringified
+    # forms. Coerce here so both shapes work — first two digits are the
+    # NIC section we filter on.
+    s = str(nic_code)
+    if not s:
+        return False
+    return s[:2] in BENFORD_DISABLED_NICS
 
 
 def _first_digit(value: float) -> int | None:

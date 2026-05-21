@@ -21,6 +21,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from backend.app.api.upload_store import get_upload_store
 from backend.app.api.validators import CIN_PATH
 from backend.app.auth.deps import get_current_user
+from backend.app.deps import get_driver
 from backend.app.ingest.benchmarks import BSEFixtureBenchmark
 from backend.app.ingest.composite import CompositeCompanySource
 from backend.app.ingest.nclt import NCLTFixtureSource
@@ -45,12 +46,19 @@ _wilful_source = WilfulDefaulterFixtureSource()
 
 
 async def _build_scoring_context(overlay) -> ScoringContext:
+    # M4 (graph patterns) wants the live Neo4j driver. When the graph isn't
+    # connected (CI without Neo4j, etc.), pass None — M4 then skips cleanly.
+    try:
+        driver = get_driver()
+    except Exception:
+        driver = None
     return ScoringContext(
         benchmarks=await _benchmark_source.fetch_all(),
         nclt=await _nclt_source.fetch_all(),
         wilful=await _wilful_source.fetch_all(),
         gst_entity=overlay.gst_entity,
         bank_credits_total=overlay.bank_credits_total,
+        driver=driver,
     )
 
 

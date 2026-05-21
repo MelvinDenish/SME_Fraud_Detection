@@ -34,7 +34,12 @@ const linkBase: React.CSSProperties = {
   letterSpacing: "0.18em",
   textTransform: "uppercase",
   fontWeight: 600,
-  borderBottom: "1px solid transparent",
+  // F7: don't mix the `borderBottom` shorthand with a `borderBottomColor`
+  // longhand override in the active variant — React warns and the colour
+  // sometimes wins, sometimes doesn't. Split into longhand triplet here.
+  borderBottomStyle: "solid",
+  borderBottomWidth: "1px",
+  borderBottomColor: "transparent",
   transition: "border-color var(--d-quick) var(--ease-out), color var(--d-quick)",
 };
 
