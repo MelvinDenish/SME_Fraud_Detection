@@ -20,11 +20,18 @@ import tempfile
 from datetime import date
 from pathlib import Path
 
-from fastapi import APIRouter, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from backend.app.api.upload_store import get_upload_store
 from backend.app.api.validators import CIN_PATH
+from backend.app.auth.deps import require_roles
+
+# All /upload/* routes mutate the per-CIN overlay. RBAC: credit_officer
+# (frontline triage), investigator (forensic deep-dive), and admin can
+# upload; auditors (read-only role) cannot. Applied via router-level
+# dependencies so every route below inherits the gate.
+_UPLOAD_AUTH = Depends(require_roles("credit_officer", "investigator", "admin"))
 from backend.app.ingest.data_confidence import compute_data_confidence
 from backend.app.ingest.gst import RawGSTEntity, pan_from_gstin
 from backend.app.ingest.schemas import CompanyBundle, RawFinancialStatement
@@ -33,7 +40,7 @@ from backend.app.parse.pdf_parser import parse_financial_pdf
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/upload", tags=["upload"])
+router = APIRouter(prefix="/upload", tags=["upload"], dependencies=[_UPLOAD_AUTH])
 
 _fixture_source = FixtureSource()
 

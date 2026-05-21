@@ -37,7 +37,7 @@ from reportlab.platypus import (
 
 from backend.app.api.upload_store import get_upload_store
 from backend.app.api.validators import CIN_PATH
-from backend.app.auth.deps import get_current_user
+from backend.app.auth.deps import get_current_user, require_roles
 from backend.app.ingest.benchmarks import BSEFixtureBenchmark
 from backend.app.ingest.composite import CompositeCompanySource
 from backend.app.ingest.nclt import NCLTFixtureSource
@@ -173,9 +173,14 @@ def _render_pdf(report_dict: dict, report_uuid: str, generated_at: datetime) -> 
 @router.get("/{cin}")
 async def get_report(
     cin: CIN_PATH,
-    _user: dict = Depends(get_current_user),
+    _user: dict = Depends(require_roles("auditor", "investigator", "admin")),
 ) -> StreamingResponse:
-    """Render the PRD §7.1 payload for {cin} as a PDF. Auth-required."""
+    """Render the PRD §7.1 payload for {cin} as a PDF.
+
+    RBAC: auditor / investigator / admin only — credit_officer accounts are
+    restricted to /analyse for triage and don't get to export evidence dossiers.
+    Closes LOCAL_TEST_REPORT §4.6.
+    """
     bundle = await _company_source.fetch_bundle(cin)
     if bundle is None:
         raise HTTPException(

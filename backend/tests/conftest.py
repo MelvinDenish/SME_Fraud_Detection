@@ -20,7 +20,10 @@ from backend.app.auth.deps import get_current_user
 STUB_USER: dict[str, Any] = {
     "user_id": "test-user-0001",
     "email": "test-user@example.com",
-    "role": "credit_officer",
+    # admin role so role-gated routes (e.g. /report — auditor/investigator/admin;
+    # /upload/* — credit_officer/investigator/admin) all pass via the same stub.
+    # RBAC-specific tests should override get_current_user with a different role.
+    "role": "admin",
     "is_active": True,
     "created_at": datetime(2026, 1, 1, tzinfo=timezone.utc),
 }
