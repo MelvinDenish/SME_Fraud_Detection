@@ -25,10 +25,12 @@ import asyncio
 import logging
 from dataclasses import dataclass, field
 from datetime import date
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import networkx as nx
 import numpy as np
+import torch
 
 from backend.app.ingest.schemas import CompanyBundle
 from backend.app.modules.m10_hypergraph_shell import HypergraphInputs
@@ -38,6 +40,12 @@ from backend.app.modules.m11_anomaly import (
     graph_feature_row,
 )
 from ml.detectors.d4_lof import D4LOF
+from ml.detectors.d5_mamba import (
+    FEATURE_DIM as D5_FEATURE_DIM,
+    TemporalConvolutionalNet,
+    build_sequence_for_cin,
+    build_sequences_from_company_bundles,
+)
 from ml.detectors.d6_combined_ae import D6Artifacts, train_d6
 from ml.l05_graph_features import GraphFeatures, extract_features
 
@@ -45,6 +53,8 @@ if TYPE_CHECKING:  # pragma: no cover
     from backend.app.modules.base import ModuleResult
 
 logger = logging.getLogger(__name__)
+
+D5_ARTIFACT_PATH = Path(__file__).resolve().parents[2] / "ml" / "artifacts" / "d5_tcn.pt"
 
 
 @dataclass
@@ -60,11 +70,12 @@ class AnalyticsCache:
     # M10 cache — full batch result, indexed by CIN
     m10_results: dict[str, "ModuleResult"] = field(default_factory=dict)
 
-    # Detector outputs cached at build time. D3 (TGN) + D5 (Mamba) deferred —
-    # they need event-stream / sequence-builder pipelines that don't exist
-    # yet (see LOCAL_TEST_REPORT §3.1). D4 + D6 fit the existing 20+7 feature
-    # rows and integrate cleanly here.
+    # Detector outputs cached at build time. D4/D5/D6 wired; D3 (TGN) still
+    # deferred — it needs an event-stream constructor that maps the live
+    # bundle's transactions to the trained TGN's node-id space.
     d4_scores_by_cin: dict[str, float] = field(default_factory=dict)
+    d5_model: TemporalConvolutionalNet | None = None
+    d5_scores_by_cin: dict[str, float] = field(default_factory=dict)
     d6_artifacts: D6Artifacts | None = None
     d6_scores_by_cin: dict[str, float] = field(default_factory=dict)
 
@@ -171,14 +182,40 @@ def build_cache(
         for cin, s in zip(both, d6_scores):
             cache.d6_scores_by_cin[cin] = float(s)
 
+    # ---- D5 (TCN) inference: load persisted model + score every bundle ----
+    # Training happens in scripts/day13_oof_retrain.py (which has the labels);
+    # at inference we just load the state_dict and predict. When the artefact
+    # is missing — fresh checkout / artefact gitignored — D5 scores stay 0
+    # for every CIN and the meta-learner's d5 slot is effectively unused.
+    if D5_ARTIFACT_PATH.exists():
+        try:
+            cache.d5_model = TemporalConvolutionalNet()
+            cache.d5_model.load_state_dict(
+                torch.load(str(D5_ARTIFACT_PATH), map_location="cpu", weights_only=True)
+            )
+            cache.d5_model.eval()
+            batch = build_sequences_from_company_bundles(bundles)
+            if batch.cins:
+                with torch.no_grad():
+                    preds = cache.d5_model(
+                        torch.from_numpy(batch.x),
+                        torch.from_numpy(batch.mask),
+                    ).cpu().numpy()
+                for cin, s in zip(batch.cins, preds):
+                    cache.d5_scores_by_cin[cin] = float(s)
+        except Exception as exc:  # pragma: no cover — defensive
+            logger.warning("analytics_cache: D5 load/predict failed (%s) — d5 slot stays zero", exc)
+            cache.d5_model = None
+
     logger.info(
         "analytics_cache: built from %d bundles — graph_bg=%d financial_bg=%d "
-        "m10_hits=%d d4=%d d6=%d",
+        "m10_hits=%d d4=%d d5=%d d6=%d",
         len(bundles),
         cache.background_graph.shape[0],
         cache.background_financials.shape[0],
         len(cache.m10_results),
         len(cache.d4_scores_by_cin),
+        len(cache.d5_scores_by_cin),
         len(cache.d6_scores_by_cin),
     )
     return cache
@@ -186,23 +223,24 @@ def build_cache(
 
 def compute_target_detector_scores(
     cin: str, bundle: CompanyBundle, cache: AnalyticsCache,
-) -> tuple[float, float]:
-    """Return (d4_score, d6_score) for a CIN.
+) -> tuple[float, float, float]:
+    """Return (d4_score, d5_score, d6_score) for a CIN.
 
     Fast-path: dict lookup when the CIN was in the cache build set. Slow-path
-    (uploads / new CINs): compute fresh against the cached background. Zeros
-    when the cache or target rows are missing — never raises.
+    (uploads / new CINs): compute fresh from the loaded model. Zeros when the
+    cache or target rows are missing — never raises.
     """
     pre_d4 = cache.d4_scores_by_cin.get(cin)
+    pre_d5 = cache.d5_scores_by_cin.get(cin)
     pre_d6 = cache.d6_scores_by_cin.get(cin)
-    if pre_d4 is not None and pre_d6 is not None:
-        return pre_d4, pre_d6
+    if pre_d4 is not None and pre_d5 is not None and pre_d6 is not None:
+        return pre_d4, pre_d5, pre_d6
 
     d4_out: float = pre_d4 if pre_d4 is not None else 0.0
+    d5_out: float = pre_d5 if pre_d5 is not None else 0.0
     d6_out: float = pre_d6 if pre_d6 is not None else 0.0
 
-    # Slow-path D6 only — D4 needs a (background + target) refit which is
-    # 100x slower than the cached lookup; skipping per-request is honest.
+    # D6 slow-path — D4 needs a full LOF refit (prohibitive); we skip it.
     if pre_d6 is None and cache.d6_artifacts is not None and bundle.financials:
         gf = cache.graph_feature_by_cin.get(cin)
         if gf is not None:
@@ -213,7 +251,37 @@ def compute_target_detector_scores(
                 d6_out = float(cache.d6_artifacts.anomaly_scores(tab, graph)[0])
             except Exception as exc:  # pragma: no cover — defensive
                 logger.warning("analytics_cache: D6 slow-path failed for %s (%s)", cin, exc)
-    return d4_out, d6_out
+
+    # D5 slow-path — TCN is cheap to evaluate; build target sequence + predict.
+    if pre_d5 is None and cache.d5_model is not None:
+        rows: list[dict] = []
+        as_of = date.today()
+        for charge in bundle.charges:
+            rows.append({
+                "amount": charge.amount,
+                "counterparty_type": "bank",
+                "gst_status": "active",
+                "delta_days": (as_of - charge.creation_date).days,
+            })
+        for fs in sorted(bundle.financials, key=lambda f: f.year):
+            ye = date(fs.year, 3, 31)
+            rows.append({
+                "amount": fs.revenue,
+                "counterparty_type": "customer",
+                "gst_status": "active" if not fs.adverse_flag else "missing_trader",
+                "delta_days": (as_of - ye).days,
+            })
+        if rows:
+            rows.sort(key=lambda r: -int(r["delta_days"]))
+            try:
+                x, mask = build_sequence_for_cin(rows)
+                xt = torch.from_numpy(x.reshape(1, *x.shape))
+                mt = torch.from_numpy(mask.reshape(1, *mask.shape))
+                with torch.no_grad():
+                    d5_out = float(cache.d5_model(xt, mt).cpu().numpy()[0])
+            except Exception as exc:  # pragma: no cover — defensive
+                logger.warning("analytics_cache: D5 slow-path failed for %s (%s)", cin, exc)
+    return d4_out, d5_out, d6_out
 
 
 async def get_or_build(bundles_provider) -> AnalyticsCache:
