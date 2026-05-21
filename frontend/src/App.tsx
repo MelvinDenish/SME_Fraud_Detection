@@ -8,6 +8,7 @@ import Evergreening from "./pages/Evergreening";
 import UploadPage from "./pages/Upload";
 import Reports from "./pages/Reports";
 import Login from "./pages/Login";
+import Search from "./pages/Search";
 
 // Editorial masthead — dark ink band sitting over the parchment canvas.
 // Type tokens cascade from styles/tokens.css; no font override here.
@@ -147,6 +148,7 @@ export default function App() {
     <div style={{ minHeight: "100vh", background: "var(--paper)" }}>
       <nav style={navStyle}>
         <Masthead />
+        <NavLink to="/search" style={navLinkStyle}>Search</NavLink>
         <NavLink to="/dashboard" style={navLinkStyle}>Dossier</NavLink>
         <NavLink to="/graph" style={navLinkStyle}>Graph</NavLink>
         <NavLink to="/itc" style={navLinkStyle}>ITC Ring</NavLink>
@@ -163,8 +165,9 @@ export default function App() {
         }}
       >
         <Routes>
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/" element={<Navigate to="/search" replace />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/search" element={<ProtectedRoute><Search /></ProtectedRoute>} />
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/graph" element={<ProtectedRoute><GraphExplorer /></ProtectedRoute>} />
           <Route path="/graph/:cin" element={<ProtectedRoute><GraphExplorer /></ProtectedRoute>} />

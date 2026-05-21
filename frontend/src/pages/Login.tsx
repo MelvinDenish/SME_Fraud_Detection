@@ -3,32 +3,53 @@ import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../lib/auth";
 
 const cardStyle: React.CSSProperties = {
-  background: "white",
-  borderRadius: 8,
-  padding: "1.5rem",
-  boxShadow: "0 1px 2px rgba(15,23,42,.07)",
-  maxWidth: 380,
-  margin: "3rem auto",
+  background: "var(--paper-elevated)",
+  padding: "var(--s-7) var(--s-6) var(--s-6)",
+  boxShadow: "var(--shadow-card)",
+  maxWidth: 420,
+  margin: "var(--s-9) auto var(--s-7)",
+  borderTop: "1px solid var(--rule)",
+  borderBottom: "1px solid var(--rule-soft)",
+};
+
+const labelStyle: React.CSSProperties = {
+  display: "block",
+  fontFamily: "var(--font-body)",
+  fontSize: "var(--t-eyebrow)",
+  letterSpacing: "0.18em",
+  textTransform: "uppercase",
+  color: "var(--ink-3)",
+  marginBottom: "var(--s-2)",
+  fontWeight: 600,
 };
 
 const inputStyle: React.CSSProperties = {
   width: "100%",
-  padding: "0.5rem 0.75rem",
-  border: "1px solid #cbd5e1",
-  borderRadius: 4,
-  marginTop: 4,
-  marginBottom: 12,
+  padding: "var(--s-3) var(--s-4)",
+  border: "1px solid var(--rule-soft)",
+  borderRadius: 0,
+  background: "var(--paper)",
+  color: "var(--ink)",
+  fontFamily: "var(--font-body)",
+  fontSize: "var(--t-body)",
+  marginBottom: "var(--s-5)",
+  outline: "none",
+  boxSizing: "border-box",
 };
 
 const btnStyle: React.CSSProperties = {
   width: "100%",
-  padding: "0.6rem",
+  padding: "var(--s-4) var(--s-5)",
   border: 0,
-  background: "#0f172a",
-  color: "white",
-  borderRadius: 4,
+  background: "var(--ink)",
+  color: "var(--paper)",
+  fontFamily: "var(--font-body)",
+  fontSize: "var(--t-eyebrow)",
+  letterSpacing: "0.22em",
+  textTransform: "uppercase",
+  fontWeight: 700,
   cursor: "pointer",
-  fontWeight: 600,
+  borderRadius: 0,
 };
 
 export default function Login() {
@@ -65,18 +86,59 @@ export default function Login() {
 
   return (
     <form onSubmit={onSubmit} style={cardStyle}>
-      <h1 style={{ marginTop: 0 }}>{mode === "login" ? "Log in" : "Register"}</h1>
-      <p style={{ color: "#475569", marginTop: 0 }}>
-        Sentinel-G analyst console. {mode === "login" ? "No account?" : "Already registered?"}{" "}
+      <p style={{
+        fontFamily: "var(--font-body)",
+        fontSize: "var(--t-eyebrow)",
+        letterSpacing: "0.28em",
+        textTransform: "uppercase",
+        color: "var(--accent-gold)",
+        margin: 0,
+        marginBottom: "var(--s-3)",
+        fontWeight: 700,
+      }}>
+        Sentinel-G · Analyst Console
+      </p>
+      <h1 style={{
+        fontFamily: "var(--font-display)",
+        fontWeight: 500,
+        fontSize: "var(--t-h1)",
+        lineHeight: 1.05,
+        color: "var(--ink)",
+        margin: 0,
+        marginBottom: "var(--s-3)",
+        letterSpacing: "-0.01em",
+      }}>
+        {mode === "login" ? "Sign in" : "New account"}
+      </h1>
+      <div style={{
+        height: 1, background: "var(--accent-gold)",
+        width: 48, marginBottom: "var(--s-5)",
+      }} aria-hidden />
+      <p style={{
+        color: "var(--ink-3)", margin: 0,
+        marginBottom: "var(--s-6)",
+        fontFamily: "var(--font-body)",
+        fontSize: "var(--t-meta)",
+      }}>
+        {mode === "login" ? "No account?" : "Already registered?"}{" "}
         <button
           type="button"
           onClick={() => { setMode(mode === "login" ? "register" : "login"); setError(null); }}
-          style={{ background: "none", border: 0, color: "#1d4ed8", cursor: "pointer", padding: 0 }}
+          style={{
+            background: "none", border: 0, padding: 0,
+            color: "var(--accent-gold)",
+            cursor: "pointer",
+            fontFamily: "var(--font-body)",
+            fontSize: "var(--t-meta)",
+            fontWeight: 600,
+            textDecoration: "underline",
+            textUnderlineOffset: 3,
+          }}
         >
-          {mode === "login" ? "Register instead" : "Log in instead"}
+          {mode === "login" ? "Register instead" : "Sign in instead"}
         </button>
       </p>
-      <label htmlFor="email">Email</label>
+      <label htmlFor="email" style={labelStyle}>Email</label>
       <input
         id="email"
         type="email"
@@ -87,7 +149,7 @@ export default function Login() {
         placeholder="you@example.com"
         style={inputStyle}
       />
-      <label htmlFor="password">Password</label>
+      <label htmlFor="password" style={labelStyle}>Password</label>
       <input
         id="password"
         type="password"
@@ -100,12 +162,17 @@ export default function Login() {
       />
       {error && (
         <div style={{
-          marginBottom: 12, padding: "0.5rem 0.75rem",
-          background: "#fee2e2", borderLeft: "4px solid #b91c1c", borderRadius: 4,
+          marginBottom: "var(--s-5)",
+          padding: "var(--s-3) var(--s-4)",
+          background: "var(--paper)",
+          borderLeft: "3px solid var(--risk-critical)",
+          color: "var(--risk-critical)",
+          fontFamily: "var(--font-body)",
+          fontSize: "var(--t-meta)",
         }}>{error}</div>
       )}
       <button type="submit" disabled={submitting} style={btnStyle}>
-        {submitting ? "…" : mode === "login" ? "Log in" : "Create account"}
+        {submitting ? "Working…" : mode === "login" ? "Sign in" : "Create account"}
       </button>
     </form>
   );

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { animate, motion, useMotionValue, useTransform } from "motion/react";
 import {
   Bar,
@@ -900,7 +900,18 @@ function PdfExportButton({ cin }: { cin: string }) {
 // Page
 
 export default function Dashboard() {
-  const [submitted, setSubmitted] = useState(DEMO_CINS.ilfs);
+  // Initial CIN: ?cin=… from the URL (e.g. when arriving from /search),
+  // otherwise the IL&FS demo subject.
+  const [searchParams] = useSearchParams();
+  const initialCin = (searchParams.get("cin") || DEMO_CINS.ilfs).toUpperCase();
+  const [submitted, setSubmitted] = useState(initialCin);
+
+  // Re-sync when the URL ?cin= changes (e.g. Search → Dashboard during the
+  // same session without a full reload).
+  useEffect(() => {
+    const fromUrl = searchParams.get("cin");
+    if (fromUrl) setSubmitted(fromUrl.toUpperCase());
+  }, [searchParams]);
 
   const query = useQuery({
     queryKey: ["analyse", submitted],
