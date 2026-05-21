@@ -27,8 +27,11 @@ async def feature_ctx() -> FeatureContext:
 
 
 def test_feature_names_match_module_keys_plus_summary_block() -> None:
-    # 3 features per module + 11 summary stats
-    assert len(FEATURE_NAMES) == len(MODULE_KEYS) * 3 + 11
+    # 3 features per module + 11 summary bundle stats + 2 detector slots (D4 + D6).
+    # D3 (TGN) + D5 (Mamba) deferred — they need event-stream / sequence pipelines
+    # that don't exist yet (PRD §9 Phase 3). See ml/features.py DETECTOR_KEYS.
+    from ml.features import DETECTOR_KEYS
+    assert len(FEATURE_NAMES) == len(MODULE_KEYS) * 3 + 11 + len(DETECTOR_KEYS)
 
 
 def test_feature_names_are_unique() -> None:

@@ -18,6 +18,7 @@ import logging
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
+from backend.app.analytics_cache import get_or_build as get_analytics_cache
 from backend.app.api.upload_store import get_upload_store
 from backend.app.api.validators import CIN_PATH
 from backend.app.auth.deps import get_current_user
@@ -45,6 +46,21 @@ _nclt_source = NCLTFixtureSource()
 _wilful_source = WilfulDefaulterFixtureSource()
 
 
+async def _all_fixture_bundles() -> list:
+    """Thunk passed to analytics_cache.get_or_build — only invoked on cold start.
+
+    Iterates `list_available_cins` + `fetch_bundle` for every fixture CIN.
+    Cost amortises over every subsequent /analyse request because the cache
+    is module-level."""
+    cins = await _fixture_source.list_available_cins()
+    bundles = []
+    for c in cins:
+        b = await _fixture_source.fetch_bundle(c)
+        if b is not None:
+            bundles.append(b)
+    return bundles
+
+
 async def _build_scoring_context(overlay) -> ScoringContext:
     # M4 (graph patterns) wants the live Neo4j driver. When the graph isn't
     # connected (CI without Neo4j, etc.), pass None — M4 then skips cleanly.
@@ -52,6 +68,13 @@ async def _build_scoring_context(overlay) -> ScoringContext:
         driver = get_driver()
     except Exception:
         driver = None
+    # M10 + M11 need the population-view cache. Lazy-built on first request
+    # via the analytics_cache module; subsequent calls hit the warm copy.
+    try:
+        analytics = await get_analytics_cache(_all_fixture_bundles)
+    except Exception as exc:  # pragma: no cover — defensive
+        logger.warning("analytics cache build failed (%s) — M10/M11 will skip", exc)
+        analytics = None
     return ScoringContext(
         benchmarks=await _benchmark_source.fetch_all(),
         nclt=await _nclt_source.fetch_all(),
@@ -59,6 +82,7 @@ async def _build_scoring_context(overlay) -> ScoringContext:
         gst_entity=overlay.gst_entity,
         bank_credits_total=overlay.bank_credits_total,
         driver=driver,
+        analytics_cache=analytics,
     )
 
 

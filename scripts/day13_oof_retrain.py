@@ -106,7 +106,16 @@ async def _build_dataset(synthetic_count: int, seed: int) -> tuple[
     benchmarks = await BSEFixtureBenchmark().fetch_all()
     nclt = await NCLTFixtureSource().fetch_all()
     wilful = await WilfulDefaulterFixtureSource().fetch_all()
-    ctx = FeatureContext(benchmarks=benchmarks, nclt=nclt, wilful=wilful)
+    # Build the analytics_cache over the full bundle set (fixtures + synthetic)
+    # so train-time M10/M11/D4/D6 features come from the same population view
+    # the inference path's cache will see at /analyse time.
+    from backend.app.analytics_cache import build_cache, reset_for_tests
+    reset_for_tests()
+    cache = build_cache(bundles)
+    ctx = FeatureContext(
+        benchmarks=benchmarks, nclt=nclt, wilful=wilful,
+        analytics_cache=cache,
+    )
 
     X, cins_in_order = build_feature_matrix(bundles, ctx)
     y = np.asarray(labels, dtype=np.int32)

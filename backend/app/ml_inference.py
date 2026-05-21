@@ -116,6 +116,7 @@ async def compute_calibrated_probability(
     benchmarks: list[BenchmarkPoint],
     nclt: list[RawNCLTProceeding],
     wilful: list[RawWilfulDefaulter],
+    analytics_cache: object | None = None,
 ) -> MetaPrediction:
     """Run F1a → F1b → F1c on this bundle. Returns nulls when artefacts
     aren't loaded or feature extraction fails. Never raises."""
@@ -124,12 +125,17 @@ async def compute_calibrated_probability(
         return MetaPrediction(p_fraud=None, interval=None)
 
     try:
-        # Same feature contract as scripts/day13_oof_retrain.py — the bundle
-        # of 28 features the LightGBM was trained on.
+        # Same feature contract as scripts/day13_oof_retrain.py — the meta
+        # learner's input vector is whatever shape build_feature_vector
+        # produces today. If the analytics_cache is supplied at both train
+        # and infer the shape includes M10/M11 triplets + D4/D6 detectors.
         from ml.features import FeatureContext, build_feature_vector
         from ml.meta.f1c_mapie import predict_with_interval
 
-        ctx = FeatureContext(benchmarks=benchmarks, nclt=nclt, wilful=wilful)
+        ctx = FeatureContext(
+            benchmarks=benchmarks, nclt=nclt, wilful=wilful,
+            analytics_cache=analytics_cache,
+        )
         x = await asyncio.to_thread(build_feature_vector, bundle, ctx)
         X = np.asarray(x, dtype=np.float32).reshape(1, -1)
         p_arr, low_arr, high_arr = await asyncio.to_thread(

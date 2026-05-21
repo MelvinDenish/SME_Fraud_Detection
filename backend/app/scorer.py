@@ -49,6 +49,12 @@ from backend.app.modules import (
     m07_auditor_nlp,
     m08_document_forensics,
     m09_nclt_defaulter,
+    m11_anomaly,
+)
+from backend.app.modules.m11_anomaly import (
+    AnomalyInputs,
+    financial_feature_row,
+    graph_feature_row,
 )
 from backend.app.modules.base import FraudSignal, ModuleResult, Severity, clamp_score
 from backend.app.modules.m02_cross_statement import CrossStatementInputs
@@ -107,6 +113,10 @@ class ScoringContext:
     # the graph isn't reachable; M4 then skips with a clear reason instead of
     # raising. Tests that don't need M4 can leave this unset.
     driver: Any | None = None
+    # Precomputed analytics cache — population-view artefacts M10 (hypergraph
+    # shell, batch-mode) and M11 (anomaly, background-fit) both need to fire.
+    # See backend/app/analytics_cache.py. None means M10/M11 skip cleanly.
+    analytics_cache: Any | None = None
 
 
 @dataclass
@@ -283,6 +293,79 @@ async def _run_m9(bundle: CompanyBundle, ctx: ScoringContext) -> ModuleResult:
     )
 
 
+async def _run_m10(bundle: CompanyBundle, ctx: ScoringContext) -> ModuleResult:
+    """Read M10's batch result for this CIN out of the analytics cache.
+
+    M10 fires on cross-company shared-attribute clusters (PRD §4.10) — running
+    it per-request with a single bundle would never find anything. The cache
+    runs the batch over the fixture pool once at startup; per-request we just
+    look up the precomputed result.
+    """
+    cin = bundle.company.cin
+    if ctx.analytics_cache is None:
+        return ModuleResult.skipped_for(
+            "m10_hypergraph_shell", cin, None,
+            "Analytics cache not built — M10 requires cross-company batch precompute",
+        )
+    pre = ctx.analytics_cache.m10_results.get(cin)
+    if pre is not None:
+        return pre
+    # CIN not in the fixture pool, or no shell-cluster signal — return a
+    # well-formed empty result so the aggregate sees a 0 instead of a skip.
+    return ModuleResult(
+        module_name="m10_hypergraph_shell",
+        cin=cin, year=None, score=0.0, signals=[],
+    )
+
+
+async def _run_m11(bundle: CompanyBundle, ctx: ScoringContext) -> ModuleResult:
+    """LOF + IsolationForest on this CIN's 7-D graph row + 20-D financial row.
+
+    Backgrounds are precomputed once from the fixture pool. The target's
+    feature rows come from the cache when the CIN is in the pool; CINs not
+    in the pool (uploads / arbitrary lookups) skip cleanly with a reason.
+    """
+    cin = bundle.company.cin
+    if ctx.analytics_cache is None:
+        return ModuleResult.skipped_for(
+            "m11_anomaly", cin, None,
+            "Analytics cache not built — M11 requires precomputed background",
+        )
+
+    cache = ctx.analytics_cache
+    graph_row = None
+    financial_row = None
+    gf = cache.graph_feature_by_cin.get(cin)
+    if gf is not None:
+        graph_row = graph_feature_row(gf)
+    fr = cache.financial_row_by_cin.get(cin)
+    if fr is not None:
+        financial_row = fr
+    elif bundle.financials:
+        # Target wasn't in the fixture pool but we have its FS — compute fresh.
+        fs_sorted = sorted(bundle.financials, key=lambda f: f.year)
+        financial_row = financial_feature_row(fs_sorted[-1])
+
+    if graph_row is None and financial_row is None:
+        return ModuleResult.skipped_for(
+            "m11_anomaly", cin, None,
+            "No feature rows available for CIN — neither graph nor financial",
+        )
+
+    return await asyncio.to_thread(
+        m11_anomaly.run,
+        AnomalyInputs(
+            cin=cin,
+            year=sorted(bundle.financials, key=lambda f: f.year)[-1].year
+                 if bundle.financials else None,
+            financial_row=financial_row,
+            graph_row=graph_row,
+            background_financials=cache.background_financials,
+            background_graph=cache.background_graph,
+        ),
+    )
+
+
 # --- Public orchestration --------------------------------------------------
 def _max_module_severity(results: list[ModuleResult]) -> Severity | None:
     severities = [r.max_severity for r in results if r.max_severity is not None]
@@ -336,12 +419,15 @@ async def score(bundle: CompanyBundle, ctx: ScoringContext) -> RiskReport:
         _run_m7(bundle),
         _run_m8(bundle),
         _run_m9(bundle, ctx),
+        _run_m10(bundle, ctx),
+        _run_m11(bundle, ctx),
     )
     meta_task = compute_calibrated_probability(
         bundle,
         benchmarks=ctx.benchmarks,
         nclt=ctx.nclt,
         wilful=ctx.wilful,
+        analytics_cache=ctx.analytics_cache,
     )
     results, meta_pred = await asyncio.gather(module_task, meta_task)
     evidence: list[FraudSignal] = []
