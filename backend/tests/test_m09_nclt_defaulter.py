@@ -79,7 +79,7 @@ def test_no_match_for_unrelated_cin() -> None:
 def test_override_promotes_low_score_to_floor() -> None:
     cin = "U27101MH2010PTC215432"
     res = m09.run(NCLTDefaulterInputs(cin=cin, nclt_proceedings=[_nclt(cin)], wilful_declarations=[]))
-    final, applied = apply_override(score=10.0, signals=res.signals)
+    final, applied, _matched_ids = apply_override(score=10.0, signals=res.signals)
     assert applied is True
     assert final == NCLT_WD_FLOOR_SCORE
 
@@ -87,13 +87,13 @@ def test_override_promotes_low_score_to_floor() -> None:
 def test_override_leaves_higher_score_alone() -> None:
     cin = "U27101MH2010PTC215432"
     res = m09.run(NCLTDefaulterInputs(cin=cin, nclt_proceedings=[_nclt(cin)], wilful_declarations=[]))
-    final, applied = apply_override(score=92.0, signals=res.signals)
+    final, applied, _matched_ids = apply_override(score=92.0, signals=res.signals)
     assert applied is True
     assert final == 92.0
 
 
 def test_override_noop_when_no_match() -> None:
-    final, applied = apply_override(score=20.0, signals=[])
+    final, applied, _matched_ids = apply_override(score=20.0, signals=[])
     assert applied is False
     assert final == 20.0
 
@@ -106,7 +106,7 @@ async def test_ilfs_override_fires_on_real_seeds() -> None:
     res = m09.run(NCLTDefaulterInputs(
         cin="U45201MH2005PTC155294", nclt_proceedings=proc, wilful_declarations=wds,
     ))
-    final, applied = apply_override(score=15.0, signals=res.signals)
+    final, applied, _matched_ids = apply_override(score=15.0, signals=res.signals)
     assert applied is True
     assert final >= NCLT_WD_FLOOR_SCORE
     sig_types = {s.signal_type for s in res.signals}
@@ -122,7 +122,7 @@ async def test_dhfl_override_fires_on_real_seeds() -> None:
     res = m09.run(NCLTDefaulterInputs(
         cin="L65910MH1984PLC032662", nclt_proceedings=proc, wilful_declarations=wds,
     ))
-    final, applied = apply_override(score=15.0, signals=res.signals)
+    final, applied, _matched_ids = apply_override(score=15.0, signals=res.signals)
     assert applied is True
     assert final >= NCLT_WD_FLOOR_SCORE
     sig_types = {s.signal_type for s in res.signals}

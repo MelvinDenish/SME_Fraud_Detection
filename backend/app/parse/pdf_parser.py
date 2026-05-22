@@ -165,6 +165,69 @@ def _extract_forensics(pdf: "pdfplumber.PDF") -> PDFForensics:
     )
 
 
+def _validate_extracted_fields(
+    fields: dict[str, float],
+    forensics: PDFForensics,
+    path: Path,
+) -> None:
+    """Stream 5.3 — sanity-check the regex-extracted numbers before they
+    poison the downstream scorer.
+
+    Hard failures (raise ValueError):
+      * `total_assets <= 0`        — a positive balance-sheet anchor is
+        the cheapest tripwire for "the regex picked up an unrelated
+        line item" or "the PDF wasn't a financial statement at all".
+      * `created_at` strictly more than 1 day *after* `modified_at` —
+        PDF metadata that time-travels backwards is malformed or
+        deliberately tampered.
+
+    Soft warnings (log only — extraction continues):
+      * `pat > revenue`            — profit-after-tax can't exceed top-
+        line revenue. Almost always means the PAT regex captured a
+        comparative-year figure or a percentage.
+      * `pat > pbt`                — taxes are never negative beyond
+        rounding-cents. If pat > pbt + small epsilon, an extraction
+        error is more likely than a refund.
+
+    The split between hard/soft matches what an investigator needs:
+    hard failures kill the bundle (the upload route maps ValueError ->
+    422 already); soft warnings flow into the operator's log stream so
+    they can patch the regex without bouncing the user's PDF.
+    """
+    assets = fields.get("total_assets")
+    if assets is not None and assets <= 0:
+        raise ValueError(
+            f"PDF sanity: total_assets must be > 0; got {assets!r} from {path.name}",
+        )
+
+    created, modified = forensics.created_at, forensics.modified_at
+    if created and modified and (created - modified).days > 1:
+        raise ValueError(
+            f"PDF sanity: creation date ({created.isoformat()}) is after "
+            f"modification date ({modified.isoformat()}) by more than one "
+            f"day — metadata anomaly, refusing the PDF",
+        )
+
+    revenue = fields.get("revenue")
+    pat = fields.get("pat")
+    pbt = fields.get("pbt")
+    if revenue is not None and pat is not None and pat > revenue:
+        logger.warning(
+            "PDF sanity: pat (%s) exceeds revenue (%s) in %s — regex likely "
+            "captured a comparative-year or percentage figure; extraction "
+            "continues but the value is suspect.",
+            pat, revenue, path.name,
+        )
+    # Allow ₹1 of rounding-cents slack — Indian audit reports round to
+    # the nearest rupee but the source figures are sometimes in paise.
+    if pat is not None and pbt is not None and pat > pbt + 1.0:
+        logger.warning(
+            "PDF sanity: pat (%s) exceeds pbt (%s) in %s — implies a "
+            "negative tax expense; treat with caution.",
+            pat, pbt, path.name,
+        )
+
+
 def parse_financial_pdf(
     path: str | Path,
     *,
@@ -214,6 +277,8 @@ def parse_financial_pdf(
                 fields[field_name] = _to_float(match.group(1)) * unit_multiplier
             except ValueError:
                 logger.warning("Could not parse number for %s in %s: %r", field_name, path, match.group(1))
+
+    _validate_extracted_fields(fields, forensics, path)
 
     auditor_match = _AUDITOR_NAME_PATTERN.search(all_text)
     auditor_name = auditor_match.group(1).strip() if auditor_match else ""

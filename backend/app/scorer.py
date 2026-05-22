@@ -132,6 +132,11 @@ class RiskReport:
     module_breakdown: dict[str, float]
     override_applied: bool
     skipped_modules: list[dict[str, str]]
+    # Stream 5.1 — audit trail: which FraudSignal.signal_id values
+    # tripped the NCLT/WD override floor. Empty when override_applied
+    # is False. Lets investigators answer "what specifically forced
+    # this CIN to CRITICAL?" without rewalking the evidence chain.
+    override_matched_signal_ids: list[str] = field(default_factory=list)
     p_fraud_calibrated: float | None = None
     p_fraud_interval: tuple[float, float] | None = None
     # Day-16: belief-propagation lift from neighbouring CINs in the same
@@ -169,6 +174,7 @@ class RiskReport:
             ],
             "module_breakdown": {k: round(v, 2) for k, v in self.module_breakdown.items()},
             "override_applied": self.override_applied,
+            "override_matched_signal_ids": list(self.override_matched_signal_ids),
             "skipped_modules": self.skipped_modules,
             "propagation_band": self.propagation_band,
             "propagation_score": round(self.propagation_score, 2),
@@ -448,8 +454,13 @@ async def score(bundle: CompanyBundle, ctx: ScoringContext) -> RiskReport:
         base_score = max(base_score, CRITICAL_FLAG_FLOOR_SCORE)
 
     # PRD §7.3: NCLT/WD override -> >= 75
-    final_score, override_applied = apply_override(base_score, evidence)
-    final_score = clamp_score(final_score)
+    # Stream 5.1: capture matched_signal_ids so the audit trail can
+    # answer "*which* M9 signal triggered the floor" without the
+    # investigator re-deriving it from the evidence chain.
+    override_result = apply_override(base_score, evidence)
+    final_score = clamp_score(override_result.final_score)
+    override_applied = override_result.applied
+    override_matched_signal_ids = list(override_result.matched_signal_ids)
 
     # Stream 3.3 — persist FraudSignal nodes + TRIGGERED_BY edges to Neo4j
     # so the /provenance endpoint can traverse the live graph (PRD §6
@@ -481,6 +492,7 @@ async def score(bundle: CompanyBundle, ctx: ScoringContext) -> RiskReport:
         evidence_chain=evidence,
         module_breakdown=breakdown,
         override_applied=override_applied,
+        override_matched_signal_ids=override_matched_signal_ids,
         skipped_modules=skipped,
         p_fraud_calibrated=meta_pred.p_fraud,
         p_fraud_interval=meta_pred.interval,
