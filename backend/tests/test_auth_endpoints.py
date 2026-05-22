@@ -75,7 +75,7 @@ def client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
 def test_register_then_login_then_me(client: TestClient) -> None:
     register = client.post(
         "/auth/register",
-        json={"email": "officer@nbfc.in", "password": "secret-pw-12345", "role": "credit_officer"},
+        json={"email": "officer@nbfc.in", "password": "secret-pw-12345"},
     )
     assert register.status_code == 201, register.text
     user = register.json()
@@ -95,6 +95,25 @@ def test_register_then_login_then_me(client: TestClient) -> None:
     me = client.get("/auth/me", headers={"Authorization": f"Bearer {token}"})
     assert me.status_code == 200
     assert me.json()["email"] == "officer@nbfc.in"
+
+
+def test_register_ignores_role_in_body(client: TestClient) -> None:
+    # Self-registration must NEVER let the caller pick their own role —
+    # this previously allowed POSTing `{"role":"admin"}` to bypass RBAC.
+    for attempted in ("admin", "auditor", "investigator"):
+        resp = client.post(
+            "/auth/register",
+            json={
+                "email": f"attacker-{attempted}@nbfc.in",
+                "password": "secret-pw-12345",
+                "role": attempted,
+            },
+        )
+        assert resp.status_code == 201, resp.text
+        assert resp.json()["role"] == "credit_officer", (
+            f"role={attempted} should have been stripped server-side, "
+            f"got {resp.json()['role']}"
+        )
 
 
 def test_duplicate_register_returns_409(client: TestClient) -> None:
@@ -138,3 +157,22 @@ def test_register_validates_email_format(client: TestClient) -> None:
         json={"email": "not-an-email", "password": "longenoughpw", "role": "auditor"},
     )
     assert bad_email.status_code == 422
+
+
+def test_create_app_refuses_insecure_jwt_in_prod(monkeypatch: pytest.MonkeyPatch) -> None:
+    # The source-tree default must never reach staging/prod. dev keeps booting
+    # with it so local + CI work without any extra setup.
+    from backend.app import config as cfg_mod
+    from backend.app.main import _INSECURE_JWT_DEFAULT, create_app
+
+    cfg_mod.get_settings.cache_clear()  # type: ignore[attr-defined]
+    monkeypatch.setenv("APP_ENV", "prod")
+    monkeypatch.setenv("JWT_SECRET", _INSECURE_JWT_DEFAULT)
+    with pytest.raises(RuntimeError, match="JWT_SECRET"):
+        create_app()
+
+    cfg_mod.get_settings.cache_clear()  # type: ignore[attr-defined]
+    monkeypatch.setenv("JWT_SECRET", "a-strong-random-secret-of-sufficient-length-xyz")
+    create_app()  # must NOT raise once a real secret is supplied
+
+    cfg_mod.get_settings.cache_clear()  # type: ignore[attr-defined]

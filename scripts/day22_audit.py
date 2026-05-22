@@ -47,7 +47,7 @@ from backend.app.modules.m06_temporal import TemporalInputs  # noqa: E402
 from ml.features import FEATURE_NAMES  # noqa: E402
 from ml.meta.f1a_lightgbm_oof import fit_oof  # noqa: E402
 from ml.meta.f1b_isotonic import fit_isotonic  # noqa: E402
-from ml.meta.f1c_mapie import fit_conformal  # noqa: E402
+from ml.meta.f1c_split_conformal import fit_conformal  # noqa: E402
 from scripts.day20_benchmark import _best_f1, _build_dataset  # noqa: E402
 
 logger = logging.getLogger("day22")

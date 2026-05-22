@@ -10,6 +10,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
+import { HttpError } from "./api";
 
 const TOKEN_KEY = "sentinelg.jwt";
 
@@ -44,7 +45,7 @@ async function postAuth<T>(path: string, body: unknown): Promise<T> {
   });
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    throw new Error(`POST ${path} -> ${res.status}: ${text || res.statusText}`);
+    throw new HttpError(res.status, "POST", path, text || res.statusText);
   }
   return (await res.json()) as T;
 }
@@ -53,7 +54,10 @@ async function fetchMe(token: string): Promise<AuthUser> {
   const res = await fetch("/api/auth/me", {
     headers: { Authorization: `Bearer ${token}` },
   });
-  if (!res.ok) throw new Error(`GET /auth/me -> ${res.status}`);
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new HttpError(res.status, "GET", "/auth/me", text || res.statusText);
+  }
   return (await res.json()) as AuthUser;
 }
 

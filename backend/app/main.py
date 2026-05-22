@@ -2,19 +2,34 @@
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from backend.app import __version__
+from backend.app.analytics_cache import get_status as _cache_status
 from backend.app.api.analyse import router as analyse_router
+from backend.app.api.narrative import router as narrative_router
 from backend.app.api.report import router as report_router
 from backend.app.api.upload import router as upload_router
 from backend.app.auth.routes import router as auth_router
 from backend.app.config import get_settings
 from backend.app.deps import get_driver, lifespan
 from backend.app.middleware.rate_limit import RateLimitMiddleware
+from backend.app.ml_inference import get_status as _ml_status
+
+
+_INSECURE_JWT_DEFAULT = "dev-only-not-for-production"
 
 
 def create_app() -> FastAPI:
     settings = get_settings()
+    # Refuse to boot in non-dev environments while still using the source-tree
+    # default JWT secret. Anyone with the public repo can otherwise forge tokens.
+    if settings.app_env != "dev" and settings.jwt_secret == _INSECURE_JWT_DEFAULT:
+        raise RuntimeError(
+            f"JWT_SECRET is using the insecure source-tree default in "
+            f"app_env={settings.app_env!r}. Set JWT_SECRET to a strong random "
+            f"value (>=32 bytes) before starting in staging/prod."
+        )
     app = FastAPI(
         title="Sentinel-G API",
         version=__version__,
@@ -39,12 +54,24 @@ def create_app() -> FastAPI:
 
     app.include_router(auth_router)
     app.include_router(analyse_router)
+    app.include_router(narrative_router)
     app.include_router(upload_router)
     app.include_router(report_router)
 
     @app.get("/health", tags=["meta"])
     async def health() -> dict[str, str]:
         return {"status": "ok", "version": __version__, "env": settings.app_env}
+
+    @app.get("/health/ml", tags=["meta"])
+    async def ml_health() -> JSONResponse:
+        """ML-tier readiness. Returns 503 when meta-learner artefacts are not
+        loaded OR analytics_cache has not built yet — both states cause
+        /analyse to silently emit `p_fraud_calibrated: null`."""
+        ml = _ml_status()
+        cache = _cache_status()
+        ok = bool(ml["loaded"] and cache.get("built"))
+        body = {"ok": ok, "meta_learner": ml, "analytics_cache": cache}
+        return JSONResponse(body, status_code=200 if ok else 503)
 
     @app.get("/health/neo4j", tags=["meta"])
     async def neo4j_health() -> dict[str, object]:

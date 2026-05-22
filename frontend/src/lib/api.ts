@@ -49,6 +49,16 @@ export interface ProvenanceResponse {
   }>;
 }
 
+export interface NarrativeResponse {
+  cin: string;
+  summary: string;
+  model: string;
+  generated_at: string;
+  cached: boolean;
+  evidence_hash: string;
+  allowed_numbers?: string[];
+}
+
 export interface UploadAck {
   cin: string;
   accepted: boolean;
@@ -89,12 +99,24 @@ function bearerHeader(): HeadersInit {
   }
 }
 
+/** Typed error so callers can branch on HTTP status (401 → redirect to login,
+ * 403 → show denied, 429 → retry, etc.). Extends Error so existing
+ * `(err as Error).message` callers keep working unchanged. */
+export class HttpError extends Error {
+  constructor(public status: number, public method: string, public path: string, public detail: string) {
+    super(`${method} ${path} -> ${status}: ${detail}`);
+    this.name = "HttpError";
+  }
+}
+
+async function _throwHttp(method: string, path: string, res: Response): Promise<never> {
+  const text = await res.text().catch(() => "");
+  throw new HttpError(res.status, method, path, text || res.statusText);
+}
+
 async function getJson<T>(path: string): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, { headers: bearerHeader() });
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new Error(`GET ${path} -> ${res.status}: ${body || res.statusText}`);
-  }
+  if (!res.ok) await _throwHttp("GET", path, res);
   return (await res.json()) as T;
 }
 
@@ -104,10 +126,7 @@ async function postJson<T>(path: string, body: unknown): Promise<T> {
     headers: { "Content-Type": "application/json", ...bearerHeader() },
     body: JSON.stringify(body),
   });
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`POST ${path} -> ${res.status}: ${text || res.statusText}`);
-  }
+  if (!res.ok) await _throwHttp("POST", path, res);
   return (await res.json()) as T;
 }
 
@@ -117,20 +136,14 @@ async function postFile<T>(path: string, file: File): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     method: "POST", body: form, headers: bearerHeader(),
   });
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`POST ${path} -> ${res.status}: ${text || res.statusText}`);
-  }
+  if (!res.ok) await _throwHttp("POST", path, res);
   return (await res.json()) as T;
 }
 
 /** Download a PDF report. Triggers a save-as in the user's browser. */
 export async function downloadReport(cin: string): Promise<{ reportId: string | null; generatedAt: string | null }> {
   const res = await fetch(`${API_BASE}/report/${cin}`, { headers: bearerHeader() });
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`GET /report/${cin} -> ${res.status}: ${text || res.statusText}`);
-  }
+  if (!res.ok) await _throwHttp("GET", `/report/${cin}`, res);
   const blob = await res.blob();
   const reportId = res.headers.get("x-report-id");
   const generatedAt = res.headers.get("x-report-generated-at");
@@ -149,6 +162,7 @@ export const api = {
   health: () => getJson<{ status: string; version: string; env: string }>("/health"),
   analyse: (cin: string) => getJson<AnalyseResponse>(`/analyse/${cin}`),
   provenance: (cin: string) => getJson<ProvenanceResponse>(`/analyse/${cin}/provenance`),
+  narrative: (cin: string) => getJson<NarrativeResponse>(`/narrative/${cin}`),
   uploadFinancials: (cin: string, file: File) =>
     postFile<UploadAck>(`/upload/financials/${cin}`, file),
   uploadGst: (cin: string, payload: Record<string, unknown>) =>

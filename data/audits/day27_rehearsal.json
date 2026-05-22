@@ -8,15 +8,14 @@
       "data_confidence": 92,
       "evidence_signal_count": 18,
       "provenance_signal_count": 18,
-      "report_bytes": 6047,
-      "report_id": "b9882bc1-0164-4981-a147-52165dee3590"
+      "report_skipped": "401 (expected: set PROD_JWT for full coverage)"
     },
     "timings_sec": {
-      "analyse": 0.026180499997281004,
-      "provenance": 0.010170900000957772,
-      "report": 0.09428730000217911
+      "analyse": 0.3096825000247918,
+      "provenance": 0.010907999996561557,
+      "report": 0.06058470002608374
     },
-    "total_sec": 0.13063870000041788,
+    "total_sec": 0.3811752000474371,
     "ok": true,
     "band_match": true
   },
@@ -29,15 +28,14 @@
       "data_confidence": 80,
       "evidence_signal_count": 11,
       "provenance_signal_count": 11,
-      "report_bytes": 5890,
-      "report_id": "0ef7a563-6609-4c0f-a27a-9858fb4b9f4f"
+      "report_skipped": "401 (expected: set PROD_JWT for full coverage)"
     },
     "timings_sec": {
-      "analyse": 0.013891100003093015,
-      "provenance": 0.007153400001698174,
-      "report": 0.0529411000024993
+      "analyse": 0.013149100006558001,
+      "provenance": 0.008503400022163987,
+      "report": 0.010682599968276918
     },
-    "total_sec": 0.07398560000729049,
+    "total_sec": 0.032335099996998906,
     "ok": true,
     "band_match": true
   },
@@ -52,59 +50,32 @@
           "data_confidence": 65,
           "evidence_signal_count": 3,
           "provenance_signal_count": 3,
-          "report_bytes": 3990,
-          "report_id": "18dffc20-9ec0-4678-89b0-0c5c9ade50cb"
+          "report_skipped": "401 (expected: set PROD_JWT for full coverage)"
         },
         "timings_sec": {
-          "analyse": 0.011259799997787923,
-          "provenance": 0.008225400000810623,
-          "report": 0.03970520000439137
+          "analyse": 0.013161700044292957,
+          "provenance": 0.00867940002353862,
+          "report": 0.010062300018034875
         },
-        "total_sec": 0.05919040000298992,
+        "total_sec": 0.03190340008586645,
         "ok": true,
         "band_match": true
       },
       {
         "cin": "U46101MH2017PTC289123",
-        "expected_band": "CRITICAL",
+        "ok": false,
+        "reason": "/provenance -> 429",
         "headline": {
           "fraud_risk_score": 75.0,
           "risk_band": "CRITICAL",
           "data_confidence": 45,
-          "evidence_signal_count": 4,
-          "provenance_signal_count": 4,
-          "report_bytes": 4698,
-          "report_id": "ee524ca6-926e-4abb-b7c7-7ad2fcbd151f"
-        },
-        "timings_sec": {
-          "analyse": 0.012525099999038503,
-          "provenance": 0.005906999998842366,
-          "report": 0.045922300007077865
-        },
-        "total_sec": 0.06435440000495873,
-        "ok": true,
-        "band_match": true
+          "evidence_signal_count": 4
+        }
       },
       {
         "cin": "U46190MH2019PTC295432",
-        "expected_band": "CRITICAL",
-        "headline": {
-          "fraud_risk_score": 75.0,
-          "risk_band": "CRITICAL",
-          "data_confidence": 45,
-          "evidence_signal_count": 3,
-          "provenance_signal_count": 3,
-          "report_bytes": 4012,
-          "report_id": "fa100d79-bbff-48d6-a12e-2efcf76e75ab"
-        },
-        "timings_sec": {
-          "analyse": 0.01486049999948591,
-          "provenance": 0.005727499999920838,
-          "report": 0.04993409999588039
-        },
-        "total_sec": 0.07052209999528714,
-        "ok": true,
-        "band_match": true
+        "ok": false,
+        "reason": "/analyse -> 429"
       }
     ],
     "ring_fixture": {
@@ -116,7 +87,7 @@
       "ok": true
     }
   },
-  "total_elapsed_sec": 3.2031340999965323,
+  "total_elapsed_sec": 1.7919063000008464,
   "total_budget_sec": 180.0,
-  "pass": true
+  "pass": false
 }

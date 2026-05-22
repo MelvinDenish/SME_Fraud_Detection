@@ -19,6 +19,7 @@ import {
   api,
   downloadReport,
 } from "../lib/api";
+import NarrativeCard from "../components/NarrativeCard";
 
 // Editorial spacing & color tokens are global from styles/tokens.css.
 // SVG / recharts attribute values can't resolve `var(--token)` — only
@@ -963,6 +964,7 @@ export default function Dashboard() {
             meta="PRD §7.1 dual-output payload"
           />
           <ScorePlate data={query.data} />
+          <NarrativeCard cin={submitted} />
           <ModuleBreakdown data={query.data} />
           <EvidenceChain data={query.data} />
 

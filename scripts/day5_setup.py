@@ -42,7 +42,7 @@ from ml.detectors.d4_lof import D4LOF  # noqa: E402
 from ml.l05_graph_features import extract_features  # noqa: E402
 from ml.meta.f1a_lightgbm_oof import fit_oof  # noqa: E402
 from ml.meta.f1b_isotonic import fit_isotonic  # noqa: E402
-from ml.meta.f1c_mapie import fit_conformal, predict_with_interval  # noqa: E402
+from ml.meta.f1c_split_conformal import fit_conformal, predict_with_interval  # noqa: E402
 
 ARTIFACT_DIR = ROOT / "ml" / "artifacts"
 logger = logging.getLogger("day5")

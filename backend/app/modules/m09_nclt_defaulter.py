@@ -16,7 +16,7 @@ Day-12 acceptance (PRD §10): 'Override rules fire on IL&FS + DHFL.'
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Iterable
+from typing import Iterable, NamedTuple
 
 from backend.app.ingest.nclt import RawNCLTProceeding
 from backend.app.ingest.wilful_defaulter import RawWilfulDefaulter
@@ -107,21 +107,53 @@ def _wilful_signal(w: RawWilfulDefaulter) -> FraudSignal:
     )
 
 
-def apply_override(score: float, signals: list[FraudSignal]) -> tuple[float, bool]:
+class OverrideResult(NamedTuple):
+    """Structured return from `apply_override` — Stream 5.1 of the
+    production-grade closure plan.
+
+    Old contract returned `(final_score, applied)`. New contract adds
+    `matched_signal_ids` so an investigator can trace *which* M9 signal
+    triggered the floor instead of seeing only a boolean. The override
+    audit trail was missing from RiskReport previously, which made the
+    "score jumped from 50 to 75 but the rule modules look unanimous"
+    case look like a bug to anyone debugging downstream.
+    """
+
+    final_score: float
+    applied: bool
+    matched_signal_ids: tuple[str, ...]
+
+
+_OVERRIDE_TRIGGERING_TYPES = {
+    "NCLT_PROCEEDING_MATCH",
+    "DRT_PROCEEDING_MATCH",
+    "WILFUL_DEFAULTER_MATCH",
+}
+
+
+def apply_override(score: float, signals: list[FraudSignal]) -> OverrideResult:
     """PRD §7.3 override rule for Module 9.
 
-    Returns (final_score, override_applied). If any of the M9 signal types
-    appear in the list, the score is promoted to >= NCLT_WD_FLOOR_SCORE.
+    Returns an `OverrideResult` namedtuple `(final_score, applied,
+    matched_signal_ids)`. If any signal in `signals` matches one of
+    `_OVERRIDE_TRIGGERING_TYPES` the score is promoted to
+    >= NCLT_WD_FLOOR_SCORE and every matching signal's id is recorded.
+
+    NamedTuple supports positional unpacking (`final_score, applied, ids
+    = apply_override(...)`) and attribute access — callers may pick
+    whichever reads better at the call site.
     """
-    triggering_types = {
-        "NCLT_PROCEEDING_MATCH",
-        "DRT_PROCEEDING_MATCH",
-        "WILFUL_DEFAULTER_MATCH",
-    }
-    has_override = any(s.signal_type in triggering_types for s in signals)
-    if not has_override:
-        return clamp_score(score), False
-    return max(clamp_score(score), NCLT_WD_FLOOR_SCORE), True
+    matched = tuple(
+        s.signal_id for s in signals
+        if s.signal_type in _OVERRIDE_TRIGGERING_TYPES
+    )
+    if not matched:
+        return OverrideResult(clamp_score(score), False, ())
+    return OverrideResult(
+        max(clamp_score(score), NCLT_WD_FLOOR_SCORE),
+        True,
+        matched,
+    )
 
 
 def run(inputs: NCLTDefaulterInputs) -> ModuleResult:
@@ -145,7 +177,7 @@ def run(inputs: NCLTDefaulterInputs) -> ModuleResult:
         signals.append(_wilful_signal(w))
 
     raw_score = clamp_score(sum(s.score_contribution for s in signals))
-    final_score, _ = apply_override(raw_score, signals)
+    final_score = apply_override(raw_score, signals).final_score
 
     return ModuleResult(
         module_name=MODULE_NAME,

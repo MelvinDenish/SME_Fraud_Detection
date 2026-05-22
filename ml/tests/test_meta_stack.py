@@ -5,7 +5,7 @@ import pytest
 
 from ml.meta.f1a_lightgbm_oof import fit_oof
 from ml.meta.f1b_isotonic import fit_isotonic
-from ml.meta.f1c_mapie import fit_conformal, predict_with_interval
+from ml.meta.f1c_split_conformal import fit_conformal, predict_with_interval
 
 
 @pytest.fixture

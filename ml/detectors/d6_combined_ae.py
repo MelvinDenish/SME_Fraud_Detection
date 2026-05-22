@@ -119,7 +119,16 @@ def graph_features_to_array(features: Iterable[GraphFeatures]) -> np.ndarray:
 
 @dataclass(frozen=True)
 class D6Artifacts:
-    """Trained model + normaliser + error-scale constants."""
+    """Trained model + normaliser + error-scale constants.
+
+    Persistence uses `torch.save` on a flat dict — keeps the file format
+    self-describing (state_dict + 4 numpy arrays + 1 float) and
+    sidesteps joblib's pickle-the-whole-Module trap that breaks across
+    torch versions. `save`/`load` are the only sanctioned I/O paths;
+    direct pickling of this dataclass is unsupported.
+
+    Stream 4.1 of the production-grade closure plan.
+    """
 
     model: CombinedAutoencoder
     normaliser: GroupNormaliser
@@ -133,6 +142,60 @@ class D6Artifacts:
             recon = self.model(x_t).cpu().numpy()
         err = np.mean((x - recon) ** 2, axis=1)
         return np.clip(err / max(self.error_p99, 1e-9), 0.0, 1.0).astype(np.float32)
+
+    # ---- Persistence -----------------------------------------------------
+    # Schema version: bump this when the on-disk layout changes so
+    # `load()` can refuse stale artifacts loudly instead of silently
+    # mis-decoding. The analytics_cache log surfaces the version.
+    _SCHEMA_VERSION = 1
+
+    def save(self, path: str) -> None:
+        """Serialise to a single torch checkpoint at `path`."""
+        from pathlib import Path as _Path
+        _Path(path).parent.mkdir(parents=True, exist_ok=True)
+        torch.save(
+            {
+                "schema_version": self._SCHEMA_VERSION,
+                "model_state": self.model.state_dict(),
+                "tab_min": self.normaliser.tab_min,
+                "tab_max": self.normaliser.tab_max,
+                "graph_min": self.normaliser.graph_min,
+                "graph_max": self.normaliser.graph_max,
+                "error_p99": float(self.error_p99),
+            },
+            path,
+        )
+
+    @classmethod
+    def load(cls, path: str) -> "D6Artifacts":
+        """Reconstruct from a checkpoint written by `save`. Raises
+        ValueError on schema-version mismatch so analytics_cache can
+        fall back to training a fresh artifact inline."""
+        # `weights_only=False` is required to deserialise the numpy
+        # arrays we packed into the dict; the dict itself is fully
+        # under our control so the loosened safety surface is acceptable.
+        blob = torch.load(path, map_location="cpu", weights_only=False)
+        version = int(blob.get("schema_version", 0))
+        if version != cls._SCHEMA_VERSION:
+            raise ValueError(
+                f"D6 artifact at {path} is schema v{version}; "
+                f"runtime expects v{cls._SCHEMA_VERSION}. Retrain via "
+                f"`python -m ml.training.train_d6 --save`.",
+            )
+        model = CombinedAutoencoder()
+        model.load_state_dict(blob["model_state"])
+        model.eval()
+        normaliser = GroupNormaliser(
+            tab_min=np.asarray(blob["tab_min"]),
+            tab_max=np.asarray(blob["tab_max"]),
+            graph_min=np.asarray(blob["graph_min"]),
+            graph_max=np.asarray(blob["graph_max"]),
+        )
+        return cls(
+            model=model,
+            normaliser=normaliser,
+            error_p99=float(blob["error_p99"]),
+        )
 
 
 def train_d6(

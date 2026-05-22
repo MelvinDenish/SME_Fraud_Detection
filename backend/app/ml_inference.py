@@ -50,11 +50,18 @@ class MetaArtifacts:
     f1a: object  # OOFResult — duck-typed to avoid heavy ml/* import at module top
     f1b: object  # CalibrationArtifacts
     f1c: object  # ConformalArtifacts
+    expected_feature_width: int  # snapped from f1a.feature_names on load
 
 
 _artifacts: MetaArtifacts | None = None
 _load_attempted: bool = False
 _load_lock = asyncio.Lock()
+# Stream 4.7 — once-per-process flag. The first inference call compares
+# the runtime feature width against the artifact's expected width; if
+# they differ we log a CRITICAL line + surface the mismatch via
+# /health/ml. The flag stops us from re-logging on every request.
+_feature_width_mismatch_logged: bool = False
+_feature_width_observed: int | None = None
 
 
 async def _load_artifacts() -> MetaArtifacts | None:
@@ -83,12 +90,26 @@ async def _load_artifacts() -> MetaArtifacts | None:
         try:
             from ml.meta.f1a_lightgbm_oof import OOFResult
             from ml.meta.f1b_isotonic import CalibrationArtifacts
-            from ml.meta.f1c_mapie import ConformalArtifacts
+            from ml.meta.f1c_split_conformal import ConformalArtifacts
             f1a = await asyncio.to_thread(OOFResult.load, str(F1A_PATH))
             f1b = await asyncio.to_thread(CalibrationArtifacts.load, str(F1B_PATH))
             f1c = await asyncio.to_thread(ConformalArtifacts.load, str(F1C_PATH))
-            _artifacts = MetaArtifacts(f1a=f1a, f1b=f1b, f1c=f1c)
-            logger.info("ml_inference: F1a/F1b/F1c artefacts loaded from %s", ARTIFACTS_DIR)
+            # Stream 4.7 — snapshot the artifact's expected feature width
+            # so the first inference call can catch a train/infer schema
+            # mismatch loudly instead of silently emitting null fields.
+            try:
+                expected_width = int(len(f1a.feature_names))
+            except Exception:  # noqa: BLE001 — older artifacts may lack feature_names
+                expected_width = 0
+            _artifacts = MetaArtifacts(
+                f1a=f1a, f1b=f1b, f1c=f1c,
+                expected_feature_width=expected_width,
+            )
+            logger.info(
+                "ml_inference: F1a/F1b/F1c artefacts loaded from %s "
+                "(expected_feature_width=%d)",
+                ARTIFACTS_DIR, expected_width,
+            )
             return _artifacts
         except Exception as exc:  # pragma: no cover — defensive
             logger.warning("ml_inference: failed to load artefacts (%s) — falling back to null", exc)
@@ -98,8 +119,41 @@ async def _load_artifacts() -> MetaArtifacts | None:
 def reset_for_tests() -> None:
     """Clear the module-level cache so tests can simulate a cold start."""
     global _artifacts, _load_attempted
+    global _feature_width_mismatch_logged, _feature_width_observed
     _artifacts = None
     _load_attempted = False
+    _feature_width_mismatch_logged = False
+    _feature_width_observed = None
+
+
+def get_status() -> dict:
+    """Snapshot of meta-learner load state for /health/ml. Never raises."""
+    loaded = _artifacts is not None
+    expected_width: int | None = None
+    if loaded:
+        try:
+            expected_width = int(_artifacts.expected_feature_width) or None
+        except Exception:
+            expected_width = None
+    observed = _feature_width_observed
+    mismatch = (
+        loaded
+        and expected_width is not None
+        and observed is not None
+        and observed != expected_width
+    )
+    return {
+        "loaded": loaded,
+        "load_attempted": _load_attempted,
+        "feature_width": expected_width,
+        "observed_feature_width": observed,
+        "feature_width_mismatch": mismatch,
+        "artifacts_present": {
+            "f1a": F1A_PATH.exists(),
+            "f1b": F1B_PATH.exists(),
+            "f1c": F1C_PATH.exists(),
+        },
+    }
 
 
 @dataclass
@@ -130,7 +184,7 @@ async def compute_calibrated_probability(
         # produces today. If the analytics_cache is supplied at both train
         # and infer the shape includes M10/M11 triplets + D4/D6 detectors.
         from ml.features import FeatureContext, build_feature_vector
-        from ml.meta.f1c_mapie import predict_with_interval
+        from ml.meta.f1c_split_conformal import predict_with_interval
 
         ctx = FeatureContext(
             benchmarks=benchmarks, nclt=nclt, wilful=wilful,
@@ -138,6 +192,30 @@ async def compute_calibrated_probability(
         )
         x = await asyncio.to_thread(build_feature_vector, bundle, ctx)
         X = np.asarray(x, dtype=np.float32).reshape(1, -1)
+
+        # Stream 4.7 — feature-width contract. If the F1a artifact was
+        # trained against a different feature schema than what
+        # `build_feature_vector` emits right now, LightGBM will raise
+        # mid-predict and the calibrated probability comes back null
+        # silently. That's the worst class of bug: dashboards stay
+        # green, /health/ml says "loaded: true", and `p_fraud_calibrated`
+        # is None for every CIN. Catch it here and surface loudly.
+        global _feature_width_mismatch_logged, _feature_width_observed
+        _feature_width_observed = int(X.shape[1])
+        expected = int(artifacts.expected_feature_width or 0)
+        if expected > 0 and X.shape[1] != expected:
+            if not _feature_width_mismatch_logged:
+                logger.critical(
+                    "ml_inference: feature-width mismatch — F1a expects %d "
+                    "features but build_feature_vector emitted %d. "
+                    "Refusing prediction; /health/ml will flag this. "
+                    "Either retrain artefacts (scripts/day13_oof_retrain.py) "
+                    "or update ml/features.py to match the trained schema.",
+                    expected, X.shape[1],
+                )
+                _feature_width_mismatch_logged = True
+            return MetaPrediction(p_fraud=None, interval=None)
+
         p_arr, low_arr, high_arr = await asyncio.to_thread(
             predict_with_interval,
             artifacts.f1a, artifacts.f1b, artifacts.f1c, X,

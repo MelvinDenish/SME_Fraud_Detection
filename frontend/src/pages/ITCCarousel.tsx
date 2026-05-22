@@ -30,14 +30,22 @@ const cardStyle: React.CSSProperties = {
   boxShadow: "var(--shadow-card)",
 };
 
-function CarouselCard({ cin, role, node, data, isLoading, error }: {
+function CarouselCard({ cin, role, node, data, isLoading, isFetching, failureCount, error }: {
   cin: string;
   role: string;
   node: string;
   data?: AnalyseResponse;
   isLoading: boolean;
+  isFetching: boolean;
+  failureCount: number;
   error: unknown;
 }) {
+  // Treat in-flight retries as "still loading" so the card doesn't flash
+  // a transient 429 between attempts. Only the terminal failure shows as
+  // an error.
+  const retrying = isFetching && failureCount > 0 && !data;
+  const showLoading = isLoading || retrying;
+  const showError = !!error && !showLoading;
   const band = data ? BAND_PALETTE[data.risk_band] : null;
   return (
     <article style={cardStyle}>
@@ -72,16 +80,18 @@ function CarouselCard({ cin, role, node, data, isLoading, error }: {
         )}
       </div>
 
-      {isLoading && (
+      {showLoading && (
         <p style={{ color: "var(--ink-4)", margin: "var(--s-4) 0 0", fontFamily: "var(--font-body)", fontSize: "var(--t-meta)" }}>
-          Fanning out signals…
+          {retrying
+            ? `Retrying signal fan-out (attempt ${failureCount + 1}/4)…`
+            : "Fanning out signals…"}
         </p>
       )}
-      {error ? (
+      {showError && (
         <p style={{ color: "var(--risk-critical)", margin: "var(--s-4) 0 0", fontFamily: "var(--font-body)", fontSize: "var(--t-meta)" }}>
           {(error as Error).message}
         </p>
-      ) : null}
+      )}
 
       {data && (
         <>
@@ -146,12 +156,31 @@ function CarouselCard({ cin, role, node, data, isLoading, error }: {
   );
 }
 
+// Stream 1.4 — retry policy for the three concurrent /analyse calls.
+// day27_rehearsal.json showed nodes B + C hitting 429 because /analyse
+// burns 3 budget slots in the global 10/min/IP rate-limit window. With
+// the Stream 1.2 prod default of 60/min the contention is gone, but we
+// still want a real retry for transient failures (cold boot, brief Fly.io
+// VM hand-off, etc.). React Query's exponential backoff: 300 / 900 / 2700ms.
+// We only retry on rate-limit and 5xx — auth/404/422 are permanent.
+const RETRIABLE_HTTP_CODES = new Set([408, 425, 429, 500, 502, 503, 504]);
+
+function isRetriable(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err ?? "");
+  // api.ts formats errors as "GET /path -> 429: ..." — fish the status out.
+  const match = msg.match(/-> (\d{3})/);
+  if (!match) return false;
+  return RETRIABLE_HTTP_CODES.has(Number(match[1]));
+}
+
 export default function ITCCarousel() {
   const results = useQueries({
     queries: CAROUSEL_CINS.map((c) => ({
       queryKey: ["analyse", c.cin],
       queryFn: () => api.analyse(c.cin),
-      retry: 0,
+      retry: (failureCount: number, error: unknown) =>
+        failureCount < 3 && isRetriable(error),
+      retryDelay: (attempt: number) => Math.min(300 * 3 ** attempt, 2700),
     })),
   });
 
@@ -193,6 +222,8 @@ export default function ITCCarousel() {
           node={c.node}
           data={results[i].data}
           isLoading={results[i].isLoading}
+          isFetching={results[i].isFetching}
+          failureCount={results[i].failureCount}
           error={results[i].error}
         />
       ))}

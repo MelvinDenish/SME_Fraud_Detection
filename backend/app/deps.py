@@ -68,6 +68,15 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         _scheduler = ScraperScheduler(driver=_driver)
         await _scheduler.start()
 
+    # Stream 1.3 — pre-warm analytics cache so the first /analyse caller
+    # doesn't pay the 5–10 s D3/D4/D5/D6 build cost. Lazy import to keep
+    # the import graph free of analyse->deps->analyse cycles.
+    try:
+        from backend.app.api.analyse import prewarm_analytics_cache
+        await prewarm_analytics_cache()
+    except Exception as exc:  # noqa: BLE001 — must not crash lifespan
+        logger.warning("lifespan: analytics_cache prewarm failed (%s)", exc)
+
     try:
         yield
     finally:
