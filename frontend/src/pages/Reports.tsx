@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { DEMO_CINS, downloadReport } from "../lib/api";
+import { useNavigate } from "react-router-dom";
+import { DEMO_CINS, HttpError, downloadReport } from "../lib/api";
 
 const eyebrow: React.CSSProperties = {
   fontFamily: "var(--font-body)",
@@ -63,6 +64,7 @@ interface ReportLog {
 }
 
 export default function Reports() {
+  const navigate = useNavigate();
   const [cin, setCin] = useState(DEMO_CINS.ilfs);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -75,6 +77,14 @@ export default function Reports() {
       const meta = await downloadReport(target);
       setLog((prev) => [{ cin: target, ...meta }, ...prev].slice(0, 10));
     } catch (e) {
+      // Stream 1.5 — JWT expired / missing on /report/{cin}: send the user
+      // to /login with a `next` hint so they land back here after sign-in.
+      // Anything else (403/404/422/5xx) renders inline so the analyst can
+      // see what went wrong without losing the page state.
+      if (e instanceof HttpError && e.status === 401) {
+        navigate(`/login?next=${encodeURIComponent("/reports")}`, { replace: true });
+        return;
+      }
       setError((e as Error).message);
     } finally {
       setBusy(false);

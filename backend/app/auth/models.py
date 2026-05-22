@@ -7,11 +7,15 @@ from pydantic import BaseModel, EmailStr, Field
 
 UserRole = Literal["credit_officer", "investigator", "auditor", "admin"]
 
+# Server-side default for self-registration. Elevated roles must be granted
+# by an already-admin caller through a separate (out-of-scope here) endpoint —
+# never via the register payload, which is reachable from the open internet.
+DEFAULT_SELF_REGISTER_ROLE: UserRole = "credit_officer"
+
 
 class UserRegisterIn(BaseModel):
     email: EmailStr
     password: str = Field(min_length=8, max_length=128)
-    role: UserRole = "credit_officer"
 
 
 class UserLoginIn(BaseModel):

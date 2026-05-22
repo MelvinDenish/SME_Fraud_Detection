@@ -87,6 +87,35 @@ _cache: AnalyticsCache | None = None
 _build_lock = asyncio.Lock()
 
 
+def get_status() -> dict:
+    """Snapshot of cache build state for /health/ml. Never raises."""
+    if _cache is None:
+        return {"built": False}
+    return {
+        "built": True,
+        "pool_size": len(_cache.financial_row_by_cin),
+        "detectors": {
+            "d3": {
+                "ready": _cache.d3_tgn is not None,
+                "scored_cins": len(_cache.d3_scores_by_cin),
+            },
+            "d4": {
+                "ready": True,
+                "scored_cins": len(_cache.d4_scores_by_cin),
+            },
+            "d5": {
+                "ready": _cache.d5_model is not None,
+                "scored_cins": len(_cache.d5_scores_by_cin),
+            },
+            "d6": {
+                "ready": _cache.d6_artifacts is not None,
+                "scored_cins": len(_cache.d6_scores_by_cin),
+            },
+        },
+        "m10_precomputed": len(_cache.m10_results),
+    }
+
+
 def _build_global_graph(
     bundles: list[CompanyBundle],
 ) -> tuple[nx.DiGraph, dict[str, int], dict[str, date]]:

@@ -1,7 +1,7 @@
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -23,7 +23,11 @@ class Settings(BaseSettings):
     jwt_secret: str = Field(default="dev-only-not-for-production")
     jwt_algorithm: str = "HS256"
     jwt_expiry_hours: int = 24
-    rate_limit_per_min: int = 10
+    # Sliding-window rate limit per JWT (or per IP for anonymous calls).
+    # Default of 0 means "use the per-env default in the model_validator
+    # below" — keeps tests honest (they can pin a tiny limit explicitly)
+    # while letting prod/dev pick a sensible bucket size automatically.
+    rate_limit_per_min: int = 0
 
     # PRD §10 Day 24 — CORS lockdown. Comma-separated origin list; defaults
     # cover the Vite dev server. Production override via CORS_ALLOWED_ORIGINS.
@@ -59,6 +63,23 @@ class Settings(BaseSettings):
     scheduler_nclt_poll_sec: int = 86_400          # 24h
     scheduler_wilful_poll_sec: int = 30 * 86_400   # 30 days (PRD: "Monthly refresh")
     scheduler_shared_attr_sec: int = 3_600         # 1h
+
+    # Per-env defaults applied only when the operator didn't pin a value
+    # explicitly. PRD §10 Day 24 was tuned for the 10/min dev test plan;
+    # production needs more headroom (judges, demo concurrency, multi-tab
+    # rehearsals), while dev should be generous so the test harness and
+    # the Vite dev server aren't tripping themselves.
+    _RATE_LIMIT_DEFAULTS = {"dev": 200, "staging": 120, "prod": 60}
+
+    @model_validator(mode="after")
+    def _apply_env_defaults(self) -> "Settings":
+        if self.rate_limit_per_min == 0:
+            object.__setattr__(
+                self,
+                "rate_limit_per_min",
+                self._RATE_LIMIT_DEFAULTS.get(self.app_env, 60),
+            )
+        return self
 
 
 @lru_cache(maxsize=1)

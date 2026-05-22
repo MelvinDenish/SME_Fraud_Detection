@@ -536,9 +536,17 @@ SET s.signal_type = $signal_type,
     s.score_contribution = $score_contribution,
     s.evidence_string = $evidence_string,
     s.module_name = $module_name,
+    s.cin = $cin,
     s.created_at = datetime($created_at)
 WITH s
 MATCH (c:Company {cin: $cin})
+// Direct Company -> FraudSignal edge so provenance traversal is one hop
+// even for module 9 (NCLT) signals where no fiscal year context exists.
+MERGE (c)-[hsc:HAS_FRAUD_SIGNAL]->(s)
+SET hsc.module = $module_name, hsc.severity = $severity
+WITH s, c
+// When a fiscal year IS available (modules M1, M2, M3, M5-M8), also
+// edge through the FinancialStatement so the per-FY drill-down works.
 OPTIONAL MATCH (c)-[:HAS_FINANCIALS {year: $year}]->(fs:FinancialStatement)
 FOREACH (_ IN CASE WHEN fs IS NULL THEN [] ELSE [1] END |
     MERGE (fs)-[r:HAS_FRAUD_SIGNAL]->(s)
@@ -643,3 +651,165 @@ async def upsert_fraud_signal(
     if record is None:
         raise RuntimeError(f"Failed to upsert FraudSignal {signal.signal_id}")
     return record["signal_id"]
+
+
+def _year_from_signal(signal: FraudSignal) -> int | None:
+    """Pull a fiscal year off the signal's `triggered_by` refs if any
+    point at a FinancialStatement — needed for the FS-mediated edge
+    in `_UPSERT_FRAUD_SIGNAL`. Returns None when no year is available
+    (M9 NCLT, M10 hypergraph, M11 anomaly, etc.) which is fine — the
+    FOREACH in the Cypher will then skip the FS edge."""
+    for ref in signal.triggered_by:
+        if ref.get("label") == "FinancialStatement" and "year" in ref:
+            return int(ref["year"])
+    return None
+
+
+async def persist_fraud_signals(
+    driver: AsyncDriver, cin: str, signals: list[FraudSignal],
+) -> int:
+    """Batch-persist every FraudSignal raised for one CIN inside a single
+    Neo4j session, returning the count successfully written.
+
+    Used by the scorer after `apply_override` so the /provenance endpoint
+    can later traverse the live graph (Stream 3.4) instead of re-running
+    the whole scorer. Idempotent — the underlying MERGE is keyed by
+    `signal_id`, so calling this twice on the same RiskReport is a no-op.
+
+    Never raises: any Neo4j-side failure is logged + the in-memory
+    `report.evidence_chain` remains the source of truth for the request.
+    """
+    if not signals:
+        return 0
+    settings = get_settings()
+    count = 0
+    try:
+        async with driver.session(database=settings.neo4j_database) as session:
+            for signal in signals:
+                year = _year_from_signal(signal)
+                await session.run(
+                    _UPSERT_FRAUD_SIGNAL,
+                    signal_id=signal.signal_id,
+                    signal_type=signal.signal_type,
+                    severity=signal.severity.value,
+                    score_contribution=float(signal.score_contribution),
+                    evidence_string=signal.evidence_string,
+                    module_name=signal.module_name,
+                    created_at=signal.created_at.isoformat(),
+                    cin=cin,
+                    year=year,
+                )
+                for ref in signal.triggered_by:
+                    label = ref.get("label")
+                    try:
+                        if label == "FinancialStatement":
+                            await session.run(
+                                _LINK_TRIGGERED_BY_FS,
+                                signal_id=signal.signal_id,
+                                cin=ref.get("cin", cin),
+                                year=ref["year"],
+                            )
+                        elif label == "LoanDisbursement":
+                            await session.run(
+                                _LINK_TRIGGERED_BY_LOAN,
+                                signal_id=signal.signal_id,
+                                loan_id=ref["loan_id"],
+                            )
+                        elif label == "GSTEntity":
+                            await session.run(
+                                _LINK_TRIGGERED_BY_GST,
+                                signal_id=signal.signal_id,
+                                gstin=ref["gstin"],
+                            )
+                        elif label == "Company":
+                            await session.run(
+                                _LINK_TRIGGERED_BY_COMPANY,
+                                signal_id=signal.signal_id,
+                                cin=ref.get("cin", cin),
+                            )
+                        elif label == "Director":
+                            await session.run(
+                                _LINK_TRIGGERED_BY_DIRECTOR,
+                                signal_id=signal.signal_id,
+                                din=ref["din"],
+                            )
+                    except KeyError as missing:
+                        logger.warning(
+                            "persist_fraud_signals: skipping malformed TRIGGERED_BY "
+                            "ref %r on %s (%s)", ref, signal.signal_id, missing,
+                        )
+                count += 1
+    except Exception as exc:  # noqa: BLE001 — must never crash the request path
+        logger.warning(
+            "persist_fraud_signals: failed after %d/%d for cin=%s (%s)",
+            count, len(signals), cin, exc,
+        )
+    return count
+
+
+# --- Provenance read (Stream 3.4) ------------------------------------------
+# Reads back what `persist_fraud_signals` wrote so /provenance can stop
+# re-running the scorer just to render the evidence chain.
+
+_READ_PROVENANCE_FOR_CIN = """
+MATCH (s:FraudSignal {cin: $cin})
+OPTIONAL MATCH (s)-[:TRIGGERED_BY]->(e)
+RETURN s.signal_id        AS signal_id,
+       s.signal_type      AS signal_type,
+       s.severity         AS severity,
+       s.score_contribution AS score_contribution,
+       s.evidence_string  AS evidence_string,
+       s.module_name      AS module_name,
+       collect(
+         CASE WHEN e IS NULL THEN NULL
+              ELSE {label: labels(e)[0], props: properties(e)}
+         END
+       ) AS refs
+ORDER BY s.created_at
+"""
+
+
+async def read_provenance_for_cin(driver: AsyncDriver, cin: str) -> dict | None:
+    """Return the `{signals, triggered_by}` provenance payload directly
+    from Neo4j for `cin`. None on driver/Cypher failure — callers fall
+    back to the in-memory evidence chain.
+
+    Shape mirrors the in-memory builder in `analyse.py` so the route can
+    swap transparently."""
+    settings = get_settings()
+    try:
+        async with driver.session(database=settings.neo4j_database) as session:
+            result = await session.run(_READ_PROVENANCE_FOR_CIN, cin=cin)
+            records = [r.data() async for r in result]
+    except Exception as exc:  # noqa: BLE001 — defensive
+        logger.warning("read_provenance_for_cin failed for %s (%s)", cin, exc)
+        return None
+
+    if not records:
+        return None
+
+    signals: list[dict[str, Any]] = []
+    triggered_by: list[dict[str, Any]] = []
+    for rec in records:
+        signals.append({
+            "signal_id": rec["signal_id"],
+            "signal_type": rec["signal_type"],
+            "severity": rec["severity"],
+            "module_name": rec["module_name"],
+            "score_contribution": rec["score_contribution"],
+            "evidence_string": rec["evidence_string"],
+        })
+        for ref in rec.get("refs") or []:
+            if not ref:
+                continue
+            triggered_by.append({
+                "signal_id": rec["signal_id"],
+                "label": ref.get("label"),
+                "ref": ref.get("props") or {},
+            })
+    return {
+        "cin": cin,
+        "signal_count": len(signals),
+        "signals": signals,
+        "triggered_by": triggered_by,
+    }

@@ -61,6 +61,27 @@ async def _all_fixture_bundles() -> list:
     return bundles
 
 
+async def prewarm_analytics_cache() -> None:
+    """Eagerly build the analytics cache at FastAPI startup.
+
+    Without this, the first /analyse caller after a cold boot pays a
+    5–10 s wait while D3 trains, D4 fits, D5 loads, D6 trains, and M10
+    runs its hypergraph batch. The same population-view artefacts are
+    needed regardless of which CIN gets queried first — there is no
+    benefit to lazy-building them. Stream 1.3 of the production-grade
+    closure plan.
+
+    Failures here are logged but never crash the lifespan — the lazy
+    build inside _build_scoring_context will still run on first request
+    if startup pre-warm raised.
+    """
+    try:
+        await get_analytics_cache(_all_fixture_bundles)
+        logger.info("analytics_cache: pre-warmed at startup")
+    except Exception as exc:  # pragma: no cover — defensive
+        logger.warning("analytics_cache prewarm failed (%s) — falling back to lazy build", exc)
+
+
 async def _build_scoring_context(overlay) -> ScoringContext:
     # M4 (graph patterns) wants the live Neo4j driver. When the graph isn't
     # connected (CI without Neo4j, etc.), pass None — M4 then skips cleanly.
@@ -118,15 +139,12 @@ async def _propagation_lift(cin: str, seed_score: float) -> tuple[str, float]:
     return (result.bands.get(cin, "LOW"), float(result.lifted_scores.get(cin, 0.0)))
 
 
-@router.get("/{cin}")
-async def analyse(
-    cin: CIN_PATH,
-    _user: dict = Depends(get_current_user),
-) -> dict:
-    """PRD §7.1 dual-output payload for one CIN, with upload overlay folded in.
+async def score_cin_full(cin: str):
+    """Shared helper — fetch + overlay-merge + score + propagation-lift.
 
-    Auth-gated (Day-19 JWT) — mirrors /report/{cin}. Bypass on this endpoint
-    was filed as F4 in docs/LOCAL_TEST_REPORT.md.
+    Returns the RiskReport, or raises HTTPException(404) when the CIN
+    isn't in any source. Reused by /analyse and /narrative so both paths
+    produce identical numbers from identical evidence.
     """
     bundle = await _company_source.fetch_bundle(cin)
     if bundle is None:
@@ -141,6 +159,20 @@ async def analyse(
     band, lifted = await _propagation_lift(cin, report.fraud_risk_score)
     report.propagation_band = band
     report.propagation_score = lifted
+    return report
+
+
+@router.get("/{cin}")
+async def analyse(
+    cin: CIN_PATH,
+    _user: dict = Depends(get_current_user),
+) -> dict:
+    """PRD §7.1 dual-output payload for one CIN, with upload overlay folded in.
+
+    Auth-gated (Day-19 JWT) — mirrors /report/{cin}. Bypass on this endpoint
+    was filed as F4 in docs/LOCAL_TEST_REPORT.md.
+    """
+    report = await score_cin_full(cin)
     return report.to_dict()
 
 
@@ -154,12 +186,34 @@ async def provenance(
     Output shape:
       {
         "cin": "U…",
-        "signals": [FraudSignal node payload, …],
+        "signal_count": int,
+        "signals":   [{signal_id, signal_type, severity, module_name,
+                       score_contribution, evidence_string}, …],
         "triggered_by": [{signal_id, label, ref}, …]
       }
-    Day-16 wires this from the live RiskScorer output. Day-20 swaps in
-    Neo4j-backed traversal once the scorer writes FraudSignal nodes.
+
+    Stream 3.4 — live-graph traversal first (`read_provenance_for_cin`);
+    falls through to a full scorer-driven rebuild when:
+      * no Neo4j driver is configured (tests, offline scoring),
+      * Cypher fails for any reason,
+      * the graph has no FraudSignal nodes for this CIN yet (cold start
+        before /analyse has been called once).
+    Both paths emit an identical shape so the React GraphExplorer can
+    consume either without branching.
     """
+    # Fast path: pull from the graph.
+    try:
+        driver = get_driver()
+    except Exception:
+        driver = None
+
+    if driver is not None:
+        from backend.app.graph.writes import read_provenance_for_cin
+        graph_payload = await read_provenance_for_cin(driver, cin)
+        if graph_payload is not None:
+            return graph_payload
+
+    # Fallback: rebuild from the scorer. Same shape as `read_provenance_for_cin`.
     bundle = await _company_source.fetch_bundle(cin)
     if bundle is None:
         raise HTTPException(

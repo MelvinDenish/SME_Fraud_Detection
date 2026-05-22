@@ -451,6 +451,27 @@ async def score(bundle: CompanyBundle, ctx: ScoringContext) -> RiskReport:
     final_score, override_applied = apply_override(base_score, evidence)
     final_score = clamp_score(final_score)
 
+    # Stream 3.3 — persist FraudSignal nodes + TRIGGERED_BY edges to Neo4j
+    # so the /provenance endpoint can traverse the live graph (PRD §6
+    # graph-native evidence) instead of rescoring on every read. Skip
+    # silently when no driver is configured (CI, unit tests, offline
+    # scoring) — the in-memory evidence_chain still flows through.
+    if ctx.driver is not None and evidence:
+        from backend.app.graph.writes import persist_fraud_signals
+        try:
+            written = await persist_fraud_signals(
+                ctx.driver, bundle.company.cin, evidence,
+            )
+            logger.info(
+                "scorer: persisted %d/%d FraudSignal(s) for %s",
+                written, len(evidence), bundle.company.cin,
+            )
+        except Exception as exc:  # noqa: BLE001 — never crash the request
+            logger.warning(
+                "scorer: FraudSignal persistence failed for %s (%s) — "
+                "provenance will use in-memory chain", bundle.company.cin, exc,
+            )
+
     return RiskReport(
         cin=bundle.company.cin,
         fraud_risk_score=final_score,

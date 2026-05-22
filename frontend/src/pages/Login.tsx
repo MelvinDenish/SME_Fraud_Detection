@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Navigate, useLocation, useNavigate } from "react-router-dom";
+import { Navigate, useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { HttpError } from "../lib/api";
 import { useAuth } from "../lib/auth";
 
 const cardStyle: React.CSSProperties = {
@@ -56,7 +57,14 @@ export default function Login() {
   const { login, register, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const from = (location.state as { from?: string } | null)?.from ?? "/dashboard";
+  const [searchParams] = useSearchParams();
+  // Three places "where to go after login" can come from, in priority order:
+  //   1. ?next= query (set by Reports.tsx 401 redirect — Stream 1.5)
+  //   2. location.state.from (set by ProtectedRoute when bouncing an anon user)
+  //   3. /dashboard default
+  const nextParam = searchParams.get("next");
+  const stateFrom = (location.state as { from?: string } | null)?.from;
+  const from = nextParam || stateFrom || "/dashboard";
 
   const [mode, setMode] = useState<"login" | "register">("login");
   // Blank by default — backend EmailStr (pydantic email-validator) rejects
@@ -65,6 +73,7 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [emailTaken, setEmailTaken] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   if (isAuthenticated) return <Navigate to={from} replace />;
@@ -72,16 +81,31 @@ export default function Login() {
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setEmailTaken(false);
     setSubmitting(true);
     try {
       if (mode === "login") await login(email.trim(), password);
       else await register(email.trim(), password);
       navigate(from, { replace: true });
     } catch (err) {
-      setError((err as Error).message);
+      // Stream 1.6 — surface 409 (email already registered) as a structured
+      // CTA instead of a wall of HTTP-error text. Everything else falls
+      // through to the generic error banner.
+      if (err instanceof HttpError && err.status === 409 && mode === "register") {
+        setEmailTaken(true);
+      } else {
+        setError((err as Error).message);
+      }
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const switchToLogin = () => {
+    setMode("login");
+    setEmailTaken(false);
+    setError(null);
+    setPassword("");
   };
 
   return (
@@ -160,6 +184,41 @@ export default function Login() {
         autoComplete={mode === "login" ? "current-password" : "new-password"}
         style={inputStyle}
       />
+      {emailTaken && (
+        <div
+          role="alert"
+          style={{
+            marginBottom: "var(--s-5)",
+            padding: "var(--s-3) var(--s-4)",
+            background: "var(--paper)",
+            borderLeft: "3px solid var(--accent-gold)",
+            color: "var(--ink-2)",
+            fontFamily: "var(--font-body)",
+            fontSize: "var(--t-meta)",
+            lineHeight: 1.5,
+          }}
+        >
+          That email is already registered.{" "}
+          <button
+            type="button"
+            onClick={switchToLogin}
+            style={{
+              background: "none",
+              border: 0,
+              padding: 0,
+              color: "var(--accent-gold)",
+              cursor: "pointer",
+              fontFamily: "var(--font-body)",
+              fontSize: "var(--t-meta)",
+              fontWeight: 700,
+              textDecoration: "underline",
+              textUnderlineOffset: 3,
+            }}
+          >
+            Sign in instead?
+          </button>
+        </div>
+      )}
       {error && (
         <div style={{
           marginBottom: "var(--s-5)",

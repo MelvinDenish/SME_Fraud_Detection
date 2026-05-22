@@ -160,6 +160,18 @@ async def upload_financials(cin: CIN_PATH, file: UploadFile = File(...)) -> Uplo
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail=f"PDF parse failed: {exc}",
             ) from exc
+        except Exception as exc:
+            # pdfplumber / pdfminer raise their own exception hierarchies
+            # (PdfminerException, PDFSyntaxError, etc.) that don't inherit
+            # from ValueError. Treat any parser failure on user-uploaded
+            # bytes as a 422 — the only alternative is a 500 the client
+            # can't act on. Log + surface the message so the analyst sees
+            # what's wrong with their PDF.
+            logger.warning("PDF parse failed on /upload/financials/%s: %s", cin, exc)
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"PDF parse failed: {exc.__class__.__name__}: {exc}",
+            ) from exc
     finally:
         try:
             tmp_path.unlink(missing_ok=True)
