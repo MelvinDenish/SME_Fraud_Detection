@@ -63,7 +63,10 @@ jobs:
             uv-${{ runner.os }}-
 
       - name: Sync deps
-        run: uv sync --frozen
+        # `--extra dev` pulls in pytest + pytest-asyncio (declared under
+        # [project.optional-dependencies].dev in pyproject.toml). Without
+        # it, `uv run pytest` fails with "No such file or directory".
+        run: uv sync --frozen --extra dev
 
       - name: pytest backend/tests + ml/tests
         env:
