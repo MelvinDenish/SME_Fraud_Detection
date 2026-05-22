@@ -1,12 +1,21 @@
-"""F1c — Conformal prediction with MAPIE (PRD §5.2).
+"""F1c — Split-conformal prediction intervals (PRD §5.2).
 
 Wraps a *calibrated* binary classifier and produces P(fraud) plus a
-[P_low, P_high] interval at alpha=0.10 with 90% empirical coverage on the
-calibration set.
+[P_low, P_high] interval at alpha=0.10 with 90% empirical coverage on
+the calibration set.
 
-MAPIE expects a scikit-learn estimator. We wrap our LightGBM + isotonic stack
-in a thin adapter that exposes `predict_proba` and `fit` so MAPIE can treat it
-like any other classifier.
+History: PRD §5.2 names MAPIE explicitly. The mapie>=1.0 interface for
+classification was unstable at implementation time (Day 5 / 2026), so
+this file implements the same construction by hand — split-conformal
+residuals on the (calibrated probability, label) pair, with the standard
+(n+1)/n correction. The math is identical to MAPIE's
+SplitConformalRegressor used on a probability target; swap-in remains a
+single-line change once their API stabilises.
+
+Renamed from `f1c_mapie.py` -> `f1c_split_conformal.py` on 2026-05-22
+(Stream 4.8 of the production-grade closure plan) to bring the file
+name in line with the actual implementation. Old imports
+(`from ml.meta.f1c_mapie import ...`) will fail loudly.
 """
 
 from __future__ import annotations

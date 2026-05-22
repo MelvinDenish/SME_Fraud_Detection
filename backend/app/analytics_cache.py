@@ -56,6 +56,7 @@ if TYPE_CHECKING:  # pragma: no cover
 logger = logging.getLogger(__name__)
 
 D5_ARTIFACT_PATH = Path(__file__).resolve().parents[2] / "ml" / "artifacts" / "d5_tcn.pt"
+D6_ARTIFACT_PATH = Path(__file__).resolve().parents[2] / "ml" / "artifacts" / "d6_combined_ae.pt"
 
 
 @dataclass
@@ -209,7 +210,30 @@ def build_cache(
         d6_graph = np.vstack(
             [graph_feature_row(cache.graph_feature_by_cin[c]) for c in both]
         ).astype(np.float32)
-        cache.d6_artifacts = train_d6(d6_tab, d6_graph, epochs=20, seed=42)
+        # Stream 4.1 — prefer the on-disk artifact when present so we
+        # stop paying the ~3s autoencoder training cost on every cold
+        # boot. Fall back to inline training when the file is missing
+        # (fresh checkout) or its schema-version doesn't match.
+        cache.d6_artifacts = None
+        if D6_ARTIFACT_PATH.exists():
+            try:
+                cache.d6_artifacts = D6Artifacts.load(str(D6_ARTIFACT_PATH))
+                logger.info(
+                    "analytics_cache: D6 loaded from %s (skipped inline training)",
+                    D6_ARTIFACT_PATH,
+                )
+            except Exception as exc:  # noqa: BLE001 — defensive
+                logger.warning(
+                    "analytics_cache: D6 load failed (%s) — training inline as fallback",
+                    exc,
+                )
+        if cache.d6_artifacts is None:
+            cache.d6_artifacts = train_d6(d6_tab, d6_graph, epochs=20, seed=42)
+            logger.info(
+                "analytics_cache: D6 trained inline on %d rows — persist via "
+                "`python -m ml.training.train_d6 --save` to skip on future boots",
+                d6_tab.shape[0],
+            )
         d6_scores = cache.d6_artifacts.anomaly_scores(d6_tab, d6_graph)
         for cin, s in zip(both, d6_scores):
             cache.d6_scores_by_cin[cin] = float(s)

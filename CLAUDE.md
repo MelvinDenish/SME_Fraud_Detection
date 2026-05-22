@@ -84,7 +84,7 @@ SME_Fraud_Detection/
 │   ├── meta/
 │   │   ├── f1a_lightgbm_oof.py  # ← loaded by backend/app/ml_inference.py at runtime
 │   │   ├── f1b_isotonic.py      # ← loaded by backend/app/ml_inference.py at runtime
-│   │   └── f1c_mapie.py         # ← loaded by backend/app/ml_inference.py at runtime
+│   │   └── f1c_split_conformal.py  # ← loaded by backend/app/ml_inference.py at runtime (renamed 2026-05-22 from f1c_mapie.py — module name now matches the split-conformal implementation; MAPIE deferred)
 │   ├── explain/
 │   │   └── gnn_explainer.py     # for TGN subgraph viz only
 │   ├── training/                # Colab-ready notebooks for CUDA training
@@ -141,7 +141,7 @@ Single source of truth for which file implements which PRD module. **Before addi
 | §4.11 | M11 Anomaly (IsoForest + LOF) | `backend/app/modules/m11_anomaly.py` |
 | §5.1 D3–D6 | ML detectors | `ml/detectors/d3_tgn.py`, `d4_lof.py`, `d5_mamba.py`, `d6_combined_ae.py` (D1 CatBoost + D2 β-VAE removed 2026-05-21 — were unimplemented stubs) |
 | §5.2 inference bridge | Meta-learner loader (F1a→F1b→F1c) called from RiskScorer | `backend/app/ml_inference.py` — wired 2026-05-21 to populate `p_fraud_calibrated` + `p_fraud_interval` |
-| §5.2 F1a/b/c | Meta-learner stack | `ml/meta/f1a_lightgbm_oof.py`, `f1b_isotonic.py`, `f1c_mapie.py` |
+| §5.2 F1a/b/c | Meta-learner stack | `ml/meta/f1a_lightgbm_oof.py`, `f1b_isotonic.py`, `f1c_split_conformal.py` |
 | §5.3 | L0.5 graph feature extraction | `ml/l05_graph_features.py` |
 | §5.4 | GNNExplainer | `ml/explain/gnn_explainer.py` |
 | §5.5 | Gemini Flash narrative | `backend/app/narrative.py` |

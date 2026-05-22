@@ -1,0 +1,135 @@
+{
+  "generated_at": "2026-05-22T02:55:20.770682+00:00",
+  "labels_path": "data\\labels\\sfio_confirmed_frauds.json",
+  "alpha": 0.1,
+  "ece_bins": 15,
+  "metrics": {
+    "n_samples": 11,
+    "n_positives": 3,
+    "n_negatives": 8,
+    "auc_rule_score": 0.5,
+    "n_with_calibrated_p": 0,
+    "auc_calibrated": null,
+    "brier": null,
+    "ece_15bin": null,
+    "conformal_coverage_alpha_0_10": null,
+    "n_with_conformal_interval": 0,
+    "notes": [
+      "Sample size < 20 — AUC and ECE point estimates have large variance. Augment data/labels/sfio_confirmed_frauds.json with negative controls and synthetic ITC/evergreening rings (Stream 4.3-4.5).",
+      "No meta-learner predictions populated — F1a/F1b/F1c artifacts may be missing or feature width mismatched. Check /health/ml.",
+      "No conformal intervals available; coverage not estimable."
+    ]
+  },
+  "rows": [
+    {
+      "cin": "L65910MH1984PLC032662",
+      "fraud_risk_score": 75.0,
+      "risk_band": "CRITICAL",
+      "p_fraud_calibrated": null,
+      "p_fraud_interval": null,
+      "data_confidence": 65,
+      "override_applied": true,
+      "label": 1
+    },
+    {
+      "cin": "U14101MH2019PTC298765",
+      "fraud_risk_score": 5.200000000000001,
+      "risk_band": "LOW",
+      "p_fraud_calibrated": null,
+      "p_fraud_interval": null,
+      "data_confidence": 65,
+      "override_applied": false,
+      "label": 0
+    },
+    {
+      "cin": "U27101MH2010PTC215432",
+      "fraud_risk_score": 75.0,
+      "risk_band": "CRITICAL",
+      "p_fraud_calibrated": null,
+      "p_fraud_interval": null,
+      "data_confidence": 80,
+      "override_applied": true,
+      "label": 1
+    },
+    {
+      "cin": "U27109MH2018PTC312456",
+      "fraud_risk_score": 75.0,
+      "risk_band": "CRITICAL",
+      "p_fraud_calibrated": null,
+      "p_fraud_interval": null,
+      "data_confidence": 65,
+      "override_applied": true,
+      "label": 0
+    },
+    {
+      "cin": "U29304MH2019PTC287654",
+      "fraud_risk_score": 75.0,
+      "risk_band": "CRITICAL",
+      "p_fraud_calibrated": null,
+      "p_fraud_interval": null,
+      "data_confidence": 92,
+      "override_applied": true,
+      "label": 0
+    },
+    {
+      "cin": "U45201MH2005PTC155294",
+      "fraud_risk_score": 75.0,
+      "risk_band": "CRITICAL",
+      "p_fraud_calibrated": null,
+      "p_fraud_interval": null,
+      "data_confidence": 92,
+      "override_applied": true,
+      "label": 1
+    },
+    {
+      "cin": "U45203MH2020PTC315678",
+      "fraud_risk_score": 80.0,
+      "risk_band": "CRITICAL",
+      "p_fraud_calibrated": null,
+      "p_fraud_interval": null,
+      "data_confidence": 25,
+      "override_applied": true,
+      "label": 0
+    },
+    {
+      "cin": "U46101MH2017PTC289123",
+      "fraud_risk_score": 75.0,
+      "risk_band": "CRITICAL",
+      "p_fraud_calibrated": null,
+      "p_fraud_interval": null,
+      "data_confidence": 45,
+      "override_applied": true,
+      "label": 0
+    },
+    {
+      "cin": "U46190MH2019PTC295432",
+      "fraud_risk_score": 75.0,
+      "risk_band": "CRITICAL",
+      "p_fraud_calibrated": null,
+      "p_fraud_interval": null,
+      "data_confidence": 45,
+      "override_applied": true,
+      "label": 0
+    },
+    {
+      "cin": "U49120MH2020PTC301234",
+      "fraud_risk_score": 75.0,
+      "risk_band": "CRITICAL",
+      "p_fraud_calibrated": null,
+      "p_fraud_interval": null,
+      "data_confidence": 65,
+      "override_applied": true,
+      "label": 0
+    },
+    {
+      "cin": "U62013MH2016PTC267890",
+      "fraud_risk_score": 75.0,
+      "risk_band": "CRITICAL",
+      "p_fraud_calibrated": null,
+      "p_fraud_interval": null,
+      "data_confidence": 45,
+      "override_applied": true,
+      "label": 0
+    }
+  ]
+}

@@ -90,7 +90,7 @@ async def _load_artifacts() -> MetaArtifacts | None:
         try:
             from ml.meta.f1a_lightgbm_oof import OOFResult
             from ml.meta.f1b_isotonic import CalibrationArtifacts
-            from ml.meta.f1c_mapie import ConformalArtifacts
+            from ml.meta.f1c_split_conformal import ConformalArtifacts
             f1a = await asyncio.to_thread(OOFResult.load, str(F1A_PATH))
             f1b = await asyncio.to_thread(CalibrationArtifacts.load, str(F1B_PATH))
             f1c = await asyncio.to_thread(ConformalArtifacts.load, str(F1C_PATH))
@@ -184,7 +184,7 @@ async def compute_calibrated_probability(
         # produces today. If the analytics_cache is supplied at both train
         # and infer the shape includes M10/M11 triplets + D4/D6 detectors.
         from ml.features import FeatureContext, build_feature_vector
-        from ml.meta.f1c_mapie import predict_with_interval
+        from ml.meta.f1c_split_conformal import predict_with_interval
 
         ctx = FeatureContext(
             benchmarks=benchmarks, nclt=nclt, wilful=wilful,

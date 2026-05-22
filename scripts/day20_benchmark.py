@@ -42,7 +42,7 @@ from backend.app.scorer import ScoringContext, score  # noqa: E402
 from ml.features import FEATURE_NAMES, FeatureContext, build_feature_matrix  # noqa: E402
 from ml.meta.f1a_lightgbm_oof import fit_oof  # noqa: E402
 from ml.meta.f1b_isotonic import fit_isotonic  # noqa: E402
-from ml.meta.f1c_mapie import fit_conformal  # noqa: E402
+from ml.meta.f1c_split_conformal import fit_conformal  # noqa: E402
 from scripts.precache_companies import generate_bundles  # noqa: E402
 
 logger = logging.getLogger("day20")
