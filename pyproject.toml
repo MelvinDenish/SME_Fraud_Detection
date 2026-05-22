@@ -11,7 +11,7 @@ dependencies = [
     # --- Backend / API ---
     "fastapi>=0.111,<0.116",
     "uvicorn[standard]>=0.30,<0.36",
-    "pydantic>=2.7,<3",
+    "pydantic[email]>=2.7,<3",
     "pydantic-settings>=2.3,<3",
     "python-jose[cryptography]>=3.3,<4",
     "passlib[bcrypt]>=1.7,<2",
