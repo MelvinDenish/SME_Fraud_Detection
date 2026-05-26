@@ -41,7 +41,7 @@ export default function Evergreening() {
     <div style={{ display: "grid", gap: "var(--s-6)", maxWidth: 960 }}>
       <header style={{ borderBottom: "1px solid var(--rule)", paddingBottom: "var(--s-5)" }}>
         <p style={{ ...eyebrow, margin: 0, marginBottom: "var(--s-2)" }}>
-          Investigation · Bank Loan Evergreening
+          Investigation · Hidden Loan Defaults
         </p>
         <h1 style={{
           fontFamily: "var(--font-display)",
@@ -62,9 +62,10 @@ export default function Evergreening() {
           maxWidth: "60ch",
           lineHeight: 1.6,
         }}>
-          PRD §4.4 evergreening patterns 13–17 plus Module 9's NCLT / wilful-defaulter
-          override fire together. The fraud risk score is floored at 75 regardless of
-          Tier-1 weighting once the NCLT signal lands.
+          DHFL repeatedly rolled over loans that were already in default, disguising
+          bad debt as healthy credit. We detected five separate patterns of this
+          behaviour — and because DHFL is under active insolvency proceedings, the
+          risk score is automatically raised to reflect the legal record.
         </p>
       </header>
 
@@ -123,16 +124,16 @@ export default function Evergreening() {
               }}>{query.data.fraud_risk_score.toFixed(1)}</p>
             </div>
             <div>
-              <p style={metaLabel}>Override</p>
+              <p style={metaLabel}>Score Raised By</p>
               <p style={{
                 fontFamily: "var(--font-body)",
                 fontSize: "var(--t-h3)",
                 color: "var(--ink)",
                 margin: 0,
-              }}>{query.data.override_applied ? "NCLT / WD" : "—"}</p>
+              }}>{query.data.override_applied ? "Court Records" : "—"}</p>
             </div>
             <div>
-              <p style={metaLabel}>Data conf.</p>
+              <p style={metaLabel}>Info Quality</p>
               <p style={{
                 fontFamily: "var(--font-mono)",
                 fontSize: "var(--t-h3)",

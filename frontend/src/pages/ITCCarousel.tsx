@@ -83,8 +83,8 @@ function CarouselCard({ cin, role, node, data, isLoading, isFetching, failureCou
       {showLoading && (
         <p style={{ color: "var(--ink-4)", margin: "var(--s-4) 0 0", fontFamily: "var(--font-body)", fontSize: "var(--t-meta)" }}>
           {retrying
-            ? `Retrying signal fan-out (attempt ${failureCount + 1}/4)…`
-            : "Fanning out signals…"}
+            ? `Still trying… (attempt ${failureCount + 1} of 4)`
+            : "Running analysis…"}
         </p>
       )}
       {showError && (
@@ -114,7 +114,7 @@ function CarouselCard({ cin, role, node, data, isLoading, isFetching, failureCou
               }}>{data.fraud_risk_score.toFixed(1)}</p>
             </div>
             <div>
-              <p style={{ ...eyebrow, margin: 0 }}>Data conf.</p>
+              <p style={{ ...eyebrow, margin: 0 }}>Info Quality</p>
               <p style={{
                 fontFamily: "var(--font-mono)",
                 fontSize: "var(--t-h3)",
@@ -188,7 +188,7 @@ export default function ITCCarousel() {
     <div style={{ display: "grid", gap: "var(--s-6)", maxWidth: 960 }}>
       <header style={{ borderBottom: "1px solid var(--rule)", paddingBottom: "var(--s-5)" }}>
         <p style={{ ...eyebrow, margin: 0, marginBottom: "var(--s-2)" }}>
-          Investigation · GST Input-Tax-Credit Ring
+          Investigation · GST Tax Credit Fraud Ring
         </p>
         <h1 style={{
           fontFamily: "var(--font-display)",
@@ -209,9 +209,10 @@ export default function ITCCarousel() {
           maxWidth: "60ch",
           lineHeight: 1.6,
         }}>
-          Synthetic GST input-tax-credit carousel modelled on the 2022 DGGI Delhi
-          Zonal Unit ring. Three nodes share addresses + bank branches; Module 10
-          (hypergraph shell) and Module 4 (SCC patterns) should flag every member.
+          Three companies appear to be routing fake GST tax credit claims through
+          each other in a closed loop — modelled on a real 2022 case. All three
+          share registered addresses and bank branches, which our network and
+          shell-entity checks have flagged.
         </p>
       </header>
       {CAROUSEL_CINS.map((c, i) => (

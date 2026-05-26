@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { useParams, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "motion/react";
 import {
@@ -66,6 +66,7 @@ function Eyebrow({
 
 export default function GraphExplorer() {
   const { cin: cinParam } = useParams<{ cin?: string }>();
+  const [searchParams] = useSearchParams();
   const [cin, setCin] = useState(cinParam ?? DEMO_CINS.ilfs);
   useEffect(() => {
     if (cinParam) setCin(cinParam);
@@ -209,6 +210,44 @@ export default function GraphExplorer() {
 
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  // Auto-select a signal when the URL contains ?signal=<signal_id>
+  // (set by the "Highlight in graph →" links on the Dashboard).
+  const signalParam = searchParams.get("signal");
+  useEffect(() => {
+    if (signalParam && nodes.length > 0) {
+      const targetId = `sig:${signalParam}`;
+      if (nodes.find((n) => n.id === targetId)) {
+        setSelectedId(targetId);
+      }
+    }
+  }, [signalParam, nodes.length]);
+
+  // When a signal node is selected, compute the set of nodes that form its
+  // evidence subgraph: the signal itself + all ref nodes it points to via
+  // TRIGGERED_BY edges. This set drives the gold-highlight rendering.
+  const highlightedIds = useMemo((): Set<string> => {
+    if (!selectedId) return new Set();
+    const s = new Set<string>([selectedId]);
+    for (const lnk of links) {
+      const srcId =
+        typeof lnk.source === "string"
+          ? lnk.source
+          : (lnk.source as unknown as GraphNode).id;
+      const tgtId =
+        typeof lnk.target === "string"
+          ? lnk.target
+          : (lnk.target as unknown as GraphNode).id;
+      if (selectedId.startsWith("sig:") && srcId === selectedId && lnk.label === "TRIGGERED_BY") {
+        s.add(tgtId);
+      }
+      if (selectedId.startsWith("ref:") && tgtId === selectedId && lnk.label === "TRIGGERED_BY") {
+        s.add(srcId);
+      }
+    }
+    return s;
+  }, [selectedId, links]);
+
   const inspected = useMemo(
     () => nodes.find((n) => n.id === (selectedId ?? hoveredId)) ?? null,
     [nodes, selectedId, hoveredId],
@@ -217,7 +256,7 @@ export default function GraphExplorer() {
   return (
     <article style={{ display: "grid", gap: "var(--s-5)" }}>
       <header style={{ display: "grid", gap: "var(--s-3)" }}>
-        <Eyebrow>Sentinel-G · Provenance Atlas</Eyebrow>
+        <Eyebrow>Sentinel-G · Evidence Graph</Eyebrow>
         <h1>The Evidence Graph.</h1>
         <p
           style={{
@@ -228,10 +267,10 @@ export default function GraphExplorer() {
             maxWidth: "62ch",
           }}
         >
-          Every FraudSignal traces back through one or more <code>TRIGGERED_BY</code>{" "}
-          edges to a specific RelatedPartyTransaction, FinancialStatement, Charge,
-          or GSTEntity. Numbers in evidence strings always cite the original
-          source row.
+          Every warning sign is connected to the exact record that triggered it —
+          financial statements, tax filings, charge documents, or GST data.
+          Click any node to inspect it. Click a warning-sign node to highlight
+          its full evidence trail in gold.
         </p>
         <div className="rule-gold" aria-hidden />
       </header>
@@ -249,7 +288,7 @@ export default function GraphExplorer() {
       >
         <div style={{ display: "grid", gap: "var(--s-2)" }}>
           <label htmlFor="graph-cin">
-            <Eyebrow>Subject CIN</Eyebrow>
+            <Eyebrow>Company ID (CIN)</Eyebrow>
           </label>
           <input
             id="graph-cin"
@@ -278,7 +317,7 @@ export default function GraphExplorer() {
             alignItems: "center",
           }}
         >
-          <Eyebrow>Quick subjects</Eyebrow>
+          <Eyebrow>Example Companies</Eyebrow>
           {Object.entries(DEMO_CINS).map(([k, v]) => (
             <button
               type="button"
@@ -337,13 +376,47 @@ export default function GraphExplorer() {
               }}
             >
               <Eyebrow>
-                {query.data.signal_count} signals ·{" "}
-                {query.data.triggered_by.length} TRIGGERED_BY edges
+                {query.data.signal_count} warning sign{query.data.signal_count === 1 ? "" : "s"} ·{" "}
+                {query.data.triggered_by.length} source record{query.data.triggered_by.length === 1 ? "" : "s"}
               </Eyebrow>
               <Eyebrow style={{ color: "var(--ink-4)" }}>
-                Hover · Click to pin
+                Hover · Click to highlight evidence
               </Eyebrow>
             </div>
+
+            {highlightedIds.size > 0 && (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  padding: "var(--s-2) var(--s-4)",
+                  background: "rgba(160,113,39,0.12)",
+                  borderLeft: `3px solid ${HEX.accentGold}`,
+                  gap: "var(--s-4)",
+                }}
+              >
+                <span style={{ fontSize: "0.78rem", color: HEX.accentGold, fontWeight: 600, letterSpacing: "0.08em" }}>
+                  Showing evidence for: {inspected?.label?.slice(0, 50)}
+                </span>
+                <button
+                  onClick={() => setSelectedId(null)}
+                  style={{
+                    background: "transparent",
+                    border: `1px solid ${HEX.accentGold}`,
+                    color: HEX.accentGold,
+                    fontSize: "0.72rem",
+                    fontWeight: 700,
+                    letterSpacing: "0.14em",
+                    textTransform: "uppercase",
+                    padding: "3px 10px",
+                    cursor: "pointer",
+                  }}
+                >
+                  Clear
+                </button>
+              </div>
+            )}
 
             <svg
               viewBox={viewBox}
@@ -425,6 +498,15 @@ export default function GraphExplorer() {
                   const involvesHover =
                     hoveredId !== null &&
                     (hoveredId === s.id || hoveredId === t.id);
+                  const isHighlighted =
+                    highlightedIds.size > 0 &&
+                    highlightedIds.has(s.id) &&
+                    highlightedIds.has(t.id);
+                  const mx = ((s.x ?? 0) + (t.x ?? 0)) / 2;
+                  const my = ((s.y ?? 0) + (t.y ?? 0)) / 2;
+                  const edgeLabel =
+                    lnk.label === "HAS_FRAUD_SIGNAL" ? "fraud finding" : "source record";
+                  const showLabel = involvesHover || isHighlighted;
                   return (
                     <g key={i}>
                       <line
@@ -432,11 +514,33 @@ export default function GraphExplorer() {
                         y1={s.y}
                         x2={t.x}
                         y2={t.y}
-                        stroke={involvesHover ? HEX.accentGold : HEX.ink3}
-                        strokeWidth={involvesHover ? 1.6 : 0.9}
-                        strokeOpacity={involvesHover ? 1 : 0.55}
+                        stroke={isHighlighted ? HEX.accentGold : involvesHover ? HEX.accentGold : HEX.ink3}
+                        strokeWidth={isHighlighted ? 2.2 : involvesHover ? 1.6 : 0.9}
+                        strokeOpacity={isHighlighted ? 1 : involvesHover ? 1 : 0.55}
                         markerEnd="url(#arrow)"
                       />
+                      {showLabel && (
+                        <g pointerEvents="none">
+                          <rect
+                            x={mx - 38}
+                            y={my - 8}
+                            width={76}
+                            height={14}
+                            fill={HEX.paper}
+                            opacity={0.88}
+                          />
+                          <text
+                            x={mx}
+                            y={my + 3}
+                            textAnchor="middle"
+                            fontFamily='"JetBrains Mono", ui-monospace, monospace'
+                            fontSize={9}
+                            fill={HEX.accentGold}
+                          >
+                            {edgeLabel}
+                          </text>
+                        </g>
+                      )}
                     </g>
                   );
                 })}
@@ -448,11 +552,31 @@ export default function GraphExplorer() {
                   if (n.x === undefined) return null;
                   const isHover = hoveredId === n.id;
                   const isSelected = selectedId === n.id;
+                  const isHighlighted = highlightedIds.has(n.id) && !isSelected;
                   const baseR =
                     n.kind === "company" ? 26 : n.kind === "signal" ? 14 : 11;
                   const r = isHover || isSelected ? baseR + 4 : baseR;
                   const fillRef =
                     n.kind === "company" ? "url(#company-glow)" : n.fill;
+
+                  // Label visibility rules:
+                  // - Company: always full label
+                  // - Signal: always show (compact when idle, full on hover/select)
+                  // - Ref: only on hover or select
+                  const showLabel =
+                    n.kind === "company" ||
+                    n.kind === "signal" ||
+                    isHover ||
+                    isSelected;
+                  const labelText =
+                    isHover || isSelected || n.kind === "company"
+                      ? n.label.slice(0, 38)
+                      : n.label.slice(0, 20);
+                  const labelWidth = Math.max(
+                    40,
+                    Math.min(labelText.length, isHover || isSelected ? 38 : 22) * 6.5,
+                  );
+
                   return (
                     <g
                       key={n.id}
@@ -463,48 +587,63 @@ export default function GraphExplorer() {
                       }
                       onClick={(e) => {
                         e.stopPropagation();
-                        setSelectedId(n.id);
+                        setSelectedId((cur) => (cur === n.id ? null : n.id));
                       }}
                       style={{ cursor: "pointer" }}
-                      filter={isHover || isSelected ? "url(#ink-shadow)" : undefined}
+                      filter={isHover || isSelected || isHighlighted ? "url(#ink-shadow)" : undefined}
                     >
+                      {/* Evidence highlight halo — gold outer ring */}
+                      {isHighlighted && (
+                        <circle
+                          r={r + 5}
+                          fill="none"
+                          stroke={HEX.accentGold}
+                          strokeWidth={2}
+                          strokeOpacity={0.85}
+                          strokeDasharray="3 2"
+                        />
+                      )}
                       <circle
                         r={r}
                         fill={fillRef}
-                        stroke={isSelected ? HEX.accentGold : HEX.paper}
-                        strokeWidth={isSelected ? 2.5 : 1.6}
+                        stroke={
+                          isSelected
+                            ? HEX.accentGold
+                            : isHighlighted
+                            ? HEX.accentGold
+                            : HEX.paper
+                        }
+                        strokeWidth={isSelected ? 2.5 : isHighlighted ? 1.8 : 1.6}
                         style={{
                           transition:
                             "r var(--d-quick) var(--ease-out), stroke var(--d-quick)",
                         }}
                       />
-                      {/* Company glyph — a small bullseye to read at distance. */}
+                      {/* Company bullseye glyph */}
                       {n.kind === "company" && (
                         <circle r={5} fill={HEX.paper} pointerEvents="none" />
                       )}
                       <title>{n.label}</title>
-                      {/* Always show full label on hover or for the company node;
-                          otherwise just a compact monogram. */}
-                      {(isHover || isSelected || n.kind === "company") && (
+                      {showLabel && (
                         <g pointerEvents="none">
                           <rect
                             x={r + 6}
-                            y={-10}
-                            width={Math.max(40, n.label.length * 6.5)}
-                            height={20}
+                            y={-9}
+                            width={labelWidth}
+                            height={18}
                             fill={HEX.paper}
-                            stroke={HEX.rule}
-                            strokeWidth={0.6}
+                            stroke={isHighlighted ? HEX.accentGold : HEX.rule}
+                            strokeWidth={isHighlighted ? 1 : 0.6}
                             rx={0}
                           />
                           <text
-                            x={r + 12}
+                            x={r + 11}
                             y={4}
                             fontFamily='"JetBrains Mono", ui-monospace, monospace'
-                            fontSize={11}
-                            fill={HEX.ink}
+                            fontSize={isHover || isSelected ? 11 : 9}
+                            fill={isHighlighted ? HEX.accentGold : HEX.ink}
                           >
-                            {n.label.slice(0, 38)}
+                            {labelText}
                           </text>
                         </g>
                       )}
@@ -540,8 +679,8 @@ function Legend() {
       swatch: <span style={dotStyle("var(--ink)", 14)} />,
     },
     {
-      label: "Fraud signal",
-      sub: "severity-coloured · M1–M11",
+      label: "Warning sign",
+      sub: "colour shows severity · click to highlight evidence",
       swatch: (
         <span style={{ display: "inline-flex", gap: 3 }}>
           <span style={dotStyle("var(--risk-low)", 9)} />
@@ -552,8 +691,8 @@ function Legend() {
       ),
     },
     {
-      label: "Reference row",
-      sub: "TRIGGERED_BY target",
+      label: "Source record",
+      sub: "the data that triggered the warning",
       swatch: <span style={dotStyle("#1e3a8a", 9)} />,
     },
   ];
@@ -642,8 +781,7 @@ function Inspector({ node }: { node: GraphNode | null }) {
               fontSize: "1rem",
             }}
           >
-            Hover any node to surface its provenance metadata. Click to pin
-            the inspection while you scan the rest of the graph.
+            Hover any dot to see what it represents. Click to pin it open — clicking a warning-sign node also highlights its full evidence trail in gold.
           </motion.p>
         ) : (
           <motion.div
@@ -742,7 +880,7 @@ function LoadingCanvas() {
         minHeight: 380,
       }}
     >
-      <Eyebrow>Resolving provenance</Eyebrow>
+      <Eyebrow>Loading evidence graph…</Eyebrow>
       <p
         style={{
           fontFamily: "var(--font-display)",
@@ -751,7 +889,7 @@ function LoadingCanvas() {
           fontSize: "1.1rem",
         }}
       >
-        Walking <code>Company → FraudSignal → TRIGGERED_BY</code> via Cypher.
+        Building the evidence map — connecting each warning sign to the records that triggered it.
       </p>
     </div>
   );

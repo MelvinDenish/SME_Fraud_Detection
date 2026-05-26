@@ -21,10 +21,6 @@ import {
 } from "../lib/api";
 import NarrativeCard from "../components/NarrativeCard";
 
-// Editorial spacing & color tokens are global from styles/tokens.css.
-// SVG / recharts attribute values can't resolve `var(--token)` — only
-// CSS `style` properties can. Mirror the relevant hexes here for chart
-// consumers; keep them in sync with tokens.css.
 const HEX = {
   paperDeep: "#ddd0ab",
   ink: "#0e0d0a",
@@ -33,6 +29,28 @@ const HEX = {
   riskHigh: "#b45309",
   riskMedium: "#a16207",
 } as const;
+
+const MODULE_DISPLAY_NAMES: Record<string, string> = {
+  m01_beneish:           "Financial Statement Quality",
+  m02_cross_statement:   "Revenue vs. Tax Consistency",
+  m03_benford:           "Number Pattern Check",
+  m04_graph_patterns:    "Network Connections",
+  m05_peer_deviation:    "Industry Benchmark",
+  m06_temporal:          "Timeline Red Flags",
+  m07_auditor_nlp:       "Auditor Report",
+  m08_document_forensics:"Document Integrity",
+  m09_nclt_defaulter:    "Legal & Default Records",
+  m10_hypergraph_shell:  "Shell Entity Check",
+  m11_anomaly:           "Statistical Anomalies",
+};
+
+function prettySignalType(raw: string): string {
+  return raw.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function prettyModuleName(raw: string): string {
+  return MODULE_DISPLAY_NAMES[raw] ?? raw.replace(/^m\d+_/, "").replace(/_/g, " ");
+}
 
 // ──────────────────────────────────────────────────────────────────────────
 // Tiny utilities
@@ -154,8 +172,9 @@ function ScorePlate({ data }: { data: AnalyseResponse }) {
           >
             <Eyebrow>Override invoked</Eyebrow>
             <div style={{ marginTop: 4 }}>
-              PRD §7.3 floor applied — NCLT proceeding or wilful-defaulter declaration
-              forces the score above the threshold for the assigned band.
+              Score raised — an active court proceeding or wilful defaulter listing
+              was found for this company. The risk score is elevated above the
+              normal band threshold as a result.
             </div>
           </div>
         )}
@@ -174,33 +193,33 @@ function ScorePlate({ data }: { data: AnalyseResponse }) {
           borderLeft: "1px solid var(--rule-soft)",
         }}
       >
-        <MetaLine label="Data confidence">
+        <MetaLine label="Information Quality">
           <span className="num">{data.data_confidence}%</span>
         </MetaLine>
-        <MetaLine label="Probability (calibrated)">
+        <MetaLine label="Fraud Likelihood">
           <span className="num">
             {data.p_fraud_calibrated !== null
               ? (data.p_fraud_calibrated * 100).toFixed(1) + "%"
               : "—"}
           </span>
         </MetaLine>
-        <MetaLine label="Conformal interval (α=0.10)">
+        <MetaLine label="Likelihood Range (90%)">
           <span className="num">
             {interval
-              ? `[${(interval[0] * 100).toFixed(1)}, ${(interval[1] * 100).toFixed(1)}]`
+              ? `[${(interval[0] * 100).toFixed(1)}%, ${(interval[1] * 100).toFixed(1)}%]`
               : "—"}
           </span>
         </MetaLine>
-        <MetaLine label="Ensemble disagreement">
+        <MetaLine label="Check Agreement">
           {data.ensemble_disagreement_flag ? (
             <span style={{ color: "var(--risk-high)", fontWeight: 600 }}>
-              Diverged &gt; 30 pts
+              Checks disagree
             </span>
           ) : (
-            "Concordant"
+            "All checks agree"
           )}
         </MetaLine>
-        <MetaLine label="Belief propagation">
+        <MetaLine label="Network Risk Spread">
           <span className="num">{data.propagation_score.toFixed(1)}</span>
           <BandStamp band={data.propagation_band} compact />
         </MetaLine>
@@ -293,7 +312,10 @@ function BandStamp({
 
 function ModuleBreakdown({ data }: { data: AnalyseResponse }) {
   const rows = Object.entries(data.module_breakdown)
-    .map(([name, score]) => ({ name, score: Number(score.toFixed(2)) }))
+    .map(([key, score]) => ({
+      name: MODULE_DISPLAY_NAMES[key] ?? key.replace(/^m\d+_/, "").replace(/_/g, " "),
+      score: Number(score.toFixed(2)),
+    }))
     .sort((a, b) => b.score - a.score);
   if (rows.length === 0) return null;
   const max = Math.max(1, ...rows.map((r) => r.score));
@@ -306,8 +328,8 @@ function ModuleBreakdown({ data }: { data: AnalyseResponse }) {
     >
       <SectionHeader
         kicker="II ·"
-        title="Per-module contributions"
-        meta={`${rows.length} modules · max ${max.toFixed(1)} pts`}
+        title="What We Checked"
+        meta={`${rows.length} checks · highest score ${max.toFixed(1)}`}
       />
       <div
         style={{
@@ -391,11 +413,11 @@ function EvidenceChain({ data }: { data: AnalyseResponse }) {
     >
       <SectionHeader
         kicker="III ·"
-        title="Evidence chain"
+        title="Why We're Flagging This"
         meta={
           signals.length === 0
-            ? "no signals fired"
-            : `${signals.length} FraudSignals with TRIGGERED_BY provenance`
+            ? "no warning signs found"
+            : `${signals.length} warning sign${signals.length === 1 ? "" : "s"} found`
         }
       />
       {signals.length === 0 ? (
@@ -455,19 +477,20 @@ function EvidenceChain({ data }: { data: AnalyseResponse }) {
                   +{s.score_contribution.toFixed(1)}
                 </span>
                 <span className="eyebrow" style={{ color: "var(--ink-4)" }}>
-                  {s.module_name.replace(/^m\d+_/, "M· ")}
+                  {prettyModuleName(s.module_name)}
                 </span>
               </div>
               <div style={{ display: "grid", gap: "var(--s-2)" }}>
-                <code
+                <span
                   style={{
                     fontSize: "0.86rem",
-                    color: "var(--ink-3)",
+                    fontWeight: 600,
+                    color: "var(--ink-2)",
                     letterSpacing: 0,
                   }}
                 >
-                  {s.signal_type}
-                </code>
+                  {prettySignalType(s.signal_type)}
+                </span>
                 <p
                   className={idx === 0 ? "dropcap" : undefined}
                   style={{
@@ -479,55 +502,72 @@ function EvidenceChain({ data }: { data: AnalyseResponse }) {
                 >
                   {s.evidence_string}
                 </p>
-                {s.triggered_by.length > 0 && (
-                  <details
+                <div style={{ display: "flex", gap: "var(--s-4)", alignItems: "center", flexWrap: "wrap" }}>
+                  {s.triggered_by.length > 0 && (
+                    <details
+                      style={{
+                        fontSize: "var(--t-meta)",
+                        color: "var(--ink-3)",
+                      }}
+                    >
+                      <summary
+                        style={{
+                          cursor: "pointer",
+                          listStyle: "none",
+                          display: "inline-flex",
+                          gap: 6,
+                          color: "var(--accent-gold)",
+                          fontWeight: 600,
+                          letterSpacing: "0.06em",
+                        }}
+                      >
+                        <span aria-hidden>▸</span> Source records ·{" "}
+                        {s.triggered_by.length} record
+                        {s.triggered_by.length === 1 ? "" : "s"}
+                      </summary>
+                      <ul
+                        style={{
+                          listStyle: "none",
+                          padding: "8px 0 0 12px",
+                          margin: 0,
+                          borderLeft: "1px solid var(--rule-soft)",
+                        }}
+                      >
+                        {s.triggered_by.map((ref, i) => (
+                          <li
+                            key={i}
+                            className="mono"
+                            style={{
+                              fontSize: "0.78rem",
+                              color: "var(--ink-3)",
+                              padding: "2px 0 2px 10px",
+                            }}
+                          >
+                            {Object.entries(ref)
+                              .map(([k, v]) => `${k}=${String(v)}`)
+                              .join(" · ")}
+                          </li>
+                        ))}
+                      </ul>
+                    </details>
+                  )}
+                  <Link
+                    to={`/graph/${data.cin}?signal=${encodeURIComponent(s.signal_id)}`}
                     style={{
-                      marginTop: 4,
-                      fontSize: "var(--t-meta)",
-                      color: "var(--ink-3)",
+                      fontSize: "0.75rem",
+                      fontFamily: "var(--font-body)",
+                      fontWeight: 600,
+                      letterSpacing: "0.1em",
+                      textTransform: "uppercase",
+                      color: "var(--accent-gold)",
+                      textDecoration: "none",
+                      borderBottom: "1px solid var(--accent-gold)",
+                      paddingBottom: 1,
                     }}
                   >
-                    <summary
-                      style={{
-                        cursor: "pointer",
-                        listStyle: "none",
-                        display: "inline-flex",
-                        gap: 6,
-                        color: "var(--accent-gold)",
-                        fontWeight: 600,
-                        letterSpacing: "0.06em",
-                      }}
-                    >
-                      <span aria-hidden>▸</span> TRIGGERED_BY ·{" "}
-                      {s.triggered_by.length} reference
-                      {s.triggered_by.length === 1 ? "" : "s"}
-                    </summary>
-                    <ul
-                      style={{
-                        listStyle: "none",
-                        padding: "8px 0 0 12px",
-                        margin: 0,
-                        borderLeft: "1px solid var(--rule-soft)",
-                      }}
-                    >
-                      {s.triggered_by.map((ref, i) => (
-                        <li
-                          key={i}
-                          className="mono"
-                          style={{
-                            fontSize: "0.78rem",
-                            color: "var(--ink-3)",
-                            padding: "2px 0 2px 10px",
-                          }}
-                        >
-                          {Object.entries(ref)
-                            .map(([k, v]) => `${k}=${String(v)}`)
-                            .join(" · ")}
-                        </li>
-                      ))}
-                    </ul>
-                  </details>
-                )}
+                    Highlight in graph →
+                  </Link>
+                </div>
               </div>
             </motion.li>
           ))}
@@ -549,7 +589,7 @@ function EmptyEvidence() {
         textAlign: "center",
       }}
     >
-      <Eyebrow>Clean subject</Eyebrow>
+      <Eyebrow>All Clear</Eyebrow>
       <p
         style={{
           fontFamily: "var(--font-display)",
@@ -557,10 +597,10 @@ function EmptyEvidence() {
           color: "var(--ink-2)",
         }}
       >
-        No FraudSignals fired against this subject.
+        No warning signs found for this company.
       </p>
       <p style={{ color: "var(--ink-3)", fontSize: "var(--t-meta)" }}>
-        The Tier-1 fan-out completed; no rule, anomaly, or graph-pattern detector flagged this CIN.
+        All checks passed — our full analysis found no suspicious patterns across financial statements, tax records, network connections, or legal proceedings.
       </p>
     </div>
   );
@@ -745,7 +785,7 @@ function LoadingPlate() {
         gap: "var(--s-4)",
       }}
     >
-      <Eyebrow>Fan-out in progress</Eyebrow>
+      <Eyebrow>Running full analysis…</Eyebrow>
       <div
         style={{
           height: 88,
@@ -784,11 +824,9 @@ function LoadingPlate() {
           fontStyle: "italic",
         }}
       >
-        Running 11 Tier-1 modules in parallel via <code>asyncio.gather</code> — M1
-        Beneish, M2 cross-statement, M3 Benford, M4 graph patterns, M5 peer,
-        M6 temporal, M7 auditor NLP, M8 forensics, M9 NCLT, M10 hypergraph,
-        M11 anomaly. The pipeline returns the PRD §7.1 dual-output payload
-        once every module reports.
+        Checking financial statements, tax records, company network, court
+        proceedings, document authenticity, and more — this usually takes a
+        few seconds.
       </p>
       <style>{`@keyframes skeleton { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }`}</style>
     </motion.section>
@@ -815,7 +853,7 @@ function ErrorPlate({ error, onRetry }: { error: Error; onRetry: () => void }) {
           color: "var(--ink)",
         }}
       >
-        The fan-out could not complete.
+        Analysis could not be completed.
       </h3>
       <code
         style={{
@@ -935,11 +973,9 @@ export default function Dashboard() {
             maxWidth: "62ch",
           }}
         >
-          Eleven Tier-1 modules fan out across the company's master record,
-          financial statements, related-party graph, NCLT proceedings, and
-          wilful-defaulter declarations. The dual-output PRD §7.1 payload is
-          rendered below — calibrated probability, conformal interval, and
-          full evidence-chain provenance.
+          We run over a dozen independent checks — financial statements, tax
+          records, director networks, court proceedings, and more — then show
+          you exactly what we found and why it matters.
         </p>
         <GoldRule />
       </header>
@@ -960,8 +996,7 @@ export default function Dashboard() {
         <>
           <SectionHeader
             kicker="I ·"
-            title="Risk verdict"
-            meta="PRD §7.1 dual-output payload"
+            title="Risk Verdict"
           />
           <ScorePlate data={query.data} />
           <NarrativeCard cin={submitted} />

@@ -78,7 +78,7 @@ export default function Search() {
   const open = (target: string) => {
     const cleaned = target.trim().toUpperCase();
     if (!CIN_REGEX.test(cleaned)) {
-      setError(`Not a valid CIN. Expected pattern L/U + 5 digits + 2 letters + 4 digits + 3 letters + 6 digits (e.g. U45201MH2005PTC155294).`);
+      setError(`That doesn't look like a valid company ID (CIN). It should be 21 characters starting with L or U — for example: U45201MH2005PTC155294.`);
       return;
     }
     setError(null);
@@ -89,7 +89,7 @@ export default function Search() {
     <div style={{ display: "grid", gap: "var(--s-7)", maxWidth: 960 }}>
       <header style={{ borderBottom: "1px solid var(--rule)", paddingBottom: "var(--s-5)" }}>
         <p style={{ ...eyebrow, margin: 0, marginBottom: "var(--s-2)" }}>
-          Sentinel-G · CIN Lookup
+          Sentinel-G · Company Search
         </p>
         <h1 style={{
           fontFamily: "var(--font-display)",
@@ -110,10 +110,10 @@ export default function Search() {
           maxWidth: "60ch",
           lineHeight: 1.6,
         }}>
-          Type or paste a 21-character Corporate Identification Number. The
-          dashboard fans the bundle out across all 11 Tier-1 modules, runs the
-          F1a/F1b/F1c meta-learner, and returns PRD §7.1's dual-output
-          dossier with full evidence-chain provenance.
+          Enter a company's 21-character registration number (CIN) to run a
+          full fraud risk check — we analyse financial statements, tax records,
+          director networks, court proceedings, and more, then show you exactly
+          what we found.
         </p>
       </header>
 
@@ -151,7 +151,7 @@ export default function Search() {
 
       <section>
         <p style={{ ...eyebrow, margin: 0, marginBottom: "var(--s-4)" }}>
-          Demo library · five canonical subjects
+          Try these example companies
         </p>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "var(--s-3)" }}>
           {DEMO_LIBRARY.map((row) => (
