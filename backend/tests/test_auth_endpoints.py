@@ -97,23 +97,26 @@ def test_register_then_login_then_me(client: TestClient) -> None:
     assert me.json()["email"] == "officer@nbfc.in"
 
 
-def test_register_ignores_role_in_body(client: TestClient) -> None:
-    # Self-registration must NEVER let the caller pick their own role —
-    # this previously allowed POSTing `{"role":"admin"}` to bypass RBAC.
-    for attempted in ("admin", "auditor", "investigator"):
+def test_register_honors_valid_roles_and_blocks_admin(client: TestClient) -> None:
+    # Non-admin roles can be self-selected; admin must be granted out-of-band.
+    for role in ("investigator", "auditor", "credit_officer"):
         resp = client.post(
             "/auth/register",
-            json={
-                "email": f"attacker-{attempted}@nbfc.in",
-                "password": "secret-pw-12345",
-                "role": attempted,
-            },
+            json={"email": f"user-{role}@nbfc.in", "password": "secret-pw-12345", "role": role},
         )
         assert resp.status_code == 201, resp.text
-        assert resp.json()["role"] == "credit_officer", (
-            f"role={attempted} should have been stripped server-side, "
-            f"got {resp.json()['role']}"
+        assert resp.json()["role"] == role, (
+            f"expected role={role} to be honoured, got {resp.json()['role']}"
         )
+
+    # Admin self-registration is blocked (422 Unprocessable Entity).
+    admin_attempt = client.post(
+        "/auth/register",
+        json={"email": "evil-admin@nbfc.in", "password": "secret-pw-12345", "role": "admin"},
+    )
+    assert admin_attempt.status_code == 422, (
+        f"admin self-registration should be rejected with 422, got {admin_attempt.status_code}"
+    )
 
 
 def test_duplicate_register_returns_409(client: TestClient) -> None:

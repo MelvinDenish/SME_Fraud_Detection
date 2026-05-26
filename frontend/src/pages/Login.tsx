@@ -66,6 +66,7 @@ interface RoleMeta {
   access: string;
 }
 
+// Admin is excluded — the role can only be granted by a seeding script, not via self-registration.
 const ROLES: RoleMeta[] = [
   {
     key: "credit_officer",
@@ -84,12 +85,6 @@ const ROLES: RoleMeta[] = [
     label: "Auditor",
     description: "Statutory or internal auditor reviewing compliance",
     access: "Read-only: Dashboard · Evidence chain · Reports",
-  },
-  {
-    key: "admin",
-    label: "Admin",
-    description: "Platform administrator managing users and system settings",
-    access: "All features + user management",
   },
 ];
 

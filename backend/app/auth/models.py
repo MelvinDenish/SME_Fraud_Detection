@@ -3,20 +3,32 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 UserRole = Literal["credit_officer", "investigator", "auditor", "admin"]
 
-# Server-side default for self-registration. Elevated roles must be granted
-# by an already-admin caller through a separate (out-of-scope here) endpoint —
-# never via the register payload, which is reachable from the open internet.
 DEFAULT_SELF_REGISTER_ROLE: UserRole = "credit_officer"
+
+# Roles that can be chosen during open self-registration.
+# admin is excluded — must be granted by a seeding script or an admin API call.
+SELF_REGISTRABLE_ROLES: frozenset[str] = frozenset(
+    {"credit_officer", "investigator", "auditor"}
+)
 
 
 class UserRegisterIn(BaseModel):
     email: EmailStr
     password: str = Field(min_length=8, max_length=128)
     role: UserRole = DEFAULT_SELF_REGISTER_ROLE
+
+    @field_validator("role")
+    @classmethod
+    def role_must_be_self_registrable(cls, v: str) -> str:
+        if v not in SELF_REGISTRABLE_ROLES:
+            raise ValueError(
+                f"Role '{v}' cannot be self-registered; contact an admin."
+            )
+        return v
 
 
 class UserLoginIn(BaseModel):
