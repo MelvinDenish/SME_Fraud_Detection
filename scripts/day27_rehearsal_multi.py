@@ -174,7 +174,7 @@ def _load_itc_ring() -> dict:
         "director_overlap_present": ring.director_overlap is not None,
         "ok": (
             len(ring.gst_entities) == 7
-            and len(ring.edges) == 7
+            and len({(e.from_gstin, e.to_gstin) for e in ring.edges}) == 7
             and ring.director_overlap is not None
         ),
     }

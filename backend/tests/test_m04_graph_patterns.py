@@ -90,13 +90,16 @@ def test_itc_ring_fixture_is_seven_node_scc() -> None:
     ring_path = REPO / "infra" / "seeds" / "itc_carousel" / "ring.json"
     ring = json.loads(ring_path.read_text(encoding="utf-8"))
     edges = ring["edges"]
-    assert len(edges) == 7
-    # Each node has exactly one outgoing and one incoming edge -> directed cycle
+    # Deduplicate by (from, to) pair — ring.json carries multiple periods per
+    # connection, so validate unique directed pairs rather than raw edge count.
+    unique_pairs = {(e["from_gstin"], e["to_gstin"]) for e in edges}
+    assert len(unique_pairs) == 7
+    # Each node has exactly one unique outgoing and one unique incoming neighbour.
     out_deg: dict[str, int] = {}
     in_deg: dict[str, int] = {}
-    for e in edges:
-        out_deg[e["from_gstin"]] = out_deg.get(e["from_gstin"], 0) + 1
-        in_deg[e["to_gstin"]] = in_deg.get(e["to_gstin"], 0) + 1
+    for from_g, to_g in unique_pairs:
+        out_deg[from_g] = out_deg.get(from_g, 0) + 1
+        in_deg[to_g] = in_deg.get(to_g, 0) + 1
     assert all(v == 1 for v in out_deg.values())
     assert all(v == 1 for v in in_deg.values())
     assert set(out_deg) == set(in_deg)
