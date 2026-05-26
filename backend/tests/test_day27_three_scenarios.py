@@ -64,7 +64,10 @@ def test_scenario_3_itc_ring_fixture_loads_with_full_shape() -> None:
     ring = _load_itc_ring()
     assert ring["ok"], ring
     assert ring["node_count"] == 7
-    assert ring["edge_count"] == 7
+    # Multi-period seed: 7 directed-cycle (from, to) pairs × 2 periods = 14.
+    # The structural cycle is still 7-node; day23_pattern_audit dedupes
+    # before checking the SCC invariant.
+    assert ring["edge_count"] == 14
     assert ring["director_overlap_present"] is True
 
 

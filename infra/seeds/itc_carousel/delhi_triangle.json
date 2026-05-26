@@ -7,7 +7,7 @@
   "case_year": 2022,
   "gst_entities": [
     {
-      "gstin": "07AABKK3847P01Z2",
+      "gstin": "07AABKK3847P1Z3",
       "name": "Karol Bagh Fabrics Pvt Ltd",
       "pan": "AABKK3847P",
       "cin": "U17101DL2020PTC365432",
@@ -21,7 +21,7 @@
       "nic_code": 46411
     },
     {
-      "gstin": "07AABQN6291C01ZL",
+      "gstin": "07AABQN6291C1ZM",
       "name": "Northern Textile Traders Pvt Ltd",
       "pan": "AABQN6291C",
       "cin": "U17101DL2020PTC367891",
@@ -37,7 +37,7 @@
       "is_missing_trader": true
     },
     {
-      "gstin": "06AABHP2074A01Z9",
+      "gstin": "06AABHP2074A1ZA",
       "name": "Haryana Polyester & Fibres Pvt Ltd",
       "pan": "AABHP2074A",
       "cin": "U17109HR2021PTC098765",
@@ -53,137 +53,137 @@
   ],
   "itc_claims": [
     {
-      "gstin": "07AABQN6291C01ZL",
+      "gstin": "07AABQN6291C1ZM",
       "period": "202209",
       "claimed_amount": 750484704.0,
       "eligible_amount": 90058164.48,
-      "source_gstin": "07AABKK3847P01Z2"
+      "source_gstin": "07AABKK3847P1Z3"
     },
     {
-      "gstin": "07AABQN6291C01ZL",
+      "gstin": "07AABQN6291C1ZM",
       "period": "202210",
       "claimed_amount": 30233818.0,
       "eligible_amount": 3628058.16,
-      "source_gstin": "07AABKK3847P01Z2"
+      "source_gstin": "07AABKK3847P1Z3"
     },
     {
-      "gstin": "07AABQN6291C01ZL",
+      "gstin": "07AABQN6291C1ZM",
       "period": "202211",
       "claimed_amount": 160325322.0,
       "eligible_amount": 19239038.64,
-      "source_gstin": "07AABKK3847P01Z2"
+      "source_gstin": "07AABKK3847P1Z3"
     },
     {
-      "gstin": "06AABHP2074A01Z9",
+      "gstin": "06AABHP2074A1ZA",
       "period": "202209",
       "claimed_amount": 10176065.0,
       "eligible_amount": 0.0,
-      "source_gstin": "07AABQN6291C01ZL"
+      "source_gstin": "07AABQN6291C1ZM"
     },
     {
-      "gstin": "06AABHP2074A01Z9",
+      "gstin": "06AABHP2074A1ZA",
       "period": "202210",
       "claimed_amount": 60535614.0,
       "eligible_amount": 0.0,
-      "source_gstin": "07AABQN6291C01ZL"
+      "source_gstin": "07AABQN6291C1ZM"
     },
     {
-      "gstin": "06AABHP2074A01Z9",
+      "gstin": "06AABHP2074A1ZA",
       "period": "202211",
       "claimed_amount": 100941973.0,
       "eligible_amount": 0.0,
-      "source_gstin": "07AABQN6291C01ZL"
+      "source_gstin": "07AABQN6291C1ZM"
     },
     {
-      "gstin": "07AABKK3847P01Z2",
+      "gstin": "07AABKK3847P1Z3",
       "period": "202209",
       "claimed_amount": 20666589.0,
       "eligible_amount": 2479990.68,
-      "source_gstin": "06AABHP2074A01Z9"
+      "source_gstin": "06AABHP2074A1ZA"
     },
     {
-      "gstin": "07AABKK3847P01Z2",
+      "gstin": "07AABKK3847P1Z3",
       "period": "202210",
       "claimed_amount": 580147779.0,
       "eligible_amount": 69617733.48,
-      "source_gstin": "06AABHP2074A01Z9"
+      "source_gstin": "06AABHP2074A1ZA"
     },
     {
-      "gstin": "07AABKK3847P01Z2",
+      "gstin": "07AABKK3847P1Z3",
       "period": "202211",
       "claimed_amount": 30611439.0,
       "eligible_amount": 3673372.68,
-      "source_gstin": "06AABHP2074A01Z9"
+      "source_gstin": "06AABHP2074A1ZA"
     }
   ],
   "edges": [
     {
-      "from_gstin": "07AABKK3847P01Z2",
-      "to_gstin": "07AABQN6291C01ZL",
+      "from_gstin": "07AABKK3847P1Z3",
+      "to_gstin": "07AABQN6291C1ZM",
       "period": "202209",
       "amount": 750484704.0,
       "invoice_count": 484,
       "risk_flag": "CARROUSEL"
     },
     {
-      "from_gstin": "07AABKK3847P01Z2",
-      "to_gstin": "07AABQN6291C01ZL",
+      "from_gstin": "07AABKK3847P1Z3",
+      "to_gstin": "07AABQN6291C1ZM",
       "period": "202210",
       "amount": 30233818.0,
       "invoice_count": 8,
       "risk_flag": "CARROUSEL"
     },
     {
-      "from_gstin": "07AABKK3847P01Z2",
-      "to_gstin": "07AABQN6291C01ZL",
+      "from_gstin": "07AABKK3847P1Z3",
+      "to_gstin": "07AABQN6291C1ZM",
       "period": "202211",
       "amount": 160325322.0,
       "invoice_count": 42,
       "risk_flag": "CARROUSEL"
     },
     {
-      "from_gstin": "07AABQN6291C01ZL",
-      "to_gstin": "06AABHP2074A01Z9",
+      "from_gstin": "07AABQN6291C1ZM",
+      "to_gstin": "06AABHP2074A1ZA",
       "period": "202209",
       "amount": 10176065.0,
       "invoice_count": 13,
       "risk_flag": "CARROUSEL"
     },
     {
-      "from_gstin": "07AABQN6291C01ZL",
-      "to_gstin": "06AABHP2074A01Z9",
+      "from_gstin": "07AABQN6291C1ZM",
+      "to_gstin": "06AABHP2074A1ZA",
       "period": "202210",
       "amount": 60535614.0,
       "invoice_count": 15,
       "risk_flag": "CARROUSEL"
     },
     {
-      "from_gstin": "07AABQN6291C01ZL",
-      "to_gstin": "06AABHP2074A01Z9",
+      "from_gstin": "07AABQN6291C1ZM",
+      "to_gstin": "06AABHP2074A1ZA",
       "period": "202211",
       "amount": 100941973.0,
       "invoice_count": 179,
       "risk_flag": "CARROUSEL"
     },
     {
-      "from_gstin": "06AABHP2074A01Z9",
-      "to_gstin": "07AABKK3847P01Z2",
+      "from_gstin": "06AABHP2074A1ZA",
+      "to_gstin": "07AABKK3847P1Z3",
       "period": "202209",
       "amount": 20666589.0,
       "invoice_count": 12,
       "risk_flag": "CARROUSEL"
     },
     {
-      "from_gstin": "06AABHP2074A01Z9",
-      "to_gstin": "07AABKK3847P01Z2",
+      "from_gstin": "06AABHP2074A1ZA",
+      "to_gstin": "07AABKK3847P1Z3",
       "period": "202210",
       "amount": 580147779.0,
       "invoice_count": 217,
       "risk_flag": "CARROUSEL"
     },
     {
-      "from_gstin": "06AABHP2074A01Z9",
-      "to_gstin": "07AABKK3847P01Z2",
+      "from_gstin": "06AABHP2074A1ZA",
+      "to_gstin": "07AABKK3847P1Z3",
       "period": "202211",
       "amount": 30611439.0,
       "invoice_count": 9,
@@ -199,9 +199,9 @@
         "cin_a": "U17101DL2020PTC365432",
         "cin_b": "U17109HR2021PTC098765",
         "hop_path_gstins": [
-          "07AABKK3847P01Z2",
-          "07AABQN6291C01ZL",
-          "06AABHP2074A01Z9"
+          "07AABKK3847P1Z3",
+          "07AABQN6291C1ZM",
+          "06AABHP2074A1ZA"
         ]
       }
     ]
