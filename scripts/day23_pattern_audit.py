@@ -104,14 +104,18 @@ def _audit_itc_patterns(today: date) -> dict:
     edges = ring["edges"]
     claims = ring["itc_claims"]
 
-    # P08 — 7-node CLAIMS_ITC_FROM SCC (directed cycle)
-    out_deg = {e["from_gstin"]: 0 for e in edges}
-    in_deg = {e["to_gstin"]: 0 for e in edges}
-    for e in edges:
-        out_deg[e["from_gstin"]] += 1
-        in_deg[e["to_gstin"]] += 1
+    # P08 — 7-node CLAIMS_ITC_FROM SCC (directed cycle). The seed records
+    # one edge per (from, to, period), so an N-period ring expands to N×7
+    # raw edges. Collapse to unique (from, to) pairs before asserting the
+    # 7-node directed-cycle invariant — the topology is period-invariant.
+    edge_pairs = {(e["from_gstin"], e["to_gstin"]) for e in edges}
+    out_deg: dict[str, int] = {}
+    in_deg: dict[str, int] = {}
+    for f, t in edge_pairs:
+        out_deg[f] = out_deg.get(f, 0) + 1
+        in_deg[t] = in_deg.get(t, 0) + 1
     p08_ok = (
-        len(edges) >= 7
+        len(edge_pairs) >= 7
         and all(v == 1 for v in out_deg.values())
         and all(v == 1 for v in in_deg.values())
         and set(out_deg) == set(in_deg) == set(entities)

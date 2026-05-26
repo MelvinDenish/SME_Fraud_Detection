@@ -1,6 +1,6 @@
 [
   {
-    "gstin": "27AABGT7917A01Z8",
+    "gstin": "27AABGT7917A1Z9",
     "name": "Godawari Tubes Pvt Ltd",
     "pan": "AABGT7917A",
     "sector": "Iron tubes/pipes",
@@ -13,7 +13,7 @@
     "is_clean_control": true
   },
   {
-    "gstin": "27AABRS5980V01ZT",
+    "gstin": "27AABRS5980V1ZU",
     "name": "Ratnagiri Steels Pvt Ltd",
     "pan": "AABRS5980V",
     "sector": "Steel products",
@@ -26,7 +26,7 @@
     "is_clean_control": true
   },
   {
-    "gstin": "36AABHK8094H01ZK",
+    "gstin": "36AABHK8094H1ZL",
     "name": "Hyderabad Krafts Pvt Ltd",
     "pan": "AABHK8094H",
     "sector": "Iron scrap",
@@ -39,7 +39,7 @@
     "is_clean_control": true
   },
   {
-    "gstin": "36AABVR7615B01ZB",
+    "gstin": "36AABVR7615B1ZC",
     "name": "Vizag Recyclers Pvt Ltd",
     "pan": "AABVR7615B",
     "sector": "Scrap recycling",
@@ -52,7 +52,7 @@
     "is_clean_control": true
   },
   {
-    "gstin": "07AABDM7227L01ZL",
+    "gstin": "07AABDM7227L1ZM",
     "name": "Delhi Mani Textiles Pvt Ltd",
     "pan": "AABDM7227L",
     "sector": "Fabric trading",
@@ -67,7 +67,7 @@
     "voluntary_cancellation_reason": "Converted to LLP"
   },
   {
-    "gstin": "06AABPH9804J01ZP",
+    "gstin": "06AABPH9804J1ZQ",
     "name": "Panipat Handlooms Pvt Ltd",
     "pan": "AABPH9804J",
     "sector": "Textile mfg",
@@ -80,7 +80,7 @@
     "is_clean_control": true
   },
   {
-    "gstin": "24AABGV7120V01Z1",
+    "gstin": "24AABGV7120V1Z2",
     "name": "Gujarat Vijay Chemicals Pvt Ltd",
     "pan": "AABGV7120V",
     "sector": "Chemical wholesale",
@@ -93,7 +93,7 @@
     "is_clean_control": true
   },
   {
-    "gstin": "08AABNK8215Z01Z2",
+    "gstin": "08AABNK8215Z1Z3",
     "name": "Natraj Kirana Pvt Ltd",
     "pan": "AABNK8215Z",
     "sector": "FMCG distribution",
@@ -106,7 +106,7 @@
     "is_clean_control": true
   },
   {
-    "gstin": "09AABAP6646S01Z4",
+    "gstin": "09AABAP6646S1Z5",
     "name": "Allahabad Produce Co Pvt Ltd",
     "pan": "AABAP6646S",
     "sector": "Agri-produce trading",
@@ -119,7 +119,7 @@
     "is_clean_control": true
   },
   {
-    "gstin": "29AABMK1611J01ZJ",
+    "gstin": "29AABMK1611J1ZK",
     "name": "Mysore Karpura Exports Pvt Ltd",
     "pan": "AABMK1611J",
     "sector": "Spice export",
@@ -134,7 +134,7 @@
     "voluntary_cancellation_reason": "Merged into parent entity"
   },
   {
-    "gstin": "33AABCR1834R01Z3",
+    "gstin": "33AABCR1834R1Z4",
     "name": "Chennai Retail Link Pvt Ltd",
     "pan": "AABCR1834R",
     "sector": "General trading",
@@ -147,7 +147,7 @@
     "is_clean_control": true
   },
   {
-    "gstin": "20AABSR3680T01ZB",
+    "gstin": "20AABSR3680T1ZC",
     "name": "Santhal Resources Pvt Ltd",
     "pan": "AABSR3680T",
     "sector": "Mineral trading",
@@ -160,7 +160,7 @@
     "is_clean_control": true
   },
   {
-    "gstin": "19AABKM3934Q01Z6",
+    "gstin": "19AABKM3934Q1Z7",
     "name": "Kolkata Merchants Pvt Ltd",
     "pan": "AABKM3934Q",
     "sector": "Readymade garments",
@@ -175,7 +175,7 @@
     "voluntary_cancellation_reason": "Converted to LLP"
   },
   {
-    "gstin": "23AABID8093D01ZV",
+    "gstin": "23AABID8093D1ZW",
     "name": "Indore Distributors Pvt Ltd",
     "pan": "AABID8093D",
     "sector": "Pharma wholesale",
@@ -188,7 +188,7 @@
     "is_clean_control": true
   },
   {
-    "gstin": "32AABKC6674U01ZN",
+    "gstin": "32AABKC6674U1ZO",
     "name": "Kerala Cashew Corp Pvt Ltd",
     "pan": "AABKC6674U",
     "sector": "Cashew processing",

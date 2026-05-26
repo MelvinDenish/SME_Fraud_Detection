@@ -63,8 +63,30 @@ def _gstin_check(gstin14: str) -> str:
 
 
 def make_gstin(state_code: str, pan: str, entity: int = 1) -> str:
-    """Build a valid GSTIN from state code (2-digit), PAN (10-char), entity number."""
-    base = f"{state_code}{pan}{entity:02d}Z"
+    """Build a valid GSTIN from state code (2-digit), PAN (10-char), entity
+    number (1-9 → '1'..'9', 10-35 → 'A'..'Z').
+
+    The 15-char GSTIN spec is `SS PPPPPPPPPP E Z C`:
+      - SS : 2-digit state code
+      - PPPPPPPPPP : 10-char PAN
+      - E  : single-char entity number (1-9 then A-Z for branches 10-35)
+      - Z  : literal default
+      - C  : checksum
+
+    Earlier revisions used `f"{entity:02d}"` which produced a 16-char
+    GSTIN ("…01Z…") that special_seeds._GSTIN_RE — and the real GST
+    portal regex — both correctly reject. Single-char entity restored
+    to keep the seed loaders honest.
+    """
+    if entity < 1:
+        raise ValueError(f"entity must be ≥1 (got {entity})")
+    if entity <= 9:
+        entity_char = str(entity)
+    elif entity <= 35:
+        entity_char = chr(ord("A") + entity - 10)
+    else:
+        raise ValueError(f"entity must be ≤35 (got {entity})")
+    base = f"{state_code}{pan}{entity_char}Z"
     return base + _gstin_check(base)
 
 
@@ -681,9 +703,14 @@ def _demo_ring_7node() -> dict:
         "U51100MH2021PTC320106",
         "U51100MH2021PTC320107",
     ]
+    # G6 (Zephyr Kommerce) is the P11 "new GSTIN with high ITC" trigger —
+    # day23_pattern_audit fires P11 when a GSTIN is registered <90 days
+    # from PINNED_TODAY (2026-05-15) AND total claimed ITC ≥30% of
+    # declared turnover. 2026-04-15 is ~30 days before the pinned date,
+    # comfortably inside the window and survives small calendar drift.
     reg_dates = [
         "2021-04-12", "2021-04-18", "2021-05-02",
-        "2021-05-08", "2021-05-20", "2021-06-01", "2021-06-12",
+        "2021-05-08", "2021-05-20", "2026-04-15", "2021-06-12",
     ]
     names = [
         "Mahavir Auto Parts Pvt Ltd",

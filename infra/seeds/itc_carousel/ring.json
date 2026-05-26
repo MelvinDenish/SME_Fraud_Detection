@@ -3,7 +3,7 @@
   "description": "SYNTHETIC — 7-node ITC carousel ring per PRD §14 demo. Forms a directed cycle G1→G2→G3→G4→G5→G6→G7→G1 on CLAIMS_ITC_FROM. G4 is the missing trader (tax_paid/itc_generated < 0.05) AND a cancelled GSTIN (P10). G6 carries a high-ITC claim above 30% of turnover (P11 trigger), and a company/director overlap block backs P12.",
   "gst_entities": [
     {
-      "gstin": "27AABMA2347C01ZZ",
+      "gstin": "27AABMA2347C1Z0",
       "name": "Mahavir Auto Parts Pvt Ltd",
       "pan": "AABMA2347C",
       "cin": "U51100MH2021PTC320101",
@@ -14,7 +14,7 @@
       "tax_paid_ytd": 9918336.65
     },
     {
-      "gstin": "27AABSH4812D01ZJ",
+      "gstin": "27AABSH4812D1ZK",
       "name": "Shree Hari Trading Co Pvt Ltd",
       "pan": "AABSH4812D",
       "cin": "U51100MH2021PTC320102",
@@ -25,7 +25,7 @@
       "tax_paid_ytd": 9207439.34
     },
     {
-      "gstin": "27AABKV6239E01ZB",
+      "gstin": "27AABKV6239E1ZC",
       "name": "Kavita Ventures Pvt Ltd",
       "pan": "AABKV6239E",
       "cin": "U51100MH2021PTC320103",
@@ -36,7 +36,7 @@
       "tax_paid_ytd": 19035035.3
     },
     {
-      "gstin": "27AABND3571F01Z5",
+      "gstin": "27AABND3571F1Z6",
       "name": "Nidhi Distributors Pvt Ltd",
       "pan": "AABND3571F",
       "cin": "U51100MH2021PTC320104",
@@ -49,7 +49,7 @@
       "is_missing_trader": true
     },
     {
-      "gstin": "27AABPR8946G01ZL",
+      "gstin": "27AABPR8946G1ZM",
       "name": "Prestige Resources Pvt Ltd",
       "pan": "AABPR8946G",
       "cin": "U51100MH2021PTC320105",
@@ -60,18 +60,18 @@
       "tax_paid_ytd": 80647024.68
     },
     {
-      "gstin": "27AABZK1473H01ZY",
+      "gstin": "27AABZK1473H1ZZ",
       "name": "Zephyr Kommerce Pvt Ltd",
       "pan": "AABZK1473H",
       "cin": "U51100MH2021PTC320106",
-      "registration_date": "2021-06-01",
+      "registration_date": "2026-04-15",
       "is_cancelled": false,
       "taxpayer_type": "regular",
       "aggregate_turnover": 963400000.0,
       "tax_paid_ytd": 58646288.1
     },
     {
-      "gstin": "27AABFE5628J01ZG",
+      "gstin": "27AABFE5628J1ZH",
       "name": "Fortune Enterprises Pvt Ltd",
       "pan": "AABFE5628J",
       "cin": "U51100MH2021PTC320107",
@@ -84,212 +84,212 @@
   ],
   "itc_claims": [
     {
-      "gstin": "27AABSH4812D01ZJ",
+      "gstin": "27AABSH4812D1ZK",
       "period": "202604",
       "claimed_amount": 30226682.0,
       "eligible_amount": 5440802.76,
-      "source_gstin": "27AABMA2347C01ZZ"
+      "source_gstin": "27AABMA2347C1Z0"
     },
     {
-      "gstin": "27AABSH4812D01ZJ",
+      "gstin": "27AABSH4812D1ZK",
       "period": "202605",
       "claimed_amount": 80139023.0,
       "eligible_amount": 14425024.14,
-      "source_gstin": "27AABMA2347C01ZZ"
+      "source_gstin": "27AABMA2347C1Z0"
     },
     {
-      "gstin": "27AABKV6239E01ZB",
+      "gstin": "27AABKV6239E1ZC",
       "period": "202604",
       "claimed_amount": 210242072.0,
       "eligible_amount": 37843572.96,
-      "source_gstin": "27AABSH4812D01ZJ"
+      "source_gstin": "27AABSH4812D1ZK"
     },
     {
-      "gstin": "27AABKV6239E01ZB",
+      "gstin": "27AABKV6239E1ZC",
       "period": "202605",
       "claimed_amount": 240094594.0,
       "eligible_amount": 43217026.92,
-      "source_gstin": "27AABSH4812D01ZJ"
+      "source_gstin": "27AABSH4812D1ZK"
     },
     {
-      "gstin": "27AABND3571F01Z5",
+      "gstin": "27AABND3571F1Z6",
       "period": "202604",
       "claimed_amount": 50872297.0,
       "eligible_amount": 9157013.46,
-      "source_gstin": "27AABKV6239E01ZB"
+      "source_gstin": "27AABKV6239E1ZC"
     },
     {
-      "gstin": "27AABND3571F01Z5",
+      "gstin": "27AABND3571F1Z6",
       "period": "202605",
       "claimed_amount": 80990278.0,
       "eligible_amount": 14578250.04,
-      "source_gstin": "27AABKV6239E01ZB"
+      "source_gstin": "27AABKV6239E1ZC"
     },
     {
-      "gstin": "27AABPR8946G01ZL",
+      "gstin": "27AABPR8946G1ZM",
       "period": "202604",
       "claimed_amount": 40494797.0,
       "eligible_amount": 0.0,
-      "source_gstin": "27AABND3571F01Z5"
+      "source_gstin": "27AABND3571F1Z6"
     },
     {
-      "gstin": "27AABPR8946G01ZL",
+      "gstin": "27AABPR8946G1ZM",
       "period": "202605",
       "claimed_amount": 410909167.0,
       "eligible_amount": 0.0,
-      "source_gstin": "27AABND3571F01Z5"
+      "source_gstin": "27AABND3571F1Z6"
     },
     {
-      "gstin": "27AABZK1473H01ZY",
+      "gstin": "27AABZK1473H1ZZ",
       "period": "202604",
       "claimed_amount": 730235543.0,
       "eligible_amount": 131442397.74,
-      "source_gstin": "27AABPR8946G01ZL"
+      "source_gstin": "27AABPR8946G1ZM"
     },
     {
-      "gstin": "27AABZK1473H01ZY",
+      "gstin": "27AABZK1473H1ZZ",
       "period": "202605",
       "claimed_amount": 250023832.0,
       "eligible_amount": 45004289.76,
-      "source_gstin": "27AABPR8946G01ZL"
+      "source_gstin": "27AABPR8946G1ZM"
     },
     {
-      "gstin": "27AABFE5628J01ZG",
+      "gstin": "27AABFE5628J1ZH",
       "period": "202604",
       "claimed_amount": 20329283.0,
       "eligible_amount": 3659270.94,
-      "source_gstin": "27AABZK1473H01ZY"
+      "source_gstin": "27AABZK1473H1ZZ"
     },
     {
-      "gstin": "27AABFE5628J01ZG",
+      "gstin": "27AABFE5628J1ZH",
       "period": "202605",
       "claimed_amount": 190464923.0,
       "eligible_amount": 34283686.14,
-      "source_gstin": "27AABZK1473H01ZY"
+      "source_gstin": "27AABZK1473H1ZZ"
     },
     {
-      "gstin": "27AABMA2347C01ZZ",
+      "gstin": "27AABMA2347C1Z0",
       "period": "202604",
       "claimed_amount": 20682700.0,
       "eligible_amount": 3722886.0,
-      "source_gstin": "27AABFE5628J01ZG"
+      "source_gstin": "27AABFE5628J1ZH"
     },
     {
-      "gstin": "27AABMA2347C01ZZ",
+      "gstin": "27AABMA2347C1Z0",
       "period": "202605",
       "claimed_amount": 280072852.0,
       "eligible_amount": 50413113.36,
-      "source_gstin": "27AABFE5628J01ZG"
+      "source_gstin": "27AABFE5628J1ZH"
     }
   ],
   "edges": [
     {
-      "from_gstin": "27AABMA2347C01ZZ",
-      "to_gstin": "27AABSH4812D01ZJ",
+      "from_gstin": "27AABMA2347C1Z0",
+      "to_gstin": "27AABSH4812D1ZK",
       "period": "202604",
       "amount": 30226682.0,
       "invoice_count": 21,
       "risk_flag": "CARROUSEL"
     },
     {
-      "from_gstin": "27AABMA2347C01ZZ",
-      "to_gstin": "27AABSH4812D01ZJ",
+      "from_gstin": "27AABMA2347C1Z0",
+      "to_gstin": "27AABSH4812D1ZK",
       "period": "202605",
       "amount": 80139023.0,
       "invoice_count": 21,
       "risk_flag": "CARROUSEL"
     },
     {
-      "from_gstin": "27AABSH4812D01ZJ",
-      "to_gstin": "27AABKV6239E01ZB",
+      "from_gstin": "27AABSH4812D1ZK",
+      "to_gstin": "27AABKV6239E1ZC",
       "period": "202604",
       "amount": 210242072.0,
       "invoice_count": 75,
       "risk_flag": "CARROUSEL"
     },
     {
-      "from_gstin": "27AABSH4812D01ZJ",
-      "to_gstin": "27AABKV6239E01ZB",
+      "from_gstin": "27AABSH4812D1ZK",
+      "to_gstin": "27AABKV6239E1ZC",
       "period": "202605",
       "amount": 240094594.0,
       "invoice_count": 142,
       "risk_flag": "CARROUSEL"
     },
     {
-      "from_gstin": "27AABKV6239E01ZB",
-      "to_gstin": "27AABND3571F01Z5",
+      "from_gstin": "27AABKV6239E1ZC",
+      "to_gstin": "27AABND3571F1Z6",
       "period": "202604",
       "amount": 50872297.0,
       "invoice_count": 19,
       "risk_flag": "CARROUSEL"
     },
     {
-      "from_gstin": "27AABKV6239E01ZB",
-      "to_gstin": "27AABND3571F01Z5",
+      "from_gstin": "27AABKV6239E1ZC",
+      "to_gstin": "27AABND3571F1Z6",
       "period": "202605",
       "amount": 80990278.0,
       "invoice_count": 29,
       "risk_flag": "CARROUSEL"
     },
     {
-      "from_gstin": "27AABND3571F01Z5",
-      "to_gstin": "27AABPR8946G01ZL",
+      "from_gstin": "27AABND3571F1Z6",
+      "to_gstin": "27AABPR8946G1ZM",
       "period": "202604",
       "amount": 40494797.0,
       "invoice_count": 18,
       "risk_flag": "CARROUSEL"
     },
     {
-      "from_gstin": "27AABND3571F01Z5",
-      "to_gstin": "27AABPR8946G01ZL",
+      "from_gstin": "27AABND3571F1Z6",
+      "to_gstin": "27AABPR8946G1ZM",
       "period": "202605",
       "amount": 410909167.0,
       "invoice_count": 358,
       "risk_flag": "CARROUSEL"
     },
     {
-      "from_gstin": "27AABPR8946G01ZL",
-      "to_gstin": "27AABZK1473H01ZY",
+      "from_gstin": "27AABPR8946G1ZM",
+      "to_gstin": "27AABZK1473H1ZZ",
       "period": "202604",
       "amount": 730235543.0,
       "invoice_count": 617,
       "risk_flag": "CARROUSEL"
     },
     {
-      "from_gstin": "27AABPR8946G01ZL",
-      "to_gstin": "27AABZK1473H01ZY",
+      "from_gstin": "27AABPR8946G1ZM",
+      "to_gstin": "27AABZK1473H1ZZ",
       "period": "202605",
       "amount": 250023832.0,
       "invoice_count": 478,
       "risk_flag": "CARROUSEL"
     },
     {
-      "from_gstin": "27AABZK1473H01ZY",
-      "to_gstin": "27AABFE5628J01ZG",
+      "from_gstin": "27AABZK1473H1ZZ",
+      "to_gstin": "27AABFE5628J1ZH",
       "period": "202604",
       "amount": 20329283.0,
       "invoice_count": 13,
       "risk_flag": "CARROUSEL"
     },
     {
-      "from_gstin": "27AABZK1473H01ZY",
-      "to_gstin": "27AABFE5628J01ZG",
+      "from_gstin": "27AABZK1473H1ZZ",
+      "to_gstin": "27AABFE5628J1ZH",
       "period": "202605",
       "amount": 190464923.0,
       "invoice_count": 72,
       "risk_flag": "CARROUSEL"
     },
     {
-      "from_gstin": "27AABFE5628J01ZG",
-      "to_gstin": "27AABMA2347C01ZZ",
+      "from_gstin": "27AABFE5628J1ZH",
+      "to_gstin": "27AABMA2347C1Z0",
       "period": "202604",
       "amount": 20682700.0,
       "invoice_count": 15,
       "risk_flag": "CARROUSEL"
     },
     {
-      "from_gstin": "27AABFE5628J01ZG",
-      "to_gstin": "27AABMA2347C01ZZ",
+      "from_gstin": "27AABFE5628J1ZH",
+      "to_gstin": "27AABMA2347C1Z0",
       "period": "202605",
       "amount": 280072852.0,
       "invoice_count": 136,
@@ -305,10 +305,10 @@
         "cin_a": "U51100MH2021PTC320101",
         "cin_b": "U51100MH2021PTC320105",
         "hop_path_gstins": [
-          "27AABMA2347C01ZZ",
-          "27AABSH4812D01ZJ",
-          "27AABKV6239E01ZB",
-          "27AABPR8946G01ZL"
+          "27AABMA2347C1Z0",
+          "27AABSH4812D1ZK",
+          "27AABKV6239E1ZC",
+          "27AABPR8946G1ZM"
         ]
       }
     ]
