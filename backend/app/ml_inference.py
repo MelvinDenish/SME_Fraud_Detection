@@ -37,6 +37,8 @@ from backend.app.ingest.wilful_defaulter import RawWilfulDefaulter
 
 logger = logging.getLogger(__name__)
 
+# 2026-05-22 — f1c_mapie shim (ml/meta/f1c_mapie.py) lets joblib resolve
+# the pre-rename pickled class path so F1c artefacts load cleanly.
 ARTIFACTS_DIR = Path(__file__).resolve().parents[2] / "ml" / "artifacts"
 F1A_PATH = ARTIFACTS_DIR / "f1a_oof.joblib"
 F1B_PATH = ARTIFACTS_DIR / "f1b_isotonic.joblib"
