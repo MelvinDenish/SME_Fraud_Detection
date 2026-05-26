@@ -16,6 +16,7 @@ DEFAULT_SELF_REGISTER_ROLE: UserRole = "credit_officer"
 class UserRegisterIn(BaseModel):
     email: EmailStr
     password: str = Field(min_length=8, max_length=128)
+    role: UserRole = DEFAULT_SELF_REGISTER_ROLE
 
 
 class UserLoginIn(BaseModel):

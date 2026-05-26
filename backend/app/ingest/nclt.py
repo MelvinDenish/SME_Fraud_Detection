@@ -258,6 +258,69 @@ def parse_cause_list_html(
     return proceedings
 
 
+class IBBIFixtureSource:
+    """Reads IBBI CIRP proceedings from the live-fetch cache (ibbi_live.json).
+
+    ibbi_fetcher.write_seed() writes there after a successful live pull.
+    Falls through to the existing NCLTFixtureSource if the file is absent.
+    The schema emitted by ibbi_fetcher._records_from_json() is identical to
+    RawNCLTProceeding, so validation is plug-compatible.
+    """
+
+    name = "ibbi_fixture"
+
+    _LIVE_PATH = SEED_ROOT / "ibbi_live.json"
+
+    def __init__(self, path: Path | None = None) -> None:
+        self._path = path or self._LIVE_PATH
+
+    async def fetch_all(self) -> list[RawNCLTProceeding]:
+        if not self._path.exists():
+            return []
+        raw = json.loads(self._path.read_text(encoding="utf-8"))
+        proceedings: list[RawNCLTProceeding] = []
+        for row in raw:
+            try:
+                proceedings.append(RawNCLTProceeding.model_validate(row))
+            except Exception as exc:
+                logger.debug("IBBI row skipped (%s): %r", exc, row)
+        logger.info("IBBIFixtureSource: loaded %d proceedings from %s", len(proceedings), self._path)
+        return proceedings
+
+    async def fetch_for_cin(self, cin: str) -> list[RawNCLTProceeding]:
+        return [p for p in await self.fetch_all() if p.cin == cin]
+
+
+class CompositeNCLTSource:
+    """Union of IBBIFixtureSource + NCLTFixtureSource, deduped by case_number.
+
+    Priority: IBBI live data first (more current), then static fixtures.
+    Use this as the default source in the RiskScorer so it picks up fresh
+    IBBI data automatically after fetch_real_data.py has run.
+    """
+
+    name = "nclt_composite"
+
+    def __init__(self) -> None:
+        self._ibbi = IBBIFixtureSource()
+        self._fixture = NCLTFixtureSource()
+
+    async def fetch_all(self) -> list[RawNCLTProceeding]:
+        ibbi_records = await self._ibbi.fetch_all()
+        fixture_records = await self._fixture.fetch_all()
+        seen: set[str] = set()
+        merged: list[RawNCLTProceeding] = []
+        for p in ibbi_records + fixture_records:
+            key = p.case_number
+            if key not in seen:
+                seen.add(key)
+                merged.append(p)
+        return merged
+
+    async def fetch_for_cin(self, cin: str) -> list[RawNCLTProceeding]:
+        return [p for p in await self.fetch_all() if p.cin == cin]
+
+
 class NCLTScraper:
     """Real NCLT cause-list scraper (PRD §10 Day-14 hardening).
 

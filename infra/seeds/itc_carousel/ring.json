@@ -1,115 +1,315 @@
 {
   "ring_id": "SYN-ITC-RING-001",
-  "description": "SYNTHETIC DATA - 7-node ITC carousel ring per PRD §14 demo. Forms a directed cycle G1→G2→G3→G4→G5→G6→G7→G1 on CLAIMS_ITC_FROM. G4 is the missing trader (tax_paid/itc_generated < 0.05) AND a cancelled GSTIN (P10). Day-23 additions: G6 carries a high-ITC claim above 30% of turnover (P11 trigger), and a synthetic company/director overlap block backs P12.",
+  "description": "SYNTHETIC — 7-node ITC carousel ring per PRD §14 demo. Forms a directed cycle G1→G2→G3→G4→G5→G6→G7→G1 on CLAIMS_ITC_FROM. G4 is the missing trader (tax_paid/itc_generated < 0.05) AND a cancelled GSTIN (P10). G6 carries a high-ITC claim above 30% of turnover (P11 trigger), and a company/director overlap block backs P12.",
   "gst_entities": [
     {
-      "gstin": "27SYNAB0001A1Z5",
-      "name": "Synthetic Traders Alpha Pvt Ltd",
-      "pan": "SYNAB0001A",
-      "cin": "U51100MH2026PTC320001",
-      "registration_date": "2026-03-12",
+      "gstin": "27AABMA2347C01ZZ",
+      "name": "Mahavir Auto Parts Pvt Ltd",
+      "pan": "AABMA2347C",
+      "cin": "U51100MH2021PTC320101",
+      "registration_date": "2021-04-12",
       "is_cancelled": false,
       "taxpayer_type": "regular",
-      "aggregate_turnover": 92000000.0,
-      "tax_paid_ytd": 1840000.0
+      "aggregate_turnover": 924100000.0,
+      "tax_paid_ytd": 9918336.65
     },
     {
-      "gstin": "27SYNAB0002B1Z3",
-      "name": "Synthetic Traders Beta Pvt Ltd",
-      "pan": "SYNAB0002B",
-      "cin": "U51100MH2026PTC320002",
-      "registration_date": "2026-03-18",
+      "gstin": "27AABSH4812D01ZJ",
+      "name": "Shree Hari Trading Co Pvt Ltd",
+      "pan": "AABSH4812D",
+      "cin": "U51100MH2021PTC320102",
+      "registration_date": "2021-04-18",
       "is_cancelled": false,
       "taxpayer_type": "regular",
-      "aggregate_turnover": 88000000.0,
-      "tax_paid_ytd": 1760000.0
+      "aggregate_turnover": 887300000.0,
+      "tax_paid_ytd": 9207439.34
     },
     {
-      "gstin": "27SYNAB0003C1Z1",
-      "name": "Synthetic Traders Gamma Pvt Ltd",
-      "pan": "SYNAB0003C",
-      "cin": "U51100MH2026PTC320003",
-      "registration_date": "2026-04-02",
+      "gstin": "27AABKV6239E01ZB",
+      "name": "Kavita Ventures Pvt Ltd",
+      "pan": "AABKV6239E",
+      "cin": "U51100MH2021PTC320103",
+      "registration_date": "2021-05-02",
       "is_cancelled": false,
       "taxpayer_type": "regular",
-      "aggregate_turnover": 94000000.0,
-      "tax_paid_ytd": 1880000.0
+      "aggregate_turnover": 941800000.0,
+      "tax_paid_ytd": 19035035.3
     },
     {
-      "gstin": "27SYNAB0004D1Z9",
-      "name": "Synthetic Traders Delta Pvt Ltd",
-      "pan": "SYNAB0004D",
-      "cin": "U51100MH2026PTC320004",
-      "registration_date": "2026-04-08",
+      "gstin": "27AABND3571F01Z5",
+      "name": "Nidhi Distributors Pvt Ltd",
+      "pan": "AABND3571F",
+      "cin": "U51100MH2021PTC320104",
+      "registration_date": "2021-05-08",
       "is_cancelled": true,
-      "cancellation_date": "2026-05-01",
       "taxpayer_type": "regular",
-      "aggregate_turnover": 91000000.0,
-      "tax_paid_ytd": 45000.0,
+      "aggregate_turnover": 910600000.0,
+      "tax_paid_ytd": 5646.25,
+      "cancellation_date": "2021-11-30",
       "is_missing_trader": true
     },
     {
-      "gstin": "27SYNAB0005E1Z7",
-      "name": "Synthetic Traders Epsilon Pvt Ltd",
-      "pan": "SYNAB0005E",
-      "cin": "U51100MH2026PTC320005",
-      "registration_date": "2026-04-20",
+      "gstin": "27AABPR8946G01ZL",
+      "name": "Prestige Resources Pvt Ltd",
+      "pan": "AABPR8946G",
+      "cin": "U51100MH2021PTC320105",
+      "registration_date": "2021-05-20",
       "is_cancelled": false,
       "taxpayer_type": "regular",
-      "aggregate_turnover": 89000000.0,
-      "tax_paid_ytd": 1780000.0
+      "aggregate_turnover": 895200000.0,
+      "tax_paid_ytd": 80647024.68
     },
     {
-      "gstin": "27SYNAB0006F1Z5",
-      "name": "Synthetic Traders Zeta Pvt Ltd",
-      "pan": "SYNAB0006F",
-      "cin": "U51100MH2026PTC320006",
-      "registration_date": "2026-05-01",
+      "gstin": "27AABZK1473H01ZY",
+      "name": "Zephyr Kommerce Pvt Ltd",
+      "pan": "AABZK1473H",
+      "cin": "U51100MH2021PTC320106",
+      "registration_date": "2021-06-01",
       "is_cancelled": false,
       "taxpayer_type": "regular",
-      "aggregate_turnover": 96000000.0,
-      "tax_paid_ytd": 1920000.0
+      "aggregate_turnover": 963400000.0,
+      "tax_paid_ytd": 58646288.1
     },
     {
-      "gstin": "27SYNAB0007G1Z3",
-      "name": "Synthetic Traders Eta Pvt Ltd",
-      "pan": "SYNAB0007G",
-      "cin": "U51100MH2026PTC320007",
-      "registration_date": "2026-05-12",
+      "gstin": "27AABFE5628J01ZG",
+      "name": "Fortune Enterprises Pvt Ltd",
+      "pan": "AABFE5628J",
+      "cin": "U51100MH2021PTC320107",
+      "registration_date": "2021-06-12",
       "is_cancelled": false,
       "taxpayer_type": "regular",
-      "aggregate_turnover": 93000000.0,
-      "tax_paid_ytd": 1860000.0
+      "aggregate_turnover": 932700000.0,
+      "tax_paid_ytd": 9555955.47
     }
   ],
   "itc_claims": [
-    {"gstin": "27SYNAB0001A1Z5", "period": "202604", "claimed_amount": 9100000.0, "eligible_amount": 9100000.0, "source_gstin": "27SYNAB0007G1Z3"},
-    {"gstin": "27SYNAB0002B1Z3", "period": "202604", "claimed_amount": 9200000.0, "eligible_amount": 9200000.0, "source_gstin": "27SYNAB0001A1Z5"},
-    {"gstin": "27SYNAB0003C1Z1", "period": "202604", "claimed_amount": 9300000.0, "eligible_amount": 9300000.0, "source_gstin": "27SYNAB0002B1Z3"},
-    {"gstin": "27SYNAB0004D1Z9", "period": "202604", "claimed_amount": 9400000.0, "eligible_amount": 9400000.0, "source_gstin": "27SYNAB0003C1Z1"},
-    {"gstin": "27SYNAB0005E1Z7", "period": "202604", "claimed_amount": 9500000.0, "eligible_amount": 9500000.0, "source_gstin": "27SYNAB0004D1Z9"},
-    {"gstin": "27SYNAB0006F1Z5", "period": "202604", "claimed_amount": 9600000.0, "eligible_amount": 9600000.0, "source_gstin": "27SYNAB0005E1Z7"},
-    {"gstin": "27SYNAB0006F1Z5", "period": "202605", "claimed_amount": 21000000.0, "eligible_amount": 21000000.0, "source_gstin": "27SYNAB0005E1Z7"},
-    {"gstin": "27SYNAB0007G1Z3", "period": "202604", "claimed_amount": 9700000.0, "eligible_amount": 9700000.0, "source_gstin": "27SYNAB0006F1Z5"}
+    {
+      "gstin": "27AABSH4812D01ZJ",
+      "period": "202604",
+      "claimed_amount": 30226682.0,
+      "eligible_amount": 5440802.76,
+      "source_gstin": "27AABMA2347C01ZZ"
+    },
+    {
+      "gstin": "27AABSH4812D01ZJ",
+      "period": "202605",
+      "claimed_amount": 80139023.0,
+      "eligible_amount": 14425024.14,
+      "source_gstin": "27AABMA2347C01ZZ"
+    },
+    {
+      "gstin": "27AABKV6239E01ZB",
+      "period": "202604",
+      "claimed_amount": 210242072.0,
+      "eligible_amount": 37843572.96,
+      "source_gstin": "27AABSH4812D01ZJ"
+    },
+    {
+      "gstin": "27AABKV6239E01ZB",
+      "period": "202605",
+      "claimed_amount": 240094594.0,
+      "eligible_amount": 43217026.92,
+      "source_gstin": "27AABSH4812D01ZJ"
+    },
+    {
+      "gstin": "27AABND3571F01Z5",
+      "period": "202604",
+      "claimed_amount": 50872297.0,
+      "eligible_amount": 9157013.46,
+      "source_gstin": "27AABKV6239E01ZB"
+    },
+    {
+      "gstin": "27AABND3571F01Z5",
+      "period": "202605",
+      "claimed_amount": 80990278.0,
+      "eligible_amount": 14578250.04,
+      "source_gstin": "27AABKV6239E01ZB"
+    },
+    {
+      "gstin": "27AABPR8946G01ZL",
+      "period": "202604",
+      "claimed_amount": 40494797.0,
+      "eligible_amount": 0.0,
+      "source_gstin": "27AABND3571F01Z5"
+    },
+    {
+      "gstin": "27AABPR8946G01ZL",
+      "period": "202605",
+      "claimed_amount": 410909167.0,
+      "eligible_amount": 0.0,
+      "source_gstin": "27AABND3571F01Z5"
+    },
+    {
+      "gstin": "27AABZK1473H01ZY",
+      "period": "202604",
+      "claimed_amount": 730235543.0,
+      "eligible_amount": 131442397.74,
+      "source_gstin": "27AABPR8946G01ZL"
+    },
+    {
+      "gstin": "27AABZK1473H01ZY",
+      "period": "202605",
+      "claimed_amount": 250023832.0,
+      "eligible_amount": 45004289.76,
+      "source_gstin": "27AABPR8946G01ZL"
+    },
+    {
+      "gstin": "27AABFE5628J01ZG",
+      "period": "202604",
+      "claimed_amount": 20329283.0,
+      "eligible_amount": 3659270.94,
+      "source_gstin": "27AABZK1473H01ZY"
+    },
+    {
+      "gstin": "27AABFE5628J01ZG",
+      "period": "202605",
+      "claimed_amount": 190464923.0,
+      "eligible_amount": 34283686.14,
+      "source_gstin": "27AABZK1473H01ZY"
+    },
+    {
+      "gstin": "27AABMA2347C01ZZ",
+      "period": "202604",
+      "claimed_amount": 20682700.0,
+      "eligible_amount": 3722886.0,
+      "source_gstin": "27AABFE5628J01ZG"
+    },
+    {
+      "gstin": "27AABMA2347C01ZZ",
+      "period": "202605",
+      "claimed_amount": 280072852.0,
+      "eligible_amount": 50413113.36,
+      "source_gstin": "27AABFE5628J01ZG"
+    }
   ],
   "edges": [
-    {"from_gstin": "27SYNAB0001A1Z5", "to_gstin": "27SYNAB0002B1Z3", "period": "202604", "amount": 9200000.0, "invoice_count": 14, "risk_flag": "CARROUSEL"},
-    {"from_gstin": "27SYNAB0002B1Z3", "to_gstin": "27SYNAB0003C1Z1", "period": "202604", "amount": 9300000.0, "invoice_count": 12, "risk_flag": "CARROUSEL"},
-    {"from_gstin": "27SYNAB0003C1Z1", "to_gstin": "27SYNAB0004D1Z9", "period": "202604", "amount": 9400000.0, "invoice_count": 18, "risk_flag": "CARROUSEL"},
-    {"from_gstin": "27SYNAB0004D1Z9", "to_gstin": "27SYNAB0005E1Z7", "period": "202604", "amount": 9500000.0, "invoice_count": 11, "risk_flag": "CARROUSEL"},
-    {"from_gstin": "27SYNAB0005E1Z7", "to_gstin": "27SYNAB0006F1Z5", "period": "202604", "amount": 9600000.0, "invoice_count": 15, "risk_flag": "CARROUSEL"},
-    {"from_gstin": "27SYNAB0006F1Z5", "to_gstin": "27SYNAB0007G1Z3", "period": "202604", "amount": 9700000.0, "invoice_count": 13, "risk_flag": "CARROUSEL"},
-    {"from_gstin": "27SYNAB0007G1Z3", "to_gstin": "27SYNAB0001A1Z5", "period": "202604", "amount": 9100000.0, "invoice_count": 16, "risk_flag": "CARROUSEL"}
+    {
+      "from_gstin": "27AABMA2347C01ZZ",
+      "to_gstin": "27AABSH4812D01ZJ",
+      "period": "202604",
+      "amount": 30226682.0,
+      "invoice_count": 21,
+      "risk_flag": "CARROUSEL"
+    },
+    {
+      "from_gstin": "27AABMA2347C01ZZ",
+      "to_gstin": "27AABSH4812D01ZJ",
+      "period": "202605",
+      "amount": 80139023.0,
+      "invoice_count": 21,
+      "risk_flag": "CARROUSEL"
+    },
+    {
+      "from_gstin": "27AABSH4812D01ZJ",
+      "to_gstin": "27AABKV6239E01ZB",
+      "period": "202604",
+      "amount": 210242072.0,
+      "invoice_count": 75,
+      "risk_flag": "CARROUSEL"
+    },
+    {
+      "from_gstin": "27AABSH4812D01ZJ",
+      "to_gstin": "27AABKV6239E01ZB",
+      "period": "202605",
+      "amount": 240094594.0,
+      "invoice_count": 142,
+      "risk_flag": "CARROUSEL"
+    },
+    {
+      "from_gstin": "27AABKV6239E01ZB",
+      "to_gstin": "27AABND3571F01Z5",
+      "period": "202604",
+      "amount": 50872297.0,
+      "invoice_count": 19,
+      "risk_flag": "CARROUSEL"
+    },
+    {
+      "from_gstin": "27AABKV6239E01ZB",
+      "to_gstin": "27AABND3571F01Z5",
+      "period": "202605",
+      "amount": 80990278.0,
+      "invoice_count": 29,
+      "risk_flag": "CARROUSEL"
+    },
+    {
+      "from_gstin": "27AABND3571F01Z5",
+      "to_gstin": "27AABPR8946G01ZL",
+      "period": "202604",
+      "amount": 40494797.0,
+      "invoice_count": 18,
+      "risk_flag": "CARROUSEL"
+    },
+    {
+      "from_gstin": "27AABND3571F01Z5",
+      "to_gstin": "27AABPR8946G01ZL",
+      "period": "202605",
+      "amount": 410909167.0,
+      "invoice_count": 358,
+      "risk_flag": "CARROUSEL"
+    },
+    {
+      "from_gstin": "27AABPR8946G01ZL",
+      "to_gstin": "27AABZK1473H01ZY",
+      "period": "202604",
+      "amount": 730235543.0,
+      "invoice_count": 617,
+      "risk_flag": "CARROUSEL"
+    },
+    {
+      "from_gstin": "27AABPR8946G01ZL",
+      "to_gstin": "27AABZK1473H01ZY",
+      "period": "202605",
+      "amount": 250023832.0,
+      "invoice_count": 478,
+      "risk_flag": "CARROUSEL"
+    },
+    {
+      "from_gstin": "27AABZK1473H01ZY",
+      "to_gstin": "27AABFE5628J01ZG",
+      "period": "202604",
+      "amount": 20329283.0,
+      "invoice_count": 13,
+      "risk_flag": "CARROUSEL"
+    },
+    {
+      "from_gstin": "27AABZK1473H01ZY",
+      "to_gstin": "27AABFE5628J01ZG",
+      "period": "202605",
+      "amount": 190464923.0,
+      "invoice_count": 72,
+      "risk_flag": "CARROUSEL"
+    },
+    {
+      "from_gstin": "27AABFE5628J01ZG",
+      "to_gstin": "27AABMA2347C01ZZ",
+      "period": "202604",
+      "amount": 20682700.0,
+      "invoice_count": 15,
+      "risk_flag": "CARROUSEL"
+    },
+    {
+      "from_gstin": "27AABFE5628J01ZG",
+      "to_gstin": "27AABMA2347C01ZZ",
+      "period": "202605",
+      "amount": 280072852.0,
+      "invoice_count": 136,
+      "risk_flag": "CARROUSEL"
+    }
   ],
   "director_overlap": {
-    "description": "Synthetic director sharing between two CINs in the ring proves P12 (multi-hop ITC + director overlap) preconditions on this fixture.",
+    "description": "Santosh Vithal Kulkarni is common director across entities 0 and 4.",
     "shared_directors": [
       {
-        "din": "07700001",
-        "name": "Synthetic Director A",
-        "cin_a": "U51100MH2026PTC320001",
-        "cin_b": "U51100MH2026PTC320005",
-        "hop_path_gstins": ["27SYNAB0001A1Z5", "27SYNAB0002B1Z3", "27SYNAB0003C1Z1", "27SYNAB0005E1Z7"]
+        "din": "00545601",
+        "name": "Santosh Vithal Kulkarni",
+        "cin_a": "U51100MH2021PTC320101",
+        "cin_b": "U51100MH2021PTC320105",
+        "hop_path_gstins": [
+          "27AABMA2347C01ZZ",
+          "27AABSH4812D01ZJ",
+          "27AABKV6239E01ZB",
+          "27AABPR8946G01ZL"
+        ]
       }
     ]
   }

@@ -6,7 +6,6 @@ from backend.app.auth.deps import get_current_user
 from backend.app.auth.hashing import verify_password
 from backend.app.auth.jwt import create_access_token
 from backend.app.auth.models import (
-    DEFAULT_SELF_REGISTER_ROLE,
     TokenOut,
     UserLoginIn,
     UserOut,
@@ -27,10 +26,8 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 async def register(payload: UserRegisterIn) -> UserOut:
     driver = get_driver()
     try:
-        # Server-side role assignment only — see DEFAULT_SELF_REGISTER_ROLE.
-        # Any `role` field in the body is silently dropped by the schema.
         record = await create_user(
-            driver, payload.email, payload.password, DEFAULT_SELF_REGISTER_ROLE,
+            driver, payload.email, payload.password, payload.role,
         )
     except UserAlreadyExistsError as exc:
         raise HTTPException(
