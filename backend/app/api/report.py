@@ -40,6 +40,8 @@ from backend.app.api.validators import CIN_PATH
 from backend.app.auth.deps import get_current_user, require_roles
 from backend.app.ingest.benchmarks import BSEFixtureBenchmark
 from backend.app.ingest.composite import CompositeCompanySource
+from backend.app.ingest.mca_public import MCAPublicScraper
+from backend.app.ingest.mca_public_playwright import MCAPublicPlaywrightFetcher
 from backend.app.ingest.nclt import NCLTFixtureSource
 from backend.app.ingest.wilful_defaulter import WilfulDefaulterFixtureSource
 from backend.app.scorer import ScoringContext, score
@@ -48,7 +50,10 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/report", tags=["report"])
 
-_company_source = CompositeCompanySource()
+# Phase-A free-source wiring — see analyse.py:42 for the rationale.
+_company_source = CompositeCompanySource(
+    secondary=MCAPublicScraper(fetcher=MCAPublicPlaywrightFetcher()),
+)
 _benchmark_source = BSEFixtureBenchmark()
 _nclt_source = NCLTFixtureSource()
 _wilful_source = WilfulDefaulterFixtureSource()
