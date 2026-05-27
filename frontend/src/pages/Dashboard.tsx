@@ -13,7 +13,6 @@ import {
 import {
   AnalyseResponse,
   BAND_PALETTE,
-  DEMO_CINS,
   RiskBand,
   SEVERITY_PALETTE,
   api,
@@ -724,46 +723,6 @@ function QueryBar({
       >
         Analyse
       </button>
-      <div
-        style={{
-          gridColumn: "1 / -1",
-          display: "flex",
-          flexWrap: "wrap",
-          gap: "var(--s-2)",
-          alignItems: "center",
-        }}
-      >
-        <Eyebrow>Demo subjects</Eyebrow>
-        {Object.entries(DEMO_CINS).map(([k, v]) => (
-          <button
-            key={k}
-            type="button"
-            onClick={() => {
-              setCin(v);
-              onSubmit(v);
-            }}
-            style={{
-              fontFamily: "var(--font-mono)",
-              fontSize: "0.78rem",
-              padding: "4px 10px",
-              background: "transparent",
-              color: "var(--ink-2)",
-              border: "1px solid var(--rule-soft)",
-              cursor: "pointer",
-              letterSpacing: 0,
-              transition: "background var(--d-quick) var(--ease-out)",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = "var(--paper-deep)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "transparent";
-            }}
-          >
-            {k}
-          </button>
-        ))}
-      </div>
     </form>
   );
 }
@@ -939,10 +898,12 @@ function PdfExportButton({ cin }: { cin: string }) {
 // Page
 
 export default function Dashboard() {
-  // Initial CIN: ?cin=… from the URL (e.g. when arriving from /search),
-  // otherwise the IL&FS demo subject.
+  // CIN comes from the URL query string (set when the user submits the
+  // /search form or clicks a row in /companies). No demo fallback —
+  // arriving here without ?cin= renders the empty CIN input and the
+  // analyst types one in.
   const [searchParams] = useSearchParams();
-  const initialCin = (searchParams.get("cin") || DEMO_CINS.ilfs).toUpperCase();
+  const initialCin = (searchParams.get("cin") || "").toUpperCase();
   const [submitted, setSubmitted] = useState(initialCin);
 
   // Re-sync when the URL ?cin= changes (e.g. Search → Dashboard during the

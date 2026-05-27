@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { DEMO_CINS, HttpError, downloadReport } from "../lib/api";
+import { HttpError, downloadReport } from "../lib/api";
 
 const eyebrow: React.CSSProperties = {
   fontFamily: "var(--font-body)",
@@ -65,7 +65,8 @@ interface ReportLog {
 
 export default function Reports() {
   const navigate = useNavigate();
-  const [cin, setCin] = useState(DEMO_CINS.ilfs);
+  // No demo fallback — analyst types the target CIN.
+  const [cin, setCin] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [log, setLog] = useState<ReportLog[]>([]);
@@ -140,23 +141,6 @@ export default function Reports() {
             {busy ? "Rendering…" : "Download PDF"}
           </button>
         </form>
-
-        <div style={{ marginTop: "var(--s-5)" }}>
-          <p style={{ ...eyebrow, margin: 0, marginBottom: "var(--s-3)", color: "var(--ink-3)" }}>
-            Quick targets
-          </p>
-          <div style={{ display: "flex", gap: "var(--s-2)", flexWrap: "wrap" }}>
-            {Object.entries(DEMO_CINS).map(([k, v]) => (
-              <button
-                key={k}
-                type="button"
-                onClick={() => { setCin(v); trigger(v); }}
-                disabled={busy}
-                style={chipBtn}
-              >{k}</button>
-            ))}
-          </div>
-        </div>
 
         {error && (
           <p style={{

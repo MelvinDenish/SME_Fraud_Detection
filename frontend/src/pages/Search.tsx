@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { api, DEMO_CINS, type CompanySummary } from "../lib/api";
+import { api, type CompanySummary } from "../lib/api";
 
 const eyebrow: React.CSSProperties = {
   fontFamily: "var(--font-body)",
@@ -61,14 +61,6 @@ const chipBtn: React.CSSProperties = {
 };
 
 const CIN_REGEX = /^[LU]\d{5}[A-Z]{2}\d{4}[A-Z]{3}\d{6}$/;
-
-const DEMO_LIBRARY: { key: string; cin: string; tagline: string }[] = [
-  { key: "ilfs", cin: DEMO_CINS.ilfs, tagline: "IL&FS · NCLT 2018-10-01 · CRITICAL" },
-  { key: "dhfl", cin: DEMO_CINS.dhfl, tagline: "DHFL · CIRP 2019-11-29 · evergreening cluster" },
-  { key: "amtek", cin: DEMO_CINS.amtek, tagline: "Amtek Auto · CIRP 2017-07-24 · WD-flagged" },
-  { key: "hijAuto", cin: DEMO_CINS.hijAuto, tagline: "HIJ Auto · synthetic shell" },
-  { key: "xyzGarments", cin: DEMO_CINS.xyzGarments, tagline: "XYZ Garments · clean control" },
-];
 
 export default function Search() {
   const navigate = useNavigate();
@@ -168,38 +160,6 @@ export default function Search() {
           }}>{error}</p>
         )}
       </article>
-
-      <section>
-        <p style={{ ...eyebrow, margin: 0, marginBottom: "var(--s-4)" }}>
-          Try these example companies
-        </p>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "var(--s-3)" }}>
-          {DEMO_LIBRARY.map((row) => (
-            <button
-              key={row.key}
-              type="button"
-              onClick={() => open(row.cin)}
-              style={{ ...chipBtn, padding: "var(--s-4)" }}
-            >
-              <p style={{
-                fontFamily: "var(--font-mono)",
-                fontSize: "var(--t-meta)",
-                color: "var(--ink)",
-                margin: 0,
-                marginBottom: "var(--s-1)",
-                fontWeight: 600,
-              }}>{row.cin}</p>
-              <p style={{
-                fontFamily: "var(--font-body)",
-                fontSize: "var(--t-eyebrow)",
-                letterSpacing: "0.08em",
-                color: "var(--ink-3)",
-                margin: 0,
-              }}>{row.tagline}</p>
-            </button>
-          ))}
-        </div>
-      </section>
 
       {(tnLoading || (tnCompanies && tnCompanies.length > 0)) && (
         <section>

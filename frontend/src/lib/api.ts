@@ -210,11 +210,3 @@ export const SEVERITY_PALETTE: Record<Severity, string> = {
   LOW: "#15803d",
 };
 
-// Demo CIN list — referenced by Dashboard, ITC, Evergreening pages.
-export const DEMO_CINS = {
-  ilfs: "U45201MH2005PTC155294",
-  amtek: "U27101MH2010PTC215432",
-  dhfl: "L65910MH1984PLC032662",
-  hijAuto: "U29304MH2019PTC287654",
-  xyzGarments: "U14101MH2019PTC298765",
-};

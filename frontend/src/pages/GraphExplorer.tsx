@@ -10,7 +10,7 @@ import {
   forceSimulation,
   type SimulationNodeDatum,
 } from "d3-force";
-import { DEMO_CINS, SEVERITY_PALETTE, api } from "../lib/api";
+import { SEVERITY_PALETTE, api } from "../lib/api";
 
 interface GraphNode extends SimulationNodeDatum {
   id: string;
@@ -67,7 +67,9 @@ function Eyebrow({
 export default function GraphExplorer() {
   const { cin: cinParam } = useParams<{ cin?: string }>();
   const [searchParams] = useSearchParams();
-  const [cin, setCin] = useState(cinParam ?? DEMO_CINS.ilfs);
+  // No demo fallback — the page accepts a CIN via the /graph/:cin route
+  // param or the CIN input below. Empty state until the analyst types one.
+  const [cin, setCin] = useState(cinParam ?? "");
   useEffect(() => {
     if (cinParam) setCin(cinParam);
   }, [cinParam]);
@@ -307,38 +309,6 @@ export default function GraphExplorer() {
               outline: "none",
             }}
           />
-        </div>
-        <div
-          style={{
-            gridColumn: "1 / -1",
-            display: "flex",
-            flexWrap: "wrap",
-            gap: "var(--s-2)",
-            alignItems: "center",
-          }}
-        >
-          <Eyebrow>Example Companies</Eyebrow>
-          {Object.entries(DEMO_CINS).map(([k, v]) => (
-            <button
-              type="button"
-              key={k}
-              onClick={() => {
-                setCin(v);
-                setSelectedId(null);
-              }}
-              style={{
-                fontFamily: "var(--font-mono)",
-                fontSize: "0.78rem",
-                padding: "4px 10px",
-                background: cin === v ? "var(--ink)" : "transparent",
-                color: cin === v ? "var(--paper)" : "var(--ink-2)",
-                border: "1px solid var(--rule-soft)",
-                cursor: "pointer",
-              }}
-            >
-              {k}
-            </button>
-          ))}
         </div>
       </form>
 

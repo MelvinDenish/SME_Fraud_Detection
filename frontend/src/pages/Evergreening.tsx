@@ -1,6 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { BAND_PALETTE, DEMO_CINS, api } from "../lib/api";
+import { BAND_PALETTE, api } from "../lib/api";
+
+// DHFL — real public-record CIRP case (admitted 2019-11-29 under IBC).
+// This page is the canonical evergreening visualisation; the CIN is
+// hard-coded because the demo narrative is anchored on DHFL's
+// loan-round-tripping patterns (PRD §14 — never cut from demo).
+// Other CINs can still be evergreening-scored via /analyse — this view
+// is the specifically-DHFL storyboard.
+const DHFL_CIN = "L65910MH1984PLC032662";
 
 const eyebrow: React.CSSProperties = {
   fontFamily: "var(--font-body)",
@@ -32,8 +40,8 @@ const metaLabel: React.CSSProperties = {
 
 export default function Evergreening() {
   const query = useQuery({
-    queryKey: ["analyse", DEMO_CINS.dhfl],
-    queryFn: () => api.analyse(DEMO_CINS.dhfl),
+    queryKey: ["analyse", DHFL_CIN],
+    queryFn: () => api.analyse(DHFL_CIN),
   });
   const band = query.data ? BAND_PALETTE[query.data.risk_band] : null;
 
