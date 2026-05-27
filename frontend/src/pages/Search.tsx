@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { DEMO_CINS } from "../lib/api";
+import { api, DEMO_CINS, type CompanySummary } from "../lib/api";
 
 const eyebrow: React.CSSProperties = {
   fontFamily: "var(--font-body)",
@@ -74,6 +74,26 @@ export default function Search() {
   const navigate = useNavigate();
   const [cin, setCin] = useState("");
   const [error, setError] = useState<string | null>(null);
+  // Real Tamil Nadu companies seeded from the data.gov.in bulk CSV
+  // (see scripts/seed_data_gov_in.py). Hidden if the endpoint 404s or
+  // returns zero rows — keeps the page useful even before the seed
+  // script has been run.
+  const [tnCompanies, setTnCompanies] = useState<CompanySummary[] | null>(null);
+  const [tnTotal, setTnTotal] = useState<number>(0);
+  const [tnLoading, setTnLoading] = useState<boolean>(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    api.companies({ state: "TN", limit: 24 })
+      .then((page) => {
+        if (cancelled) return;
+        setTnCompanies(page.items);
+        setTnTotal(page.total);
+      })
+      .catch(() => { if (!cancelled) setTnCompanies([]); })
+      .finally(() => { if (!cancelled) setTnLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
 
   const open = (target: string) => {
     const cleaned = target.trim().toUpperCase();
@@ -180,6 +200,72 @@ export default function Search() {
           ))}
         </div>
       </section>
+
+      {(tnLoading || (tnCompanies && tnCompanies.length > 0)) && (
+        <section>
+          <p style={{ ...eyebrow, margin: 0, marginBottom: "var(--s-2)" }}>
+            Tamil Nadu · live MCA registry
+          </p>
+          <p style={{
+            color: "var(--ink-3)",
+            margin: 0,
+            marginBottom: "var(--s-4)",
+            fontFamily: "var(--font-body)",
+            fontSize: "var(--t-meta)",
+            lineHeight: 1.55,
+            maxWidth: "60ch",
+          }}>
+            Real Tamil Nadu companies loaded from the data.gov.in bulk MCA
+            snapshot ({tnTotal.toLocaleString()} in graph; showing
+            {" "}{tnCompanies?.length ?? 0} newest registrations). Click any
+            row to run the full Sentinel-G analysis.
+          </p>
+          {tnLoading && (
+            <p style={{
+              color: "var(--ink-3)",
+              fontFamily: "var(--font-mono)",
+              fontSize: "var(--t-meta)",
+              margin: 0,
+            }}>Loading...</p>
+          )}
+          {tnCompanies && tnCompanies.length > 0 && (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "var(--s-3)" }}>
+              {tnCompanies.map((c) => (
+                <button
+                  key={c.cin}
+                  type="button"
+                  onClick={() => open(c.cin)}
+                  style={{ ...chipBtn, padding: "var(--s-4)" }}
+                >
+                  <p style={{
+                    fontFamily: "var(--font-body)",
+                    fontSize: "var(--t-meta)",
+                    color: "var(--ink)",
+                    margin: 0,
+                    marginBottom: "var(--s-1)",
+                    fontWeight: 600,
+                    lineHeight: 1.3,
+                  }}>{c.name ?? c.cin}</p>
+                  <p style={{
+                    fontFamily: "var(--font-mono)",
+                    fontSize: "var(--t-eyebrow)",
+                    letterSpacing: "0.04em",
+                    color: "var(--ink-3)",
+                    margin: 0,
+                  }}>
+                    {c.cin}
+                    {c.incorporation_year != null && (
+                      <span style={{ marginLeft: "var(--s-2)", color: "var(--accent-gold)" }}>
+                        · {c.incorporation_year}
+                      </span>
+                    )}
+                  </p>
+                </button>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
     </div>
   );
 }

@@ -102,7 +102,19 @@ class CompositeCompanySource:
         if secondary_bundle is not None:
             return await self._fold_extra_charges(secondary_bundle, cin)
 
-        # Tier 3 — FixtureSource (offline demo backbone).
+        # Tier 3 — data.gov.in bulk CSV master-only bundle. Returns None
+        # when the cache_dir is empty (operator hasn't downloaded a
+        # snapshot yet) or the CIN isn't in the universe.
+        bulk_bundle: CompanyBundle | None = None
+        try:
+            bulk_bundle = await self.bulk_universe.fetch_bundle(cin)
+        except Exception as exc:
+            logger.warning("data.gov.in bulk fetch failed for %s: %s", cin, exc)
+
+        if bulk_bundle is not None:
+            return await self._fold_extra_charges(bulk_bundle, cin)
+
+        # Tier 4 — FixtureSource (offline demo backbone).
         return await self.fallback.fetch_bundle(cin)
 
     async def _fold_extra_charges(
