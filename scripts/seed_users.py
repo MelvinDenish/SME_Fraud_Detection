@@ -53,21 +53,42 @@ DEMO_USERS = [
 
 
 async def seed() -> None:
+    # Build the driver locally — `backend.app.deps.get_driver()` only works
+    # inside FastAPI's async lifespan. Seed scripts run standalone, so
+    # mirror the pattern from `scripts/precache_companies.py` and
+    # `scripts/seed_data_gov_in.py`.
+    from neo4j import AsyncGraphDatabase
+
     from backend.app.auth.repository import UserAlreadyExistsError, create_user
-    from backend.app.deps import get_driver
+    from backend.app.config import get_settings
 
-    driver = get_driver()
+    settings = get_settings()
+    driver = AsyncGraphDatabase.driver(
+        settings.neo4j_uri,
+        auth=(settings.neo4j_user, settings.neo4j_password),
+    )
+    try:
+        await driver.verify_connectivity()
+    except Exception as exc:
+        logger.error(
+            "Cannot reach Neo4j at %s — start it with "
+            "`docker compose -f infra/docker-compose.dev.yml up -d`. Error: %s",
+            settings.neo4j_uri, exc,
+        )
+        await driver.close()
+        return
 
-    for u in DEMO_USERS:
-        try:
-            rec = await create_user(driver, u["email"], u["password"], u["role"])
-            logger.info("Created  %-28s  role=%-16s  %s", u["email"], u["role"], u["persona"])
-        except UserAlreadyExistsError:
-            logger.info("Skipped  %-28s  (already exists)", u["email"])
-        except Exception as exc:
-            logger.error("Failed   %-28s  %s", u["email"], exc)
-
-    await driver.close()
+    try:
+        for u in DEMO_USERS:
+            try:
+                await create_user(driver, u["email"], u["password"], u["role"])
+                logger.info("Created  %-28s  role=%-16s  %s", u["email"], u["role"], u["persona"])
+            except UserAlreadyExistsError:
+                logger.info("Skipped  %-28s  (already exists)", u["email"])
+            except Exception as exc:
+                logger.error("Failed   %-28s  %s", u["email"], exc)
+    finally:
+        await driver.close()
     logger.info("Done. All demo users ready.")
 
 

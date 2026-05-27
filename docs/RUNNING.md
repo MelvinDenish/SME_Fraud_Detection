@@ -179,12 +179,33 @@ Replace `you@example.com` with the email you registered.
 
 ### 4.3 — Role matrix (for reference)
 
-| Role | `/analyse` | `/narrative` | `/report` | `/upload/*` |
-|---|---|---|---|---|
-| `credit_officer` | ✅ | ✅ | ❌ | ❌ |
-| `investigator` | ✅ | ✅ | ✅ | ✅ |
-| `auditor` | ✅ | ✅ | ✅ | ❌ |
-| `admin` | ✅ | ✅ | ✅ | ✅ |
+Source of truth: [`require_roles()`](../backend/app/auth/deps.py) decorators in [`upload.py:34`](../backend/app/api/upload.py#L34) and [`report.py:181`](../backend/app/api/report.py#L181).
+
+| Role | `/analyse` | `/narrative` | `/companies` | `/upload/*` | `/report` |
+|---|---|---|---|---|---|
+| `credit_officer` | ✅ | ✅ | ✅ | ✅ | ❌ |
+| `investigator` | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `auditor` | ✅ | ✅ | ✅ | ❌ | ✅ |
+| `admin` | ✅ | ✅ | ✅ | ✅ | ✅ |
+
+### 4.4 — Demo users (recommended over registering your own)
+
+`scripts/seed_users.py` mints four demo personas — one per role — all
+sharing the password `Sentinel@1`. Idempotent.
+
+```powershell
+.venv\Scripts\python.exe scripts/seed_users.py
+```
+
+| Email             | Role            | Persona                                |
+|-------------------|-----------------|----------------------------------------|
+| `priya@demo.in`   | credit_officer  | SBI Loan Officer                       |
+| `rajan@demo.in`   | investigator    | DGGI (GST Intelligence) Inspector      |
+| `deepa@demo.in`   | auditor         | NCLT Resolution Professional           |
+| `amir@demo.in`    | admin           | Compliance & Platform Admin            |
+
+For a full per-persona walkthrough that exercises every feature each
+role can reach, see [docs/WALKTHROUGH.md](./WALKTHROUGH.md).
 
 ---
 
