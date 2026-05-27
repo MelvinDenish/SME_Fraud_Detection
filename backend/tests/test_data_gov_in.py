@@ -123,8 +123,16 @@ async def test_nic_with_trailing_description_extracts_leading_digits() -> None:
 async def test_broken_rows_dropped_complete_row_kept() -> None:
     src = DataGovInBulkSource(csv_texts=[_BROKEN_ROW_CSV])
     cins = await src.list_available_cins()
-    # Only the fully-populated row survives.
-    assert cins == ["U29304MH2019PTC287654"]
+    # Essential fields = incorporation_date + state. Missing either drops
+    # the row. NIC is non-essential after the TN snapshot work — the
+    # entire TN universe ships nic_code='NA' with industry info in a
+    # separate text column, so a missing NIC now maps to sentinel 99999
+    # ("Other") instead of dropping the row. M5 peer deviation cleanly
+    # skips sentinel rows since no BSE benchmark exists for nic 99999.
+    assert cins == ["U27101MH2010PTC215432", "U29304MH2019PTC287654"]
+    missing_nic = await src.fetch_bundle("U27101MH2010PTC215432")
+    assert missing_nic is not None
+    assert missing_nic.company.nic_code == 99999
 
 
 @pytest.mark.asyncio
