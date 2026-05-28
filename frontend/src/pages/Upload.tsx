@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { DEMO_CINS, UploadAck, UploadPreview, api } from "../lib/api";
+import { UploadAck, UploadPreview, api } from "../lib/api";
 
 const eyebrow: React.CSSProperties = {
   fontFamily: "var(--font-body)",
@@ -345,7 +345,9 @@ function PreviewCard({ preview }: { preview: UploadPreview | undefined }) {
 }
 
 export default function UploadPage() {
-  const [cin, setCin] = useState(DEMO_CINS.xyzGarments);
+  // No demo fallback — analyst types the target CIN, or arrives with it
+  // pasted in from the Search page. Empty state until they enter one.
+  const [cin, setCin] = useState("");
   const qc = useQueryClient();
   const previewQuery = useQuery({
     queryKey: ["upload-preview", cin],
@@ -394,16 +396,6 @@ export default function UploadPage() {
           onChange={(e) => setCin(e.target.value.trim().toUpperCase())}
           style={{ ...inputStyle, width: "100%", boxSizing: "border-box" }}
         />
-        <div style={{ display: "flex", gap: "var(--s-2)", marginTop: "var(--s-3)", flexWrap: "wrap" }}>
-          {Object.entries(DEMO_CINS).map(([k, v]) => (
-            <button
-              key={k}
-              type="button"
-              onClick={() => setCin(v)}
-              style={chipBtn}
-            >{k}</button>
-          ))}
-        </div>
       </article>
 
       {previewQuery.error && (

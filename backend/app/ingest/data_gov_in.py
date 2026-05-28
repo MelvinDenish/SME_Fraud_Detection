@@ -109,6 +109,10 @@ _COL_ALIASES: dict[str, str] = {
     "date_of_registration": "incorporation_date",
     "incorporationdate": "incorporation_date",
     "registereddate": "incorporation_date",
+    # TN snapshot from data.gov.in publishes the column as
+    # `CompanyRegistrationdate_date` (note the doubled token + underscore).
+    # Normalising drops non-alphanumerics so it lands here.
+    "companyregistrationdatedate": "incorporation_date",
     "industrialclass": "nic_code",
     "industrial_class": "nic_code",
     "principalbusinessactivityasperclass": "nic_code",
@@ -117,6 +121,10 @@ _COL_ALIASES: dict[str, str] = {
     "registeredstate": "state",
     "registered_state": "state",
     "state": "state",
+    # TN snapshot column header (`CompanyStateCode` — but the value is the
+    # full state name like "tamil nadu", not a 2-letter code).
+    # `_state_code()` handles both shapes.
+    "companystatecode": "state",
     "registeredofficeaddress": "registered_address",
     "registered_office_address": "registered_address",
     "address": "registered_address",
@@ -226,14 +234,23 @@ class DataGovInBulkSource:
                 incorporation = _parse_date(row.get("incorporation_date", ""))
                 nic = _parse_nic(row.get("nic_code", ""))
                 state = _state_code(row.get("state", ""))
-                if incorporation is None or nic is None or state is None:
+                # incorporation_date + state are essential — if either is
+                # missing the row is unusable for any downstream module.
+                if incorporation is None or state is None:
                     logger.warning(
                         "data.gov.in row skipped (incomplete master): cin=%s "
-                        "incorporation=%r nic=%r state=%r",
-                        cin, row.get("incorporation_date"),
-                        row.get("nic_code"), row.get("state"),
+                        "incorporation=%r state=%r",
+                        cin, row.get("incorporation_date"), row.get("state"),
                     )
                     continue
+                # NIC fallback: TN snapshot writes 'NA' for every row (real
+                # industry data lives in `CompanyIndustrialClassification`
+                # text column). Sentinel 99999 = "Other / Unclassified" so
+                # the RawCompany schema accepts the row but M5
+                # peer-deviation cleanly skips it (no BSE benchmark for
+                # 99999).
+                if nic is None:
+                    nic = 99999
 
                 try:
                     company = RawCompany(

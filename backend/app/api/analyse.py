@@ -25,6 +25,8 @@ from backend.app.auth.deps import get_current_user
 from backend.app.deps import get_driver
 from backend.app.ingest.benchmarks import BSEFixtureBenchmark
 from backend.app.ingest.composite import CompositeCompanySource
+from backend.app.ingest.mca_public import MCAPublicScraper
+from backend.app.ingest.mca_public_playwright import MCAPublicPlaywrightFetcher
 from backend.app.ingest.nclt import NCLTFixtureSource
 from backend.app.ingest.sources import FixtureSource
 from backend.app.ingest.wilful_defaulter import WilfulDefaulterFixtureSource
@@ -39,7 +41,16 @@ router = APIRouter(prefix="/analyse", tags=["analyse"])
 # V3 first and falls back to the FixtureSource seeds on key absence / 404.
 # Belief-propagation edges still come from the FixtureSource list (it's the
 # only enumerable surface — MCA21 has no "list all CINs" endpoint).
-_company_source = CompositeCompanySource()
+#
+# Phase-A free-source wiring: the secondary tier injects
+# MCAPublicPlaywrightFetcher so that on a cookie-bootstrapped machine
+# (`python -m backend.app.ingest.mca_public_playwright --bootstrap`) the
+# composite scrapes mca.gov.in live for any CIN. With no cookies present
+# the fetcher returns None and the composite cleanly falls through to
+# data.gov.in bulk → FixtureSource. See docs/INGEST_MCA_PUBLIC.md.
+_company_source = CompositeCompanySource(
+    secondary=MCAPublicScraper(fetcher=MCAPublicPlaywrightFetcher()),
+)
 _fixture_source = FixtureSource()
 _benchmark_source = BSEFixtureBenchmark()
 _nclt_source = NCLTFixtureSource()

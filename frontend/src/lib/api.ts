@@ -66,6 +66,21 @@ export interface UploadAck {
   extra: Record<string, unknown>;
 }
 
+// PRD §10 + Phase-C data.gov.in bulk — a paginated row from /companies.
+// Used by Search.tsx to render the "recently loaded" panel of real
+// MCA-registered companies seeded from the data.gov.in CSV.
+export interface CompanySummary {
+  cin: string;
+  name: string | null;
+  state: string | null;
+  incorporation_year: number | null;
+}
+
+export interface CompaniesPage {
+  total: number;
+  items: CompanySummary[];
+}
+
 // PRD §10 Day-21 — DC improvement preview before submission.
 export interface UploadPreview {
   cin: string;
@@ -170,6 +185,14 @@ export const api = {
   uploadBank: (cin: string, creditsTotal: number) =>
     postJson<UploadAck>(`/upload/bank/${cin}`, { credits_total: creditsTotal }),
   uploadPreview: (cin: string) => getJson<UploadPreview>(`/upload/${cin}/preview`),
+  companies: (opts: { state?: string; limit?: number; offset?: number } = {}) => {
+    const params = new URLSearchParams();
+    if (opts.state) params.set("state", opts.state);
+    if (opts.limit != null) params.set("limit", String(opts.limit));
+    if (opts.offset != null) params.set("offset", String(opts.offset));
+    const qs = params.toString();
+    return getJson<CompaniesPage>(`/companies${qs ? "?" + qs : ""}`);
+  },
 };
 
 // PRD §7.2 band colour palette — kept here so every page renders the same hue.
@@ -187,11 +210,3 @@ export const SEVERITY_PALETTE: Record<Severity, string> = {
   LOW: "#15803d",
 };
 
-// Demo CIN list — referenced by Dashboard, ITC, Evergreening pages.
-export const DEMO_CINS = {
-  ilfs: "U45201MH2005PTC155294",
-  amtek: "U27101MH2010PTC215432",
-  dhfl: "L65910MH1984PLC032662",
-  hijAuto: "U29304MH2019PTC287654",
-  xyzGarments: "U14101MH2019PTC298765",
-};
