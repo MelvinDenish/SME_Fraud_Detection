@@ -129,19 +129,42 @@ export default function NarrativeCard({ cin }: NarrativeCardProps) {
       )}
 
       {query.data && (
-        <p
-          style={{
-            margin: 0,
-            fontFamily: "var(--font-display)",
-            fontSize: "1.05rem",
-            lineHeight: 1.6,
-            color: "var(--ink-2)",
-            fontStyle: "italic",
-            maxWidth: "62ch",
-          }}
-        >
-          {query.data.summary}
-        </p>
+        <>
+          <p
+            style={{
+              margin: 0,
+              fontFamily: "var(--font-display)",
+              fontSize: "1.05rem",
+              lineHeight: 1.6,
+              color: "var(--ink-2)",
+              fontStyle: "italic",
+              maxWidth: "62ch",
+            }}
+          >
+            {query.data.summary}
+          </p>
+          {query.data.model.startsWith("template-fallback") && (
+            <p
+              style={{
+                margin: 0,
+                paddingLeft: "var(--s-3)",
+                borderLeft: "2px solid var(--accent-gold)",
+                fontFamily: "var(--font-body)",
+                fontSize: "var(--t-meta)",
+                color: "var(--ink-3)",
+                lineHeight: 1.5,
+                maxWidth: "62ch",
+              }}
+            >
+              <strong style={{ color: "var(--ink-2)" }}>Live LLM unavailable.</strong>{" "}
+              This synopsis was composed by the deterministic template — every
+              number above is drawn directly from the structured evidence, so
+              the prose is reliable but less varied than a Gemini-generated
+              summary. Restore the Gemini API key on the backend to enable
+              richer prose.
+            </p>
+          )}
+        </>
       )}
 
       {/* Inline keyframes — scoped enough that we don't pollute

@@ -16,6 +16,7 @@ from backend.app.config import get_settings
 from backend.app.deps import get_driver, lifespan
 from backend.app.middleware.rate_limit import RateLimitMiddleware
 from backend.app.ml_inference import get_status as _ml_status
+from backend.app.narrative import get_narrator
 
 
 _INSECURE_JWT_DEFAULT = "dev-only-not-for-production"
@@ -74,6 +75,17 @@ def create_app() -> FastAPI:
         ok = bool(ml["loaded"] and cache.get("built"))
         body = {"ok": ok, "meta_learner": ml, "analytics_cache": cache}
         return JSONResponse(body, status_code=200 if ok else 503)
+
+    @app.get("/health/gemini", tags=["meta"])
+    async def gemini_health() -> JSONResponse:
+        """Gemini narrative service readiness. Returns 503 when the API
+        key isn't configured OR the SDK failed to initialise — the
+        narrative endpoint will still respond via the template fallback,
+        but the frontend can surface a 'narrative service offline'
+        banner so judges aren't surprised by the generic prose."""
+        st = await get_narrator().status()
+        ok = bool(st["configured"] and st["live"])
+        return JSONResponse(st | {"ok": ok}, status_code=200 if ok else 503)
 
     @app.get("/health/neo4j", tags=["meta"])
     async def neo4j_health() -> dict[str, object]:

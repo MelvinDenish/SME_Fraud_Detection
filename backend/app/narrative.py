@@ -380,6 +380,25 @@ class GeminiNarrator:
         self._model = None
         self._model_name = "template-fallback"
 
+    async def status(self) -> dict[str, Any]:
+        """Lightweight readiness probe — never calls the API. Reports
+        whether the key is configured and whether the SDK initialised
+        successfully. Triggers lazy init on first call so the second
+        call returns a stable state."""
+        settings = get_settings()
+        key = (settings.gemini_api_key or "").strip()
+        configured = bool(key) and not key.startswith("PLACEHOLDER")
+        # Force init so subsequent calls report `live` accurately.
+        await self._ensure_model()
+        live = self._model is not None
+        return {
+            "configured": configured,
+            "live": live,
+            "model": self._model_name,
+            "init_attempted": self._init_attempted,
+            "cache_entries": len(self._cache),
+        }
+
 
 # ---------------------------------------------------------------------------
 # Step 3 — deterministic template fallback. Never hallucinates by
