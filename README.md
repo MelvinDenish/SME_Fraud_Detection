@@ -50,8 +50,8 @@ Indian banks and NBFCs lost an estimated ₹25,000–40,000 crore to SME loan fr
 - **ML:** LightGBM (OOF meta-learner), scikit-learn (Isolation Forest, LOF, Isotonic), PyTorch Geometric (TGN), Mamba SSM, MAPIE (conformal), CatBoost, NetworkX
 - **NLP / Docs:** spaCy, pdfplumber, camelot, pytesseract, reportlab
 - **LLM (narrative only):** Gemini Flash (Google AI Studio free tier)
-- **APIs:** MCA21, CERSAI, BSE SME, NCLT, RBI wilful defaulter
-- **Hosting:** Fly.io (FastAPI) · Railway (Neo4j Docker) · Vercel (frontend)
+- **APIs:** MCA21, CERSAI, BSE SME, NCLT, RBI wilful defaulter, data.gov.in MCA bulk (CC-BY)
+- **Hosting:** AWS Lightsail (FastAPI + Neo4j co-located, Caddy + Let's Encrypt) · Vercel (frontend)
 
 ### Additional
 - [x] AI / ML
@@ -79,9 +79,27 @@ Indian banks and NBFCs lost an estimated ₹25,000–40,000 crore to SME loan fr
 
 ## Demo & Deliverables
 
+- **Live Frontend:** https://sentinel-g-theta.vercel.app
+- **API Backend:** https://13.126.114.27.sslip.io (AWS Lightsail, Mumbai)
+- **Demo Logins:** four personas (Loan Officer, Investigator, Auditor, Admin) — credentials in [docs/WALKTHROUGH.md](./docs/WALKTHROUGH.md)
 - **Demo Video:** _to be added after Week 4 rehearsals (PRD §10 Day 28)_
-- **Deployment Link:** _to be added after Day 28 production deploy_
 - **PRD:** see [Sentinel_G_Final.docx](./Sentinel_G_Final.docx)
+
+### What's Real vs Seeded in the Demo
+
+We're explicit about this so judges can probe deeper than the scripted demo without being surprised:
+
+| Component | Real data | Notes |
+|---|---|---|
+| 4 demo cases (IL&FS, DHFL, Amtek, ITC carousel) | ✅ Real SFIO case numbers, real NCLT C.P.(IB) admissions, real RBI wilful-defaulter declarations | Financial statements hand-extracted from SFIO public reports into [data/labels/sfio_confirmed_frauds.json](./data/labels/sfio_confirmed_frauds.json) and [infra/seeds/companies/](./infra/seeds/companies/) — public records, not synthesised |
+| 191k Tamil Nadu companies | ✅ data.gov.in CC-BY bulk MCA snapshot | **Master data only** — registration + NIC + state. No financials. The Search page renders a `MASTER ONLY` badge so analysts know to upload financials before analysing |
+| 17 graph patterns (M4) | ✅ Real async Cypher with GDS SCC / WCC | Fire on the demo seed; would fire on any company with seeded relationships |
+| 11 Tier-1 rule modules (M1-M11) | ✅ Real implementations of Beneish, Benford, peer-deviation, etc. | When inputs are available — see the Dashboard's LowDataBanner when DC < 45% |
+| ML meta-learner (F1a/F1b/F1c) | ✅ LightGBM OOF + Isotonic + Split Conformal, shipped in the GHCR image | Loads lazily on first `/analyse`; trained on the 14-case SFIO label set |
+| ML detectors (D3 TGN, D4 LOF, D5 TCN fallback, D6 AE) | ✅ Pretrained weights in `ml/artifacts/` | Mamba SSM in D5 needs CUDA; production runs the TCN fallback |
+| MCA21 V3 live API | ⚠️ Not connected | Requires paid subscription. Bulk fallback (data.gov.in) covers TN; full live ingestion across all states is post-demo scope (see Future Scope) |
+| MCA Public Portal scraping | ⚠️ Local-dev only | Playwright not shipped in the production image. See [docs/INGEST_MCA_PUBLIC.md](./docs/INGEST_MCA_PUBLIC.md) for the free-tier path |
+| Gemini Flash narrative | ⚠️ Optional | If the key is missing / rate-limited / invalid, the card shows a "Live LLM unavailable" notice and falls back to a deterministic template that cites only structured-evidence numbers (never hallucinates) |
 
 ---
 
@@ -117,11 +135,11 @@ Verify `RETURN gds.version()` works at http://localhost:7474 — that's the PRD 
 
 ### Deploy
 
-| Component | Target | Command |
+| Component | Target | How |
 |---|---|---|
-| FastAPI backend | Fly.io | `flyctl deploy -c backend/fly.toml` |
-| Neo4j | Railway | see [infra/railway/README.md](./infra/railway/README.md) |
-| Frontend | Vercel | `vercel --prod` from `frontend/` |
+| FastAPI backend + Neo4j 5 + GDS | AWS Lightsail (4 GB, $20/mo) | `bash infra/aws/lightsail_bootstrap.sh` — see [docs/DEPLOY_AWS_LIGHTSAIL.md](./docs/DEPLOY_AWS_LIGHTSAIL.md) |
+| GHCR image build | GitHub Actions | auto-fires on `backend/**`, `ml/**`, `pyproject.toml` changes |
+| Frontend | Vercel | auto-deploy on push to `main` (rewrites `/api/*` to the Lightsail backend) |
 
 ---
 
