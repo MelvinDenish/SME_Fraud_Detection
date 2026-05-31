@@ -92,7 +92,42 @@ log "seeding 4 demo users via docker exec..."
 docker exec sentinel-g-api python scripts/seed_users.py || \
   log "WARN: seed_users.py exited non-zero. Re-run manually with: docker exec sentinel-g-api python scripts/seed_users.py"
 
-# --- 7. Smoke test --------------------------------------------------------
+# --- 7. TN bulk seed (async background, ~30 min) -------------------------
+# Pulls the 77 MB Tamil Nadu MCA snapshot from the v1-data GitHub release,
+# copies it into the FastAPI container, and kicks off the seeder in the
+# background. Operator returns to interactive use immediately; tail the
+# log to watch progress. Skip with SEED_TN_BULK=false ./lightsail_bootstrap.sh
+if [[ "${SEED_TN_BULK:-true}" == "true" ]]; then
+  CSV_URL="https://github.com/MelvinDenish/SME_Fraud_Detection/releases/download/v1-data/TN_Companies_Master_Data.csv"
+  CSV_HOST="$REPO_DIR/data/raw/data_gov_in/TN_Companies_Master_Data.csv"
+  SEED_LOG="$REPO_DIR/seed_tn.log"
+
+  mkdir -p "$(dirname "$CSV_HOST")"
+  if [[ ! -s "$CSV_HOST" ]]; then
+    log "downloading TN bulk CSV (~77 MB) from v1-data release..."
+    curl -fsSL -o "$CSV_HOST" "$CSV_URL" || \
+      log "WARN: CSV download failed; skipping TN seed. Retry with: curl -L -o '$CSV_HOST' '$CSV_URL'"
+  else
+    log "TN CSV already present at $CSV_HOST ($(du -h "$CSV_HOST" | cut -f1)); skipping download"
+  fi
+
+  if [[ -s "$CSV_HOST" ]]; then
+    log "copying CSV into sentinel-g-api container + kicking off async seed..."
+    docker exec sentinel-g-api mkdir -p /app/data/raw/data_gov_in
+    docker cp "$CSV_HOST" sentinel-g-api:/app/data/raw/data_gov_in/TN_Companies_Master_Data.csv
+    # nohup so the seed survives bootstrap exit; & to background it.
+    nohup docker exec sentinel-g-api python scripts/seed_data_gov_in.py --limit 200000 \
+      > "$SEED_LOG" 2>&1 &
+    SEED_PID=$!
+    log "TN seed running in background (PID $SEED_PID, ~30 min)."
+    log "  watch progress: tail -f $SEED_LOG"
+    log "  check it finished: grep 'Seed complete' $SEED_LOG"
+  fi
+else
+  log "SEED_TN_BULK=false — skipping TN bulk seed."
+fi
+
+# --- 8. Smoke test --------------------------------------------------------
 DOMAIN_VAL=$(grep -E '^DOMAIN=' "$COMPOSE_DIR/.env" | head -1 | cut -d= -f2-)
 log "smoke testing https://${DOMAIN_VAL}/health ..."
 sleep 5  # give Caddy a beat to finish Let's Encrypt cert issuance
@@ -109,3 +144,8 @@ log "  curl https://${DOMAIN_VAL}/health"
 log "  curl https://${DOMAIN_VAL}/health/neo4j"
 log "  curl https://${DOMAIN_VAL}/health/ml"
 log "Demo users seeded — see docs/WALKTHROUGH.md for credentials."
+if [[ -n "${SEED_PID:-}" ]]; then
+  log ""
+  log "TN bulk seed continues in background (PID $SEED_PID, log: $SEED_LOG)."
+  log "Search will return real TN companies once the seed finishes (~30 min)."
+fi

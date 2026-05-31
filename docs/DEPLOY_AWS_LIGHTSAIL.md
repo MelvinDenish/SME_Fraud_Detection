@@ -109,7 +109,12 @@ This:
 - Starts the compose stack
 - Waits for Neo4j + FastAPI healthchecks (~3 min)
 - Seeds the 4 demo users (`priya@demo.in`, `rajan@demo.in`, `deepa@demo.in`, `amir@demo.in`, all password `Sentinel@1`)
+- **Downloads the Tamil Nadu MCA bulk CSV (~77 MB) from the v1-data GitHub release** and kicks off `seed_data_gov_in.py` in the background. The seed takes ~30 min and writes ~191k `:Company` master nodes into Neo4j; bootstrap returns to the prompt immediately so you can move on.
 - Smoke-tests `/health` via the public domain
+
+Watch the TN seed progress with `tail -f ~/sentinel-g/seed_tn.log`. The seed is done when you see a line like `Seed complete: 200000/200000 written in ...`.
+
+Skip the TN seed entirely if you don't want it: `SEED_TN_BULK=false ./lightsail_bootstrap.sh`. The 4 demo CINs (IL&FS, DHFL, Amtek, etc.) still work without it; only the "Tamil Nadu live registry" panel on `/search` will be empty.
 
 If the docker install ran for the first time, log out and back in (or run `newgrp docker`) before re-running.
 
@@ -145,21 +150,34 @@ Full walkthrough by role: see `docs/WALKTHROUGH.md`.
 
 ---
 
-## (Optional) Seed the Tamil Nadu real-company registry
+## TN bulk re-seed / reset
 
-If you want `/search` to find real Indian SMEs (not just the 4 fixtures), upload the TN bulk CSV:
+The bootstrap already kicks off the 191k TN seed automatically (see step 4 above). This section is only for re-running it after a Neo4j wipe, refreshing to a newer snapshot, or running it manually after `SEED_TN_BULK=false ./lightsail_bootstrap.sh`.
 
 ```bash
-# From your laptop
-scp -i LightsailDefaultKey-*.pem TN_Companies_Master_Data.csv \
-  ubuntu@<ip>:~/sentinel-g/data/raw/data_gov_in/
-
-# Then on the VM
 ssh -i ... ubuntu@<ip>
+cd ~/sentinel-g
+
+# Re-download the CSV if it's missing on the host
+mkdir -p data/raw/data_gov_in
+curl -L -o data/raw/data_gov_in/TN_Companies_Master_Data.csv \
+  https://github.com/MelvinDenish/SME_Fraud_Detection/releases/download/v1-data/TN_Companies_Master_Data.csv
+
+# Copy into the container + seed
+docker exec sentinel-g-api mkdir -p /app/data/raw/data_gov_in
+docker cp data/raw/data_gov_in/TN_Companies_Master_Data.csv \
+  sentinel-g-api:/app/data/raw/data_gov_in/
+
+# Foreground (watch progress live, ~30 min)
 docker exec sentinel-g-api python scripts/seed_data_gov_in.py --limit 200000
+
+# Or background it
+nohup docker exec sentinel-g-api python scripts/seed_data_gov_in.py --limit 200000 \
+  > seed_tn.log 2>&1 &
+tail -f seed_tn.log
 ```
 
-~30 minutes; runs in the background of the FastAPI container.
+The seed is **idempotent on CIN** — Neo4j MERGEs by `cin`, so re-running just refreshes properties on existing nodes.
 
 ---
 
