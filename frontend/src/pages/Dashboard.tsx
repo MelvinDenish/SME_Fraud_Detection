@@ -576,6 +576,79 @@ function EvidenceChain({ data }: { data: AnalyseResponse }) {
   );
 }
 
+// ──────────────────────────────────────────────────────────────────────────
+// Low-data banner — shown when data_confidence is too low for a meaningful
+// score. Without this, a real user searching a TN company that has only
+// master-data on file sees a row of zeroed module scores and assumes the
+// product is broken. This redirects them to the upload flow instead.
+
+function LowDataBanner({ cin, dataConfidence }: { cin: string; dataConfidence: number }) {
+  return (
+    <motion.section
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+      style={{
+        background: "var(--paper-elevated)",
+        boxShadow: "var(--shadow-card)",
+        padding: "var(--s-5) var(--s-6)",
+        borderLeft: "8px solid var(--accent-gold)",
+        display: "grid",
+        gap: "var(--s-3)",
+      }}
+    >
+      <Eyebrow>Limited Data Available · {dataConfidence}% Complete</Eyebrow>
+      <h3
+        style={{
+          fontFamily: "var(--font-display)",
+          fontSize: "1.4rem",
+          color: "var(--ink)",
+          margin: 0,
+          lineHeight: 1.25,
+        }}
+      >
+        Only public master data on file for this company.
+      </h3>
+      <p
+        style={{
+          color: "var(--ink-2)",
+          fontSize: "1rem",
+          lineHeight: 1.55,
+          margin: 0,
+          maxWidth: "62ch",
+        }}
+      >
+        We have the registration record (name, NIC code, state, incorporation
+        date), but no financial statements, GST returns, or auditor reports
+        yet. Most fraud signals require these inputs. Upload the company's
+        audited financials (AOC-4) or recent P&amp;L to unlock the full
+        analysis.
+      </p>
+      <div style={{ display: "flex", gap: "var(--s-3)", alignItems: "center", marginTop: "var(--s-2)" }}>
+        <Link
+          to={`/upload?cin=${encodeURIComponent(cin)}`}
+          style={{
+            padding: "10px 22px",
+            background: "var(--ink)",
+            color: "var(--paper)",
+            fontFamily: "var(--font-body)",
+            fontWeight: 700,
+            letterSpacing: "0.18em",
+            textTransform: "uppercase",
+            fontSize: "0.78rem",
+            textDecoration: "none",
+          }}
+        >
+          Upload financials →
+        </Link>
+        <span style={{ fontSize: "var(--t-meta)", color: "var(--ink-4)", fontStyle: "italic" }}>
+          PDF · ₹0 · processed in seconds
+        </span>
+      </div>
+    </motion.section>
+  );
+}
+
 function EmptyEvidence() {
   return (
     <div
@@ -960,6 +1033,12 @@ export default function Dashboard() {
             title="Risk Verdict"
           />
           <ScorePlate data={query.data} />
+          {query.data.data_confidence < 45 && (
+            <LowDataBanner
+              cin={query.data.cin}
+              dataConfidence={query.data.data_confidence}
+            />
+          )}
           <NarrativeCard cin={submitted} />
           <ModuleBreakdown data={query.data} />
           <EvidenceChain data={query.data} />
