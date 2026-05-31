@@ -49,13 +49,15 @@ services:
       neo4j:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8000/health"]
+      # python-slim image has no wget/curl — use stdlib urllib.
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health').status==200 else 1)\""]
       interval: 30s
       timeout: 5s
       retries: 6
       start_period: 60s
-    mem_limit: 1g
-    mem_reservation: 700m
+    # 1g OOM-killed seed_data_gov_in.py (uvicorn 465 MB + seed import 635 MB > 1 GB).
+    mem_limit: 1500m
+    mem_reservation: 900m
 
   caddy:
     image: caddy:2-alpine
