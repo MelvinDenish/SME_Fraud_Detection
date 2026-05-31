@@ -162,7 +162,7 @@ back on `/login`.
 ### Priya's verification checklist
 
 - [ ] Login as `priya@demo.in` works
-- [ ] `/search` reachable; demo CIN chips clickable
+- [ ] `/search` reachable; CIN input + Analyse button work
 - [ ] TN bulk panel renders (if Section 0.2 was run)
 - [ ] `/dashboard` resolves IL&FS to CRITICAL with full evidence chain
 - [ ] `/dashboard` resolves a TN CIN with honest `data_confidence=25`
