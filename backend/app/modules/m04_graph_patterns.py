@@ -20,6 +20,7 @@ Day-9 acceptance (PRD §10): 'All 17 patterns run. SCC finds rings on synthetic 
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from dataclasses import dataclass
 from typing import Awaitable, Callable
@@ -39,6 +40,12 @@ logger = logging.getLogger(__name__)
 
 MODULE_NAME = "m04_graph_patterns"
 
+# Hard per-pattern Cypher budget. GDS calls (SCC, WCC) can blow up on
+# adversarial graphs; without a ceiling, one pattern can hang the whole
+# /analyse request. On timeout the pattern silently returns no signals
+# instead of bubbling a 500 — the other 16 patterns still run.
+_PATTERN_TIMEOUT_SECONDS = 5.0
+
 
 # ---------------------------------------------------------------------------
 # Pattern catalogue — one row per PRD §4.4 pattern.
@@ -57,12 +64,29 @@ class PatternSpec:
 # Helpers
 # ===========================================================================
 async def _records(driver: AsyncDriver, cypher: str, **params) -> list[dict]:
-    """Run a read-only Cypher and return materialised dict rows."""
+    """Run a read-only Cypher and return materialised dict rows.
+
+    Wrapped in a 5-second timeout — GDS SCC / WCC on dense graphs can
+    hang; returning [] keeps /analyse responsive at the cost of one
+    pattern's signals. The remaining 16 patterns still execute."""
     settings = get_settings()
-    async with driver.session(database=settings.neo4j_database) as session:
-        cursor = await session.run(cypher, **params)
-        records = [r.data() async for r in cursor]
-    return records
+
+    async def _drain() -> list[dict]:
+        async with driver.session(database=settings.neo4j_database) as session:
+            cursor = await session.run(cypher, **params)
+            return [r.data() async for r in cursor]
+
+    try:
+        return await asyncio.wait_for(_drain(), timeout=_PATTERN_TIMEOUT_SECONDS)
+    except asyncio.TimeoutError:
+        # First 80 chars of the Cypher is enough to identify which pattern.
+        snippet = " ".join(cypher.split())[:80]
+        logger.warning(
+            "M4 pattern Cypher timed out after %.1fs — returning empty result. Cypher: %s…",
+            _PATTERN_TIMEOUT_SECONDS,
+            snippet,
+        )
+        return []
 
 
 def _signal(

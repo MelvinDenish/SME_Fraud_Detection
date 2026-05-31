@@ -178,13 +178,15 @@ def _render_pdf(report_dict: dict, report_uuid: str, generated_at: datetime) -> 
 @router.get("/{cin}")
 async def get_report(
     cin: CIN_PATH,
-    _user: dict = Depends(require_roles("auditor", "investigator", "admin")),
+    _user: dict = Depends(require_roles("credit_officer", "auditor", "investigator", "admin")),
 ) -> StreamingResponse:
     """Render the PRD §7.1 payload for {cin} as a PDF.
 
-    RBAC: auditor / investigator / admin only — credit_officer accounts are
-    restricted to /analyse for triage and don't get to export evidence dossiers.
-    Closes LOCAL_TEST_REPORT §4.6.
+    RBAC: all four authenticated roles can download a dossier — credit
+    officers need the PDF for their borrower compliance file, auditors for
+    sample reviews, investigators / admin for case files. The frontend
+    Login persona description (credit_officer access includes "Reports")
+    is the source of truth.
     """
     bundle = await _company_source.fetch_bundle(cin)
     if bundle is None:
