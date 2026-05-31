@@ -8,10 +8,16 @@ Matrix (5 roles × 7 routes = 35 assertions, deduplicated below):
 
     role             /analyse  /analyse/.../prov  /upload/preview  /upload/financials  /upload/gst  /upload/bank  /report
     anonymous        401       401                401              401                 401          401           401
-    credit_officer   ok        ok                 ok               ok                  ok           ok            403
+    credit_officer   ok        ok                 ok               ok                  ok           ok            ok
     investigator     ok        ok                 ok               ok                  ok           ok            ok
     auditor          ok        ok                 403              403                 403          403           ok
     admin            ok        ok                 ok               ok                  ok           ok            ok
+
+Note: credit_officer was previously forbidden on /report but the
+Login.tsx persona description advertises Reports access — loan officers
+need the PDF for their borrower compliance file, which is the real
+workflow the persona was modelled on. report.py and this matrix were
+aligned on that contract.
 
 `ok` means non-401 and non-403 — the test does not care whether the
 underlying handler returns 200/404/422; it cares only that the role
@@ -48,7 +54,7 @@ FORBIDDEN_ROLES = {
     "POST /upload/financials/{cin}": {"auditor"},
     "POST /upload/gst/{cin}": {"auditor"},
     "POST /upload/bank/{cin}": {"auditor"},
-    "GET /report/{cin}": {"credit_officer"},
+    "GET /report/{cin}": set(),
 }
 
 
