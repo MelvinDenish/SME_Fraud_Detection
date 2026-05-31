@@ -18,6 +18,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query
 from neo4j import AsyncDriver
 from pydantic import BaseModel, Field
+from typing import Literal
 
 from backend.app.auth.deps import get_current_user
 from backend.app.config import get_settings
@@ -28,11 +29,23 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/companies", tags=["companies"])
 
 
+# Cardinality of the data we have on file for a company. Drives the
+# Search-page colour badge so analysts know up-front whether clicking
+# through will yield a full forensic analysis or just an empty plate.
+#   complete    — ≥2 financial statements AND ≥1 director on file
+#   partial     — some financials or directors, but not both
+#   master_only — only the MCA master record (the 191k TN bulk default)
+DataQuality = Literal["complete", "partial", "master_only"]
+
+
 class CompanySummary(BaseModel):
     cin: str
     name: str | None = None
     state: str | None = None
     incorporation_year: int | None = None
+    data_quality: DataQuality = "master_only"
+    n_financials: int = 0
+    n_directors: int = 0
 
 
 class CompaniesPage(BaseModel):
@@ -40,18 +53,36 @@ class CompaniesPage(BaseModel):
     items: list[CompanySummary]
 
 
+# Cheap OPTIONAL MATCH counts — runs per page, not per company, so 25-200
+# rows fit comfortably in the query budget. Indexes on (Company.cin),
+# IS_DIRECTOR_OF, HAS_FINANCIALS are assumed (Day-1 schema).
 _LIST_CYPHER = """
 MATCH (c:Company)
 WHERE ($state IS NULL OR c.state = $state)
   AND c.incorporation_date IS NOT NULL
-RETURN c.cin AS cin,
-       c.name AS name,
-       c.state AS state,
-       c.incorporation_date AS incorporation_date
+WITH c
 ORDER BY c.incorporation_date DESC, c.cin ASC
 SKIP $offset
 LIMIT $limit
+OPTIONAL MATCH (c)-[:HAS_FINANCIALS]->(f:FinancialStatement)
+WITH c, count(DISTINCT f) AS n_financials
+OPTIONAL MATCH (c)<-[:IS_DIRECTOR_OF]-(d:Director)
+WITH c, n_financials, count(DISTINCT d) AS n_directors
+RETURN c.cin AS cin,
+       c.name AS name,
+       c.state AS state,
+       c.incorporation_date AS incorporation_date,
+       n_financials,
+       n_directors
 """
+
+
+def _classify(n_financials: int, n_directors: int) -> DataQuality:
+    if n_financials >= 2 and n_directors >= 1:
+        return "complete"
+    if n_financials >= 1 or n_directors >= 1:
+        return "partial"
+    return "master_only"
 
 _COUNT_CYPHER = """
 MATCH (c:Company)
@@ -88,10 +119,15 @@ async def list_companies(
                 year = int(inc.year)
             else:
                 year = None
+            n_fs = int(row.get("n_financials") or 0)
+            n_dir = int(row.get("n_directors") or 0)
             items.append(CompanySummary(
                 cin=row["cin"],
                 name=row.get("name"),
                 state=row.get("state"),
                 incorporation_year=year,
+                data_quality=_classify(n_fs, n_dir),
+                n_financials=n_fs,
+                n_directors=n_dir,
             ))
     return CompaniesPage(total=total, items=items)

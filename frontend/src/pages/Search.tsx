@@ -1,6 +1,41 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { api, type CompanySummary } from "../lib/api";
+import { api, type CompanySummary, type DataQuality } from "../lib/api";
+
+const QUALITY_PALETTE: Record<DataQuality, { bg: string; fg: string; label: string }> = {
+  complete:    { bg: "#15803d", fg: "#ffffff", label: "FULL DATA" },
+  partial:     { bg: "#a16207", fg: "#ffffff", label: "PARTIAL" },
+  master_only: { bg: "#6b6b6b", fg: "#ffffff", label: "MASTER ONLY" },
+};
+
+function QualityBadge({ q }: { q: DataQuality }) {
+  const p = QUALITY_PALETTE[q];
+  return (
+    <span
+      title={
+        q === "complete"
+          ? "Has financial statements + directors — full forensic analysis available"
+          : q === "partial"
+            ? "Has some directors or financials — limited analysis"
+            : "Only public master record on file — upload financials for the full analysis"
+      }
+      style={{
+        display: "inline-block",
+        background: p.bg,
+        color: p.fg,
+        fontFamily: "var(--font-body)",
+        fontWeight: 700,
+        letterSpacing: "0.14em",
+        textTransform: "uppercase",
+        fontSize: "9px",
+        padding: "2px 6px",
+        marginTop: "var(--s-2)",
+      }}
+    >
+      {p.label}
+    </span>
+  );
+}
 
 const eyebrow: React.CSSProperties = {
   fontFamily: "var(--font-body)",
@@ -220,6 +255,7 @@ export default function Search() {
                       </span>
                     )}
                   </p>
+                  <QualityBadge q={c.data_quality} />
                 </button>
               ))}
             </div>

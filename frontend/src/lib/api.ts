@@ -69,11 +69,16 @@ export interface UploadAck {
 // PRD §10 + Phase-C data.gov.in bulk — a paginated row from /companies.
 // Used by Search.tsx to render the "recently loaded" panel of real
 // MCA-registered companies seeded from the data.gov.in CSV.
+export type DataQuality = "complete" | "partial" | "master_only";
+
 export interface CompanySummary {
   cin: string;
   name: string | null;
   state: string | null;
   incorporation_year: number | null;
+  data_quality: DataQuality;
+  n_financials: number;
+  n_directors: number;
 }
 
 export interface CompaniesPage {
