@@ -32,6 +32,10 @@ RUN uv pip install --system -r pyproject.toml
 
 COPY backend ./backend
 COPY ml ./ml
+# Demo-critical assets — required at runtime for analyse / search / seeds.
+COPY scripts ./scripts
+COPY infra/seeds ./infra/seeds
+COPY data/labels ./data/labels
 
 EXPOSE 8000
 

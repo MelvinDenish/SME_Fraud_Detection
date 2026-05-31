@@ -26,14 +26,14 @@ env/
 # --- uv ---------------------------------------------------------------------
 .uv-cache/
 
-# --- ML artifacts (regenerable) --------------------------------------------
+# --- ML artifacts ----------------------------------------------------------
+# Small pretrained weights + calibration are checked in so the GHCR build
+# ships them in the image. Anything large (training caches, checkpoints, raw
+# datasets) stays ignored.
 .torch_cache/
-ml/artifacts/*.pkl
-ml/artifacts/*.pt
-ml/artifacts/*.joblib
+ml/artifacts/checkpoints/
 ml/artifacts/*.npz
 ml/artifacts/*.bin
-ml/artifacts/checkpoints/
 data/raw/
 data/interim/
 data/processed/

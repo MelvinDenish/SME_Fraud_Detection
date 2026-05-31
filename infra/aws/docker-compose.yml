@@ -45,6 +45,13 @@ services:
     env_file: .env
     expose:
       - "8000"
+    # data/raw is large + region-specific (191k TN companies, 75 MB) so it
+    # lives on the host instead of inside the image. Bootstrap downloads it
+    # from the v1-data GitHub Release into $REPO_DIR/data/raw before
+    # `docker compose up`. Mounting it read-only here survives container
+    # recreates without re-running docker cp.
+    volumes:
+      - ../../data/raw:/app/data/raw:ro
     depends_on:
       neo4j:
         condition: service_healthy

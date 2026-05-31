@@ -93,10 +93,11 @@ docker exec sentinel-g-api python scripts/seed_users.py || \
   log "WARN: seed_users.py exited non-zero. Re-run manually with: docker exec sentinel-g-api python scripts/seed_users.py"
 
 # --- 7. TN bulk seed (async background, ~30 min) -------------------------
-# Pulls the 77 MB Tamil Nadu MCA snapshot from the v1-data GitHub release,
-# copies it into the FastAPI container, and kicks off the seeder in the
-# background. Operator returns to interactive use immediately; tail the
-# log to watch progress. Skip with SEED_TN_BULK=false ./lightsail_bootstrap.sh
+# Pulls the 77 MB Tamil Nadu MCA snapshot from the v1-data GitHub release
+# onto the host. The compose file mounts $REPO_DIR/data/raw read-only into
+# the api container at /app/data/raw, so no docker cp is needed. Kicks off
+# the seeder in the background; bootstrap exits immediately.
+# Skip with SEED_TN_BULK=false ./lightsail_bootstrap.sh
 if [[ "${SEED_TN_BULK:-true}" == "true" ]]; then
   CSV_URL="https://github.com/MelvinDenish/SME_Fraud_Detection/releases/download/v1-data/TN_Companies_Master_Data.csv"
   CSV_HOST="$REPO_DIR/data/raw/data_gov_in/TN_Companies_Master_Data.csv"
@@ -112,11 +113,10 @@ if [[ "${SEED_TN_BULK:-true}" == "true" ]]; then
   fi
 
   if [[ -s "$CSV_HOST" ]]; then
-    log "copying CSV into sentinel-g-api container + kicking off async seed..."
-    docker exec sentinel-g-api mkdir -p /app/data/raw/data_gov_in
-    docker cp "$CSV_HOST" sentinel-g-api:/app/data/raw/data_gov_in/TN_Companies_Master_Data.csv
-    # nohup so the seed survives bootstrap exit; & to background it.
-    nohup docker exec sentinel-g-api python scripts/seed_data_gov_in.py --limit 200000 \
+    # Container sees the file via the data/raw volume mount declared in
+    # docker-compose.yml — no docker cp required.
+    log "kicking off async seed (container reads CSV via mounted volume)..."
+    nohup sg docker -c "docker exec sentinel-g-api python scripts/seed_data_gov_in.py --limit 200000" \
       > "$SEED_LOG" 2>&1 &
     SEED_PID=$!
     log "TN seed running in background (PID $SEED_PID, ~30 min)."
