@@ -148,16 +148,28 @@ class CarouselDirectorOverlap(BaseModel):
 
 
 class ITCCarouselSeed(BaseModel):
-    """7-node synthetic carousel ring per PRD §10 Day 6 + §14 demo."""
+    """ITC carousel ring reconstructed from public DGGI Zonal Unit press
+    release pattern (PRD §10 Day 6 + §14 demo). Real amount / zone /
+    sector / period; company names redacted by DGGI per active-
+    investigation protocol."""
 
     model_config = ConfigDict(extra="forbid")
 
     ring_id: str
-    description: str = "SYNTHETIC DATA - 7-node ITC carousel ring per PRD §14 demo"
+    description: str = ""
     gst_entities: list[RawCarouselGSTEntity]
     itc_claims: list[RawITCClaim]
     edges: list[RawClaimsITCFrom]
     director_overlap: CarouselDirectorOverlap | None = None
+    # Lineage attribution — populated from the source CBIC press release,
+    # surfaced on the /sources page. Optional so legacy fixtures still
+    # load; the weekly DGGI refresh job always writes these fields.
+    source_url: str | None = None
+    source_type: str | None = None
+    dggi_zone: str | None = None
+    redaction_status: str | None = None
+    entity_disclosure: str | None = None
+    verified_date: str | None = None
 
 
 def load_itc_carousel(path: Path | None = None) -> ITCCarouselSeed:
