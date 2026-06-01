@@ -178,6 +178,34 @@ export async function downloadReport(cin: string): Promise<{ reportId: string | 
   return { reportId, generatedAt };
 }
 
+// Public data-lineage inventory — backs the /sources page judges hit
+// without logging in. Every fraud signal traces to one of these rows.
+export type SourceStatus = "live" | "stale" | "missing" | "external";
+export type SourceType =
+  | "government_bulk"
+  | "government_scraper"
+  | "court_record"
+  | "industry_benchmark";
+
+export interface SourceInventoryItem {
+  id: string;
+  name: string;
+  url: string;
+  source_type: SourceType | string;
+  license: string;
+  description: string;
+  last_refreshed: string | null;
+  record_count: number | null;
+  status: SourceStatus | string;
+}
+
+export interface SourceInventory {
+  generated_at: string;
+  sources: SourceInventoryItem[];
+  total_sources: number;
+  total_records: number;
+}
+
 export const api = {
   health: () => getJson<{ status: string; version: string; env: string }>("/health"),
   analyse: (cin: string) => getJson<AnalyseResponse>(`/analyse/${cin}`),
@@ -198,6 +226,7 @@ export const api = {
     const qs = params.toString();
     return getJson<CompaniesPage>(`/companies${qs ? "?" + qs : ""}`);
   },
+  sources: () => getJson<SourceInventory>("/sources"),
 };
 
 // PRD §7.2 band colour palette — kept here so every page renders the same hue.

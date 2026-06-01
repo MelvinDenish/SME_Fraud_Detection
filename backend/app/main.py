@@ -10,6 +10,7 @@ from backend.app.api.analyse import router as analyse_router
 from backend.app.api.companies import router as companies_router
 from backend.app.api.narrative import router as narrative_router
 from backend.app.api.report import router as report_router
+from backend.app.api.sources import router as sources_router
 from backend.app.api.upload import router as upload_router
 from backend.app.auth.routes import router as auth_router
 from backend.app.config import get_settings
@@ -60,6 +61,7 @@ def create_app() -> FastAPI:
     app.include_router(narrative_router)
     app.include_router(upload_router)
     app.include_router(report_router)
+    app.include_router(sources_router)
 
     @app.get("/health", tags=["meta"])
     async def health() -> dict[str, str]:

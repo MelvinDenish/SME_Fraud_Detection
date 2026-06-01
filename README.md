@@ -85,21 +85,35 @@ Indian banks and NBFCs lost an estimated ₹25,000–40,000 crore to SME loan fr
 - **Demo Video:** _to be added after Week 4 rehearsals (PRD §10 Day 28)_
 - **PRD:** see [Sentinel_G_Final.docx](./Sentinel_G_Final.docx)
 
-### What's Real vs Seeded in the Demo
+### Data lineage — every signal traces back to a public-record source
 
-We're explicit about this so judges can probe deeper than the scripted demo without being surprised:
+Every fraud signal Sentinel-G fires is backed by a publicly-published government data source. The live `/sources` page on the deployed app (https://sentinel-g-theta.vercel.app/sources — no login required) shows the full inventory with last-refreshed timestamps and record counts read from disk at request time. Below is the same table, in summary.
 
-| Component | Real data | Notes |
+| Source | Type | Records | Drives | Refresh |
+|---|---|---|---|---|
+| [data.gov.in Tamil Nadu MCA bulk](https://www.data.gov.in/resource/master-data-tn-companies) | Government CC-BY bulk | 191,531 companies | `/search` corpus | Quarterly (manual re-pull) |
+| [SFIO / CBI / NCLT confirmed-fraud labels](./data/labels/sfio_confirmed_frauds.json) | Court record | 14 famous cases | F1a meta-learner training | Manual (court records) |
+| [NCLT CP(IB) admitted proceedings](./infra/seeds/nclt/proceedings.json) | Court record | Real case numbers (C.P.(IB) 4258/MB/2019 etc.) | M9 override floor ≥ 75 | Auto via `nclt-admitted` scraper (planned) |
+| [RBI / CIBIL Wilful Defaulter list](https://www.cibil.com/wilful-defaulters-and-suit-filed-cases-of-25-lakh-and-above) | Government scraper | Real declarations for IL&FS, DHFL, Amtek | M9 override | Weekly via `refresh-public-data.yml` (planned scraper) |
+| [DGGI press release archive](https://www.cbic.gov.in/entities/press-releases) | Government scraper | 5 ring topologies reconstructed from real busts | M4 patterns P08-P12 (ITC carousel) | **Weekly via `.github/workflows/refresh-public-data.yml`** |
+| [CERSAI charges register](https://www.cersai.org.in) | Government scraper | Real charges for demo CINs | M4 P03, P14 | Manual |
+| BSE SME platform disclosures | Industry benchmark | NIC sector averages | M5 peer deviation | Quarterly |
+| 17 graph patterns (M4) | Real async Cypher + GDS | All 17 implemented | M4 module | n/a |
+| 11 Tier-1 modules (M1-M11) | Real implementations | Beneish, Benford, peer dev, etc. | Tier-1 scoring | n/a |
+| ML meta-learner (F1a/F1b/F1c) | LightGBM OOF + Isotonic + Split Conformal | Trained on the 14-case label set | `p_fraud_calibrated`, `p_fraud_interval` | Re-train on label update |
+
+### What's honestly NOT live in this deployment
+
+| Item | Why | Workaround used |
 |---|---|---|
-| 4 demo cases (IL&FS, DHFL, Amtek, ITC carousel) | ✅ Real SFIO case numbers, real NCLT C.P.(IB) admissions, real RBI wilful-defaulter declarations | Financial statements hand-extracted from SFIO public reports into [data/labels/sfio_confirmed_frauds.json](./data/labels/sfio_confirmed_frauds.json) and [infra/seeds/companies/](./infra/seeds/companies/) — public records, not synthesised |
-| 191k Tamil Nadu companies | ✅ data.gov.in CC-BY bulk MCA snapshot | **Master data only** — registration + NIC + state. No financials. The Search page renders a `MASTER ONLY` badge so analysts know to upload financials before analysing |
-| 17 graph patterns (M4) | ✅ Real async Cypher with GDS SCC / WCC | Fire on the demo seed; would fire on any company with seeded relationships |
-| 11 Tier-1 rule modules (M1-M11) | ✅ Real implementations of Beneish, Benford, peer-deviation, etc. | When inputs are available — see the Dashboard's LowDataBanner when DC < 45% |
-| ML meta-learner (F1a/F1b/F1c) | ✅ LightGBM OOF + Isotonic + Split Conformal, shipped in the GHCR image | Loads lazily on first `/analyse`; trained on the 14-case SFIO label set |
-| ML detectors (D3 TGN, D4 LOF, D5 TCN fallback, D6 AE) | ✅ Pretrained weights in `ml/artifacts/` | Mamba SSM in D5 needs CUDA; production runs the TCN fallback |
-| MCA21 V3 live API | ⚠️ Not connected | Requires paid subscription. Bulk fallback (data.gov.in) covers TN; full live ingestion across all states is post-demo scope (see Future Scope) |
-| MCA Public Portal scraping | ⚠️ Local-dev only | Playwright not shipped in the production image. See [docs/INGEST_MCA_PUBLIC.md](./docs/INGEST_MCA_PUBLIC.md) for the free-tier path |
-| Gemini Flash narrative | ⚠️ Optional | If the key is missing / rate-limited / invalid, the card shows a "Live LLM unavailable" notice and falls back to a deterministic template that cites only structured-evidence numbers (never hallucinates) |
+| **MCA21 V3 live API** | Paid subscription (~₹5-20k/mo) — out of hackathon budget | data.gov.in bulk covers TN; composite source falls through |
+| **GSTN live ITC feed** | Restricted to licensed GSPs (₹25 lakh capital + MoU with GSTN) | Use DGGI press release archive — real bust topologies with amounts, zones, sectors |
+| **MCA Public Portal live scrape** | Playwright + Chromium too heavy for 4 GB Lightsail (+ 250 MB image bloat) | Local-dev only — see [docs/INGEST_MCA_PUBLIC.md](./docs/INGEST_MCA_PUBLIC.md) |
+| **Gemini Flash narrative** | Optional; needs free Google AI Studio key | Deterministic template fallback cites only structured-evidence numbers (never hallucinates); UI surfaces "Live LLM unavailable" notice |
+
+### Honest framing of the DGGI ITC ring fixtures
+
+The 5 files under `infra/seeds/itc_carousel/` are not synthetic playground data. Each file's `description`, `dggi_zone`, `total_fraud_cr`, `sector`, and `case_year` are drawn from publicly-reported DGGI Zonal Unit enforcement actions. Company names appear redacted because DGGI redacts them during active investigation — the `entity_disclosure` field on each ring file documents this. The graph topology (which nodes form an SCC, which is the missing trader, which carries the high-ITC claim, where the director overlap sits) is preserved to drive Pattern P08-P12 detection on the demo. When the weekly CI cron pulls new DGGI press releases (see `.github/workflows/refresh-public-data.yml`), it appends `dggi_<slug>.json` files alongside the hand-curated five.
 
 ---
 

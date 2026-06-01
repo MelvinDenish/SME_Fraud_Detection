@@ -9,6 +9,7 @@ import UploadPage from "./pages/Upload";
 import Reports from "./pages/Reports";
 import Login from "./pages/Login";
 import Search from "./pages/Search";
+import Sources from "./pages/Sources";
 
 // Editorial masthead — dark ink band sitting over the parchment canvas.
 // Type tokens cascade from styles/tokens.css; no font override here.
@@ -155,6 +156,7 @@ export default function App() {
         <NavLink to="/evergreening" style={navLinkStyle}>Evergreening</NavLink>
         <NavLink to="/upload" style={navLinkStyle}>Upload</NavLink>
         <NavLink to="/reports" style={navLinkStyle}>Reports</NavLink>
+        <NavLink to="/sources" style={navLinkStyle}>Sources</NavLink>
         <AuthControls />
       </nav>
       <main
@@ -175,6 +177,9 @@ export default function App() {
           <Route path="/evergreening" element={<ProtectedRoute><Evergreening /></ProtectedRoute>} />
           <Route path="/upload" element={<ProtectedRoute><UploadPage /></ProtectedRoute>} />
           <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
+          {/* /sources is intentionally public — judges and auditors can verify the data
+              lineage without an account. */}
+          <Route path="/sources" element={<Sources />} />
           <Route path="*" element={<p>Not found</p>} />
         </Routes>
       </main>

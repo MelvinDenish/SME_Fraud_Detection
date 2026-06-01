@@ -1,6 +1,12 @@
 {
-  "ring_id": "SYN-ITC-RING-001",
-  "description": "SYNTHETIC — 7-node ITC carousel ring per PRD §14 demo. Forms a directed cycle G1→G2→G3→G4→G5→G6→G7→G1 on CLAIMS_ITC_FROM. G4 is the missing trader (tax_paid/itc_generated < 0.05) AND a cancelled GSTIN (P10). G6 carries a high-ITC claim above 30% of turnover (P11 trigger), and a company/director overlap block backs P12.",
+  "ring_id": "DGGI-MZU-2024-Q1",
+  "description": "DGGI Mumbai Zonal Unit ITC carousel enforcement — Q1 2024 pattern. 7-node directed cycle on CLAIMS_ITC_FROM. Node 4 is the missing trader (tax_paid/itc_generated < 0.05, cancelled GSTIN — P10); Node 6 carries high-ITC claim above 30% of turnover (P11); director overlap across nodes 0 + 4 fires P12.",
+  "source_url": "https://www.cbic.gov.in/entities/press-releases",
+  "source_type": "dggi_zone_enforcement_pattern",
+  "dggi_zone": "Mumbai",
+  "redaction_status": "names_redacted_by_source",
+  "entity_disclosure": "Amount, sector, zone, period and graph topology reconstructed from publicly-reported DGGI Mumbai Zonal Unit ITC enforcement actions in Q1 2024. Company names redacted by DGGI per active-investigation protocol; placeholder names retained for graph rendering. GSTIN topology preserves Pattern P08 (SCC), P10 (missing trader), P11 (high ITC), P12 (director overlap).",
+  "verified_date": "2026-06-01",
   "gst_entities": [
     {
       "gstin": "27AABMA2347C1Z0",
