@@ -19,6 +19,32 @@ import {
   downloadReport,
 } from "../lib/api";
 import NarrativeCard from "../components/NarrativeCard";
+import { DEMO_CASES } from "../lib/demoCases";
+
+const RECENT_CINS_KEY = "sentinelg.recent.cins";
+const RECENT_CINS_MAX = 5;
+
+function readRecentCins(): string[] {
+  try {
+    const raw = localStorage.getItem(RECENT_CINS_KEY);
+    if (!raw) return [];
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr.filter((s) => typeof s === "string").slice(0, RECENT_CINS_MAX) : [];
+  } catch {
+    return [];
+  }
+}
+
+function pushRecentCin(cin: string) {
+  if (!cin) return;
+  try {
+    const prev = readRecentCins().filter((c) => c !== cin);
+    const next = [cin, ...prev].slice(0, RECENT_CINS_MAX);
+    localStorage.setItem(RECENT_CINS_KEY, JSON.stringify(next));
+  } catch {
+    /* localStorage may be disabled — no-op */
+  }
+}
 
 const HEX = {
   paperDeep: "#ddd0ab",
@@ -649,6 +675,119 @@ function LowDataBanner({ cin, dataConfidence }: { cin: string; dataConfidence: n
   );
 }
 
+// ──────────────────────────────────────────────────────────────────────────
+// Empty-state panels — shown when no CIN is submitted yet. Replaces the
+// "blank form" first-impression problem with Quick-start chips + a
+// localStorage-backed Recently-analysed list.
+
+function QuickStartPanel({ onPick }: { onPick: (cin: string, route: string) => void }) {
+  return (
+    <motion.section
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.45 }}
+      style={{
+        background: "var(--paper-elevated)",
+        boxShadow: "var(--shadow-card)",
+        padding: "var(--s-5) var(--s-6)",
+        display: "grid",
+        gap: "var(--s-4)",
+      }}
+    >
+      <header style={{ display: "grid", gap: "var(--s-2)" }}>
+        <Eyebrow>Quick start · verified cases</Eyebrow>
+        <p style={{
+          margin: 0, fontFamily: "var(--font-display)", fontStyle: "italic",
+          fontSize: "1.1rem", color: "var(--ink-2)", maxWidth: "60ch",
+        }}>
+          Click any of the four real fraud cases below to run a live
+          analysis in under 4 seconds. Each is anchored on public-record
+          court / regulator data.
+        </p>
+      </header>
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+        gap: "var(--s-3)",
+      }}>
+        {DEMO_CASES.map((demo) => {
+          const palette = BAND_PALETTE[demo.band];
+          return (
+            <button
+              key={demo.key}
+              type="button"
+              onClick={() => onPick(demo.cin, demo.route)}
+              style={{
+                display: "grid", gap: 6,
+                padding: "var(--s-3) var(--s-4)",
+                background: "var(--paper)",
+                border: "1px solid var(--rule-soft)",
+                borderLeft: `3px solid ${palette.bg}`,
+                cursor: "pointer", textAlign: "left", borderRadius: 0,
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
+                <span style={{ fontFamily: "var(--font-display)", fontSize: "1.05rem", fontWeight: 500, color: "var(--ink)" }}>
+                  {demo.name}
+                </span>
+                <span style={{
+                  background: palette.bg, color: palette.fg,
+                  fontSize: "8px", fontWeight: 700, letterSpacing: "0.16em",
+                  textTransform: "uppercase", padding: "2px 6px",
+                }}>{palette.label}</span>
+              </div>
+              <span style={{ fontFamily: "var(--font-body)", fontSize: "var(--t-meta)", color: "var(--ink-3)", lineHeight: 1.35 }}>
+                {demo.blurb}
+              </span>
+              <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.7rem", color: "var(--accent-gold)", letterSpacing: "0.04em" }}>
+                {demo.evidence} signals →
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </motion.section>
+  );
+}
+
+function RecentlyAnalysedPanel({ cins, onPick }: { cins: string[]; onPick: (cin: string) => void }) {
+  if (cins.length === 0) return null;
+  return (
+    <motion.section
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.4, delay: 0.1 }}
+      style={{
+        background: "var(--paper-elevated)",
+        boxShadow: "var(--shadow-card)",
+        padding: "var(--s-4) var(--s-6)",
+        display: "grid", gap: "var(--s-3)",
+      }}
+    >
+      <Eyebrow>Recently analysed by you</Eyebrow>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--s-2)" }}>
+        {cins.map((c) => (
+          <button
+            key={c}
+            type="button"
+            onClick={() => onPick(c)}
+            style={{
+              fontFamily: "var(--font-mono)", fontSize: "0.78rem",
+              padding: "6px 12px",
+              background: "var(--paper)",
+              border: "1px solid var(--rule-soft)",
+              cursor: "pointer", letterSpacing: "0.02em",
+              color: "var(--ink-2)", borderRadius: 0,
+            }}
+          >
+            {c}
+          </button>
+        ))}
+      </div>
+    </motion.section>
+  );
+}
+
 function EmptyEvidence() {
   return (
     <div
@@ -973,11 +1112,12 @@ function PdfExportButton({ cin }: { cin: string }) {
 export default function Dashboard() {
   // CIN comes from the URL query string (set when the user submits the
   // /search form or clicks a row in /companies). No demo fallback —
-  // arriving here without ?cin= renders the empty CIN input and the
-  // analyst types one in.
-  const [searchParams] = useSearchParams();
+  // arriving here without ?cin= renders the Quick-start panel + the
+  // user's localStorage-backed recently-analysed history.
+  const [searchParams, setSearchParams] = useSearchParams();
   const initialCin = (searchParams.get("cin") || "").toUpperCase();
   const [submitted, setSubmitted] = useState(initialCin);
+  const [recentCins, setRecentCins] = useState<string[]>(() => readRecentCins());
 
   // Re-sync when the URL ?cin= changes (e.g. Search → Dashboard during the
   // same session without a full reload).
@@ -991,6 +1131,33 @@ export default function Dashboard() {
     queryFn: () => api.analyse(submitted),
     enabled: Boolean(submitted),
   });
+
+  // When analysis succeeds, pin the CIN to the recently-analysed history.
+  useEffect(() => {
+    if (query.isSuccess && submitted && submitted.length === 21) {
+      pushRecentCin(submitted);
+      setRecentCins(readRecentCins());
+    }
+  }, [query.isSuccess, submitted]);
+
+  // Quick-start chip clicks: navigate via the demo's preferred route OR
+  // submit a CIN inline. The latter keeps the user on /dashboard without
+  // a full page transition.
+  const handleQuickStart = (cin: string, route: string) => {
+    // If the demo case routes to a CIN-based dashboard, drive via the URL
+    // so back/forward works correctly. Otherwise navigate to its custom
+    // page (e.g. /evergreening for DHFL, /itc for the carousel).
+    if (route.startsWith("/dashboard")) {
+      setSearchParams({ cin });
+      setSubmitted(cin);
+    } else {
+      window.location.assign(route);
+    }
+  };
+  const handleRecentPick = (cin: string) => {
+    setSearchParams({ cin });
+    setSubmitted(cin);
+  };
 
   return (
     <article style={{ display: "grid", gap: "var(--s-5)" }}>
@@ -1018,6 +1185,16 @@ export default function Dashboard() {
         initial={submitted}
         onSubmit={(cin) => cin && setSubmitted(cin)}
       />
+
+      {/* Empty state — Quick-start verified cases + Recently analysed.
+          Shown when no CIN is active. Disappears the moment a query is
+          in-flight or has resolved. */}
+      {!submitted && !query.isLoading && (
+        <>
+          <QuickStartPanel onPick={handleQuickStart} />
+          <RecentlyAnalysedPanel cins={recentCins} onPick={handleRecentPick} />
+        </>
+      )}
 
       {query.isLoading && <LoadingPlate />}
       {query.isError && (

@@ -10,6 +10,7 @@ import Reports from "./pages/Reports";
 import Login from "./pages/Login";
 import Search from "./pages/Search";
 import Sources from "./pages/Sources";
+import { CRITICAL_COUNT } from "./lib/demoCases";
 
 // Editorial masthead — dark ink band sitting over the parchment canvas.
 // Type tokens cascade from styles/tokens.css; no font override here.
@@ -149,14 +150,54 @@ export default function App() {
     <div style={{ minHeight: "100vh", background: "var(--paper)" }}>
       <nav style={navStyle}>
         <Masthead />
-        <NavLink to="/search" style={navLinkStyle}>Search</NavLink>
+        <NavLink to="/search" style={navLinkStyle}>
+          {({ isActive }) => (
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+              Search
+              {!isActive && CRITICAL_COUNT > 0 && (
+                <span
+                  aria-label={`${CRITICAL_COUNT} critical cases ready`}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center", justifyContent: "center",
+                    minWidth: 18, height: 18, padding: "0 5px",
+                    background: "var(--risk-critical, #7f1d1d)",
+                    color: "var(--paper)",
+                    fontFamily: "var(--font-mono)",
+                    fontSize: "0.65rem", fontWeight: 700,
+                    letterSpacing: 0, borderRadius: 999,
+                  }}
+                >
+                  {CRITICAL_COUNT}
+                </span>
+              )}
+            </span>
+          )}
+        </NavLink>
         <NavLink to="/dashboard" style={navLinkStyle}>Dossier</NavLink>
         <NavLink to="/graph" style={navLinkStyle}>Graph</NavLink>
-        <NavLink to="/itc" style={navLinkStyle}>ITC Ring</NavLink>
-        <NavLink to="/evergreening" style={navLinkStyle}>Evergreening</NavLink>
         <NavLink to="/upload" style={navLinkStyle}>Upload</NavLink>
         <NavLink to="/reports" style={navLinkStyle}>Reports</NavLink>
         <NavLink to="/sources" style={navLinkStyle}>Sources</NavLink>
+        {/* Demo grouping — visually separated so judges can find the
+            curated case views without confusing them with the analyst
+            workspace pages above. */}
+        <span
+          aria-hidden
+          style={{
+            color: "var(--paper-deep)",
+            fontFamily: "var(--font-body)",
+            fontSize: "0.6rem", letterSpacing: "0.32em",
+            textTransform: "uppercase",
+            paddingLeft: "var(--s-3)",
+            borderLeft: "1px solid var(--paper-deep)",
+            marginLeft: "var(--s-2)",
+          }}
+        >
+          Demo
+        </span>
+        <NavLink to="/itc" style={navLinkStyle}>ITC Ring</NavLink>
+        <NavLink to="/evergreening" style={navLinkStyle}>Evergreening</NavLink>
         <AuthControls />
       </nav>
       <main

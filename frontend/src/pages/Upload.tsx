@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { UploadAck, UploadPreview, api } from "../lib/api";
+import { UploadAck, UploadPreview, api, BAND_PALETTE } from "../lib/api";
+import { DEMO_CASES } from "../lib/demoCases";
 
 const eyebrow: React.CSSProperties = {
   fontFamily: "var(--font-body)",
@@ -388,12 +389,58 @@ export default function UploadPage() {
         </p>
       </header>
 
+      {/* Demo-case chips — shown when no CIN is typed. Click any to pre-fill
+          the target so a new user immediately sees what the upload flow
+          does without having to hunt for a valid CIN. Hidden once typing
+          begins so the analyst's input remains the source of truth. */}
+      {cin.length === 0 && (
+        <article style={{ ...cardStyle, borderLeft: "4px solid var(--accent-gold)" }}>
+          <p style={{ ...eyebrow, margin: 0, marginBottom: "var(--s-2)" }}>
+            Start with a verified case
+          </p>
+          <p style={{
+            color: "var(--ink-3)", margin: 0, marginBottom: "var(--s-4)",
+            fontFamily: "var(--font-body)", fontSize: "var(--t-meta)",
+            maxWidth: "62ch", lineHeight: 1.55,
+          }}>
+            Click any case below to pre-fill its CIN — the three upload
+            forms unlock and you can drop a real AOC-4 / GST / bank file
+            to see how the overlay bumps the DataConfidence ladder.
+          </p>
+          <div style={{ display: "flex", gap: "var(--s-2)", flexWrap: "wrap" }}>
+            {DEMO_CASES.filter((d) => /^[LU]/.test(d.cin)).map((d) => {
+              const palette = BAND_PALETTE[d.band];
+              return (
+                <button
+                  key={d.key}
+                  type="button"
+                  onClick={() => setCin(d.cin)}
+                  style={{
+                    display: "inline-flex", alignItems: "baseline", gap: 8,
+                    padding: "var(--s-2) var(--s-4)",
+                    background: "var(--paper)",
+                    border: "1px solid var(--rule-soft)",
+                    borderLeft: `3px solid ${palette.bg}`,
+                    cursor: "pointer", borderRadius: 0,
+                    fontFamily: "var(--font-body)",
+                  }}
+                >
+                  <span style={{ fontWeight: 700, color: "var(--ink)", fontSize: "0.9rem" }}>{d.name}</span>
+                  <span style={{ fontFamily: "var(--font-mono)", color: "var(--ink-3)", fontSize: "0.72rem" }}>{d.cin}</span>
+                </button>
+              );
+            })}
+          </div>
+        </article>
+      )}
+
       <article style={cardStyle}>
         <p style={{ ...eyebrow, margin: 0, marginBottom: "var(--s-3)" }}>Target CIN</p>
         <input
           id="upload-cin"
           value={cin}
           onChange={(e) => setCin(e.target.value.trim().toUpperCase())}
+          placeholder="Paste a CIN or click a verified case above"
           style={{ ...inputStyle, width: "100%", boxSizing: "border-box" }}
         />
       </article>

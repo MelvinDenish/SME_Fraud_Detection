@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { HttpError, downloadReport } from "../lib/api";
+import { HttpError, downloadReport, BAND_PALETTE } from "../lib/api";
+import { DEMO_CASES } from "../lib/demoCases";
 
 const eyebrow: React.CSSProperties = {
   fontFamily: "var(--font-body)",
@@ -123,6 +124,53 @@ export default function Reports() {
         </p>
       </header>
 
+      {/* Quick-render chips — shown when no past reports exist. One click
+          downloads the dossier for a verified case so a new analyst sees
+          the PDF format immediately. */}
+      {log.length === 0 && (
+        <article style={{ ...cardStyle, borderLeft: "4px solid var(--accent-gold)" }}>
+          <p style={{ ...eyebrow, margin: 0, marginBottom: "var(--s-2)" }}>
+            First dossier · click to render
+          </p>
+          <p style={{
+            color: "var(--ink-3)", margin: 0, marginBottom: "var(--s-4)",
+            fontFamily: "var(--font-body)", fontSize: "var(--t-meta)",
+            maxWidth: "62ch", lineHeight: 1.55,
+          }}>
+            One click renders the dual-output PDF — score, calibrated
+            probability, evidence chain, signed disclaimer. Each case
+            below produces a 6-8 page dossier.
+          </p>
+          <div style={{ display: "flex", gap: "var(--s-2)", flexWrap: "wrap" }}>
+            {DEMO_CASES.filter((d) => /^[LU]/.test(d.cin)).map((d) => {
+              const palette = BAND_PALETTE[d.band];
+              return (
+                <button
+                  key={d.key}
+                  type="button"
+                  disabled={busy}
+                  onClick={() => trigger(d.cin)}
+                  style={{
+                    display: "inline-flex", alignItems: "baseline", gap: 8,
+                    padding: "var(--s-2) var(--s-4)",
+                    background: "var(--paper)",
+                    border: "1px solid var(--rule-soft)",
+                    borderLeft: `3px solid ${palette.bg}`,
+                    cursor: busy ? "wait" : "pointer", borderRadius: 0,
+                    fontFamily: "var(--font-body)",
+                  }}
+                >
+                  <span style={{ fontWeight: 700, color: "var(--ink)", fontSize: "0.9rem" }}>{d.name}</span>
+                  <span style={{ fontFamily: "var(--font-mono)", color: "var(--ink-3)", fontSize: "0.72rem" }}>
+                    {busy ? "rendering…" : `${d.evidence} signals → PDF`}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </article>
+      )}
+
       <article style={cardStyle}>
         <p style={{ ...eyebrow, margin: 0, marginBottom: "var(--s-4)" }}>Render</p>
         <form
@@ -133,7 +181,7 @@ export default function Reports() {
             id="report-cin"
             value={cin}
             onChange={(e) => setCin(e.target.value)}
-            placeholder="CIN"
+            placeholder="Paste a CIN or use a verified-case chip above"
             aria-label="CIN to render"
             style={inputStyle}
           />

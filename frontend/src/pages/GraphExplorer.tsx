@@ -10,7 +10,8 @@ import {
   forceSimulation,
   type SimulationNodeDatum,
 } from "d3-force";
-import { SEVERITY_PALETTE, api } from "../lib/api";
+import { BAND_PALETTE, SEVERITY_PALETTE, api } from "../lib/api";
+import { DEMO_CASES } from "../lib/demoCases";
 
 interface GraphNode extends SimulationNodeDatum {
   id: string;
@@ -311,6 +312,65 @@ export default function GraphExplorer() {
           />
         </div>
       </form>
+
+      {/* Empty state — when no CIN is typed yet, show demo-case chips so
+          the analyst immediately understands what the graph view does
+          without having to leave the page. Disappears once a query
+          starts (loading) or returns data. */}
+      {!cin && !query.isLoading && !query.data && (
+        <section
+          style={{
+            background: "var(--paper-elevated)",
+            boxShadow: "var(--shadow-card)",
+            padding: "var(--s-5) var(--s-6)",
+            display: "grid",
+            gap: "var(--s-3)",
+            borderLeft: "4px solid var(--accent-gold)",
+          }}
+        >
+          <Eyebrow>Open the graph for a verified case</Eyebrow>
+          <p
+            style={{
+              fontFamily: "var(--font-display)",
+              fontStyle: "italic",
+              color: "var(--ink-2)",
+              fontSize: "1.05rem",
+              margin: 0,
+              maxWidth: "62ch",
+            }}
+          >
+            Pick any case below to render its full provenance graph —
+            company at the centre, warning signs by severity, and the
+            exact source records that triggered each one.
+          </p>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--s-2)", marginTop: "var(--s-2)" }}>
+            {DEMO_CASES.filter((d) => /^[LU]/.test(d.cin)).map((d) => {
+              const palette = BAND_PALETTE[d.band];
+              return (
+                <button
+                  key={d.key}
+                  type="button"
+                  onClick={() => setCin(d.cin)}
+                  style={{
+                    display: "inline-flex", alignItems: "baseline", gap: 8,
+                    padding: "var(--s-2) var(--s-4)",
+                    background: "var(--paper)",
+                    border: "1px solid var(--rule-soft)",
+                    borderLeft: `3px solid ${palette.bg}`,
+                    cursor: "pointer", borderRadius: 0,
+                    fontFamily: "var(--font-body)",
+                  }}
+                >
+                  <span style={{ fontWeight: 700, color: "var(--ink)", fontSize: "0.9rem" }}>{d.name}</span>
+                  <span style={{ fontFamily: "var(--font-mono)", color: "var(--ink-3)", fontSize: "0.72rem" }}>
+                    {d.evidence} signals →
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {query.isLoading && <LoadingCanvas />}
       {query.isError && (

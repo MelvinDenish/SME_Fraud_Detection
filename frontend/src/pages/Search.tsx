@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { api, type CompanySummary, type DataQuality } from "../lib/api";
+import { api, type CompanySummary, type DataQuality, BAND_PALETTE } from "../lib/api";
+import { DEMO_CASES, type DemoCase } from "../lib/demoCases";
 
 const QUALITY_PALETTE: Record<DataQuality, { bg: string; fg: string; label: string }> = {
   complete:    { bg: "#15803d", fg: "#ffffff", label: "FULL DATA" },
@@ -97,6 +98,92 @@ const chipBtn: React.CSSProperties = {
 
 const CIN_REGEX = /^[LU]\d{5}[A-Z]{2}\d{4}[A-Z]{3}\d{6}$/;
 
+// Verified-case tile — large, click-through card for the 4 real fraud cases
+// the engine catches as CRITICAL/HIGH. Sits above the manual CIN input so
+// a new user never sees an "empty form" experience.
+function VerifiedCaseTile({ demo, onActivate }: { demo: DemoCase; onActivate: () => void }) {
+  const palette = BAND_PALETTE[demo.band];
+  return (
+    <button
+      type="button"
+      onClick={onActivate}
+      style={{
+        display: "grid",
+        gap: "var(--s-3)",
+        padding: "var(--s-5) var(--s-5) var(--s-4)",
+        background: "var(--paper-elevated)",
+        border: "1px solid var(--rule)",
+        borderLeft: `4px solid ${palette.bg}`,
+        boxShadow: "var(--shadow-card)",
+        cursor: "pointer",
+        textAlign: "left",
+        font: "inherit",
+        color: "inherit",
+        borderRadius: 0,
+        transition: "transform 120ms ease, box-shadow 120ms ease",
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.transform = "translateY(-2px)";
+        e.currentTarget.style.boxShadow = "0 6px 22px rgba(0,0,0,0.10)";
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.transform = "translateY(0)";
+        e.currentTarget.style.boxShadow = "var(--shadow-card)";
+      }}
+    >
+      <header style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "var(--s-3)" }}>
+        <span style={{
+          fontFamily: "var(--font-display)", fontWeight: 500,
+          fontSize: "1.5rem", color: "var(--ink)", lineHeight: 1.1,
+        }}>{demo.name}</span>
+        <span style={{
+          background: palette.bg, color: palette.fg,
+          fontFamily: "var(--font-body)", fontWeight: 700,
+          letterSpacing: "0.16em", textTransform: "uppercase",
+          fontSize: "9px", padding: "3px 8px", whiteSpace: "nowrap",
+          border: "1px solid rgba(0,0,0,0.18)",
+        }}>{palette.label}</span>
+      </header>
+
+      <p style={{
+        margin: 0, fontFamily: "var(--font-display)", fontStyle: "italic",
+        fontSize: "1rem", color: "var(--ink-2)", lineHeight: 1.4,
+      }}>{demo.blurb}</p>
+
+      <div style={{
+        display: "flex", gap: "var(--s-3)", alignItems: "baseline",
+        marginTop: "var(--s-2)", flexWrap: "wrap",
+      }}>
+        <span style={{
+          fontFamily: "var(--font-mono)", fontSize: "0.78rem",
+          color: "var(--accent-gold)", fontWeight: 700,
+          letterSpacing: "0.06em",
+        }}>{demo.evidence} signals</span>
+        <span style={{
+          fontFamily: "var(--font-body)", fontSize: "var(--t-meta)",
+          color: "var(--ink-4)", letterSpacing: "0.02em",
+        }}>· {demo.source}</span>
+      </div>
+
+      <div style={{
+        display: "flex", justifyContent: "space-between", alignItems: "baseline",
+        marginTop: "var(--s-3)",
+        borderTop: "1px solid var(--rule-soft)", paddingTop: "var(--s-3)",
+      }}>
+        <span style={{
+          fontFamily: "var(--font-mono)", fontSize: "0.75rem",
+          color: "var(--ink-3)",
+        }}>{demo.cin}</span>
+        <span style={{
+          fontFamily: "var(--font-body)", fontWeight: 700,
+          fontSize: "0.78rem", letterSpacing: "0.18em",
+          textTransform: "uppercase", color: "var(--accent-gold)",
+        }}>View dossier →</span>
+      </div>
+    </button>
+  );
+}
+
 export default function Search() {
   const navigate = useNavigate();
   const [cin, setCin] = useState("");
@@ -164,7 +251,48 @@ export default function Search() {
         </p>
       </header>
 
+      {/* ── Verified cases panel ─────────────────────────────────────
+          The headline surface for any new user. Four real fraud cases
+          the engine catches as CRITICAL/HIGH, with click-through to
+          their respective dossier route. Sits ABOVE the manual CIN
+          input so a judge never lands on an empty form. */}
+      <section>
+        <header style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "var(--s-4)", gap: "var(--s-4)" }}>
+          <div>
+            <p style={{ ...eyebrow, margin: 0, marginBottom: "var(--s-2)" }}>
+              Verified fraud cases · click any tile
+            </p>
+            <p style={{
+              color: "var(--ink-3)", margin: 0,
+              fontFamily: "var(--font-body)", fontSize: "var(--t-meta)",
+              maxWidth: "60ch", lineHeight: 1.55,
+            }}>
+              Each case below is anchored on real public-record data — SFIO
+              investigation reports, NCLT CIRP admissions, RBI wilful
+              defaulter declarations, DGGI Zonal Unit busts. Click any tile
+              to run the live analysis.
+            </p>
+          </div>
+        </header>
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+          gap: "var(--s-4)",
+        }}>
+          {DEMO_CASES.map((demo) => (
+            <VerifiedCaseTile
+              key={demo.key}
+              demo={demo}
+              onActivate={() => navigate(demo.route)}
+            />
+          ))}
+        </div>
+      </section>
+
       <article style={cardStyle}>
+        <p style={{ ...eyebrow, margin: 0, marginBottom: "var(--s-3)", color: "var(--ink-3)" }}>
+          Or analyse any CIN
+        </p>
         <form
           onSubmit={(e) => { e.preventDefault(); open(cin); }}
           style={{ display: "flex", gap: "var(--s-3)", alignItems: "stretch" }}
@@ -197,9 +325,9 @@ export default function Search() {
       </article>
 
       {(tnLoading || (tnCompanies && tnCompanies.length > 0)) && (
-        <section>
-          <p style={{ ...eyebrow, margin: 0, marginBottom: "var(--s-2)" }}>
-            Tamil Nadu · live MCA registry
+        <section style={{ opacity: 0.85 }}>
+          <p style={{ ...eyebrow, margin: 0, marginBottom: "var(--s-2)", color: "var(--ink-4)" }}>
+            Newly registered · no analysis yet
           </p>
           <p style={{
             color: "var(--ink-3)",
@@ -210,10 +338,12 @@ export default function Search() {
             lineHeight: 1.55,
             maxWidth: "60ch",
           }}>
-            Real Tamil Nadu companies loaded from the data.gov.in bulk MCA
-            snapshot ({tnTotal.toLocaleString()} in graph; showing
-            {" "}{tnCompanies?.length ?? 0} newest registrations). Click any
-            row to run the full Sentinel-G analysis.
+            {tnTotal.toLocaleString()} Tamil Nadu companies from the
+            data.gov.in bulk MCA snapshot (showing {tnCompanies?.length ?? 0}{" "}
+            newest registrations). These companies have only public master
+            data on file — upload financials via <em>/upload</em> to enable
+            the full fraud analysis, or run the M0 shell-cluster atlas to
+            find mass-incorporation patterns across the corpus.
           </p>
           {tnLoading && (
             <p style={{
