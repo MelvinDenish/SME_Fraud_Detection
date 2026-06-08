@@ -19,7 +19,9 @@ import {
   downloadReport,
 } from "../lib/api";
 import NarrativeCard from "../components/NarrativeCard";
+import OnboardingHint from "../components/OnboardingHint";
 import { DEMO_CASES } from "../lib/demoCases";
+import type { TrendingCluster, TrendingFeed } from "../lib/api";
 
 const RECENT_CINS_KEY = "sentinelg.recent.cins";
 const RECENT_CINS_MAX = 5;
@@ -750,6 +752,109 @@ function QuickStartPanel({ onPick }: { onPick: (cin: string, route: string) => v
   );
 }
 
+// Today's findings — top 3 newest shell clusters + a stats banner.
+// Fetches /trending on mount; gracefully no-ops if the endpoint is
+// missing (older backend deploys), so the page never breaks.
+function TodaysFindingsPanel() {
+  const [feed, setFeed] = useState<TrendingFeed | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    api.trending()
+      .then((d) => { if (!cancelled) setFeed(d); })
+      .catch((e) => { if (!cancelled) setError((e as Error).message); });
+    return () => { cancelled = true; };
+  }, []);
+
+  if (error || !feed) return null;
+
+  const clusters = feed.newest_shell_clusters.slice(0, 3);
+  return (
+    <motion.section
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.4, delay: 0.15 }}
+      style={{
+        background: "var(--paper-elevated)",
+        boxShadow: "var(--shadow-card)",
+        padding: "var(--s-5) var(--s-6)",
+        display: "grid",
+        gap: "var(--s-4)",
+      }}
+    >
+      <header style={{ display: "grid", gap: "var(--s-2)" }}>
+        <Eyebrow>Today's findings · Shell Atlas (M0)</Eyebrow>
+        <div style={{
+          display: "flex", flexWrap: "wrap", gap: "var(--s-5)",
+          fontSize: "var(--t-meta)", color: "var(--ink-3)",
+          fontFamily: "var(--font-mono)",
+        }}>
+          <span><strong style={{ color: "var(--ink)" }}>{feed.stats.total_shell_clusters.toLocaleString()}</strong> shell clusters</span>
+          <span><strong style={{ color: "var(--ink)" }}>{feed.stats.total_flagged_cins.toLocaleString()}</strong> flagged CINs</span>
+          <span><strong style={{ color: "var(--ink)" }}>{feed.stats.rows_in_tn_corpus.toLocaleString()}</strong> rows in TN corpus</span>
+        </div>
+      </header>
+      {clusters.length === 0 ? (
+        <p style={{
+          fontFamily: "var(--font-display)", fontStyle: "italic",
+          color: "var(--ink-3)", margin: 0, fontSize: "1rem",
+        }}>
+          Atlas is still building on the backend — the first /trending call
+          warms the cache, subsequent loads will populate this panel.
+        </p>
+      ) : (
+        <div style={{ display: "grid", gap: "var(--s-3)" }}>
+          {clusters.map((c) => (
+            <TrendingClusterRow key={c.cluster_id} c={c} />
+          ))}
+        </div>
+      )}
+      <Link
+        to="/shells"
+        style={{
+          fontFamily: "var(--font-body)", fontSize: "var(--t-eyebrow)",
+          letterSpacing: "0.18em", textTransform: "uppercase",
+          fontWeight: 700, color: "var(--accent-gold)",
+          textDecoration: "none", borderBottom: "1px solid var(--accent-gold)",
+          paddingBottom: 1, justifySelf: "start",
+        }}
+      >
+        Browse the full Shell Atlas →
+      </Link>
+    </motion.section>
+  );
+}
+
+function TrendingClusterRow({ c }: { c: TrendingCluster }) {
+  return (
+    <div style={{
+      display: "grid", gridTemplateColumns: "auto 1fr auto", gap: "var(--s-4)",
+      alignItems: "center", padding: "var(--s-3) var(--s-4)",
+      background: "var(--paper)", borderLeft: "3px solid var(--accent-gold)",
+    }}>
+      <span style={{
+        fontFamily: "var(--font-mono)", fontWeight: 700,
+        fontSize: "1.05rem", color: "var(--ink)",
+      }}>{c.size}</span>
+      <div style={{ display: "grid", gap: 2 }}>
+        <span style={{
+          fontFamily: "var(--font-body)", fontWeight: 600, color: "var(--ink-2)",
+          fontSize: "var(--t-meta)",
+        }}>{c.signal_type.replace(/_/g, " ")}{c.state ? ` · ${c.state}` : ""}</span>
+        <span style={{
+          fontFamily: "var(--font-mono)", fontSize: "var(--t-eyebrow)",
+          color: "var(--ink-3)", letterSpacing: "0.02em",
+        }}>{c.anchor_value.slice(0, 70)}{c.anchor_value.length > 70 ? "…" : ""}</span>
+      </div>
+      <span style={{
+        fontFamily: "var(--font-mono)", fontSize: "var(--t-meta)",
+        color: "var(--ink-4)",
+      }}>{c.cluster_id}</span>
+    </div>
+  );
+}
+
 function RecentlyAnalysedPanel({ cins, onPick }: { cins: string[]; onPick: (cin: string) => void }) {
   if (cins.length === 0) return null;
   return (
@@ -1161,6 +1266,7 @@ export default function Dashboard() {
 
   return (
     <article style={{ display: "grid", gap: "var(--s-5)" }}>
+      <OnboardingHint />
       {/* Masthead */}
       <header style={{ display: "grid", gap: "var(--s-3)" }}>
         <Eyebrow>Sentinel-G · Investigation Desk · Vol. 1</Eyebrow>
@@ -1192,6 +1298,7 @@ export default function Dashboard() {
       {!submitted && !query.isLoading && (
         <>
           <QuickStartPanel onPick={handleQuickStart} />
+          <TodaysFindingsPanel />
           <RecentlyAnalysedPanel cins={recentCins} onPick={handleRecentPick} />
         </>
       )}

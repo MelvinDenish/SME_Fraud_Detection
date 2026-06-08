@@ -227,7 +227,45 @@ export const api = {
     return getJson<CompaniesPage>(`/companies${qs ? "?" + qs : ""}`);
   },
   sources: () => getJson<SourceInventory>("/sources"),
+  trending: () => getJson<TrendingFeed>("/trending"),
 };
+
+// Backs the Dashboard "Today's findings" panel + the masthead stats
+// banner. Mirrors backend/app/api/trending.py.
+export type RiskBandStrict = "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
+
+export interface TrendingCase {
+  cin: string;
+  name: string;
+  band: RiskBandStrict;
+  blurb: string;
+  source: string;
+  evidence: number;
+  route: string;
+}
+
+export interface TrendingCluster {
+  cluster_id: string;
+  signal_type: string;
+  size: number;
+  state: string | null;
+  anchor_value: string;
+  evidence_string: string;
+}
+
+export interface TrendingStats {
+  total_critical_cases: number;
+  total_shell_clusters: number;
+  total_flagged_cins: number;
+  rows_in_tn_corpus: number;
+}
+
+export interface TrendingFeed {
+  generated_at: string;
+  top_critical_today: TrendingCase[];
+  newest_shell_clusters: TrendingCluster[];
+  stats: TrendingStats;
+}
 
 // PRD §7.2 band colour palette — kept here so every page renders the same hue.
 export const BAND_PALETTE: Record<RiskBand, { bg: string; fg: string; label: string }> = {

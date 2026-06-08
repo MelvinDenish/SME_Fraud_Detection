@@ -116,8 +116,52 @@ export default function Sources() {
       .catch((e) => setError((e as Error).message));
   }, []);
 
+  // Compute the freshest mtime across all live sources for the sticky
+  // header. "Last refresh" gives judges a one-glance freshness signal
+  // without having to scan every row.
+  const freshest = data?.sources
+    .map((s) => s.last_refreshed)
+    .filter((v): v is string => Boolean(v))
+    .sort()
+    .at(-1) ?? null;
+
   return (
     <article style={{ display: "grid", gap: "var(--s-7)" }}>
+      {data && (
+        <div
+          style={{
+            position: "sticky",
+            top: "var(--s-3)",
+            zIndex: 5,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: "var(--s-4)",
+            padding: "var(--s-3) var(--s-5)",
+            background: "var(--paper)",
+            border: "1px solid var(--rule)",
+            borderLeft: "4px solid var(--accent-gold)",
+            boxShadow: "var(--shadow-card)",
+            fontFamily: "var(--font-mono)",
+            fontSize: "var(--t-meta)",
+            color: "var(--ink-2)",
+            flexWrap: "wrap",
+          }}
+        >
+          <span>
+            <strong style={{ color: "var(--ink)" }}>{data.total_sources}</strong> sources ·{" "}
+            <strong style={{ color: "var(--ink)" }}>{data.total_records.toLocaleString()}</strong> records on file
+          </span>
+          {freshest && (
+            <span style={{ color: "var(--ink-3)" }}>
+              freshest refresh: {timeAgo(freshest)}
+            </span>
+          )}
+          <span style={{ color: "var(--ink-4)" }}>
+            inventory generated {data.generated_at.slice(11, 19)} UTC
+          </span>
+        </div>
+      )}
       <header style={{ display: "grid", gap: "var(--s-3)" }}>
         <span style={{
           fontFamily: "var(--font-body)", fontSize: "var(--t-eyebrow)",
