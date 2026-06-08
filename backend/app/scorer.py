@@ -57,6 +57,11 @@ from backend.app.modules.m11_anomaly import (
     graph_feature_row,
 )
 from backend.app.modules.base import FraudSignal, ModuleResult, Severity, clamp_score
+from backend.app.modules.m0_master_shell_atlas import (
+    ShellCluster,
+    ShellSignalType,
+    get_atlas,
+)
 from backend.app.modules.m02_cross_statement import CrossStatementInputs
 from backend.app.modules.m06_temporal import TemporalInputs
 from backend.app.modules.m09_nclt_defaulter import (
@@ -436,6 +441,19 @@ async def score(bundle: CompanyBundle, ctx: ScoringContext) -> RiskReport:
         analytics_cache=ctx.analytics_cache,
     )
     results, meta_pred = await asyncio.gather(module_task, meta_task)
+
+    # M0 master-data shell atlas hook — for CINs in the 250k TN bulk that
+    # have no relationships / financials in Neo4j (M1-M11 all skip), the
+    # atlas surfaces shell-like patterns derivable from the master record
+    # alone: address clusters, mass-incorporation events, paper-shell
+    # capital ratios. We synthesize a ModuleResult so the existing
+    # aggregator + persistence + breakdown handlers process it uniformly
+    # with M1-M11. Demo CINs (IL&FS / DHFL / Amtek) usually aren't in the
+    # TN bulk, so this is purely additive — no risk of double-counting.
+    m0_result = _m0_atlas_result(bundle.company.cin)
+    if m0_result is not None:
+        results = list(results) + [m0_result]
+
     evidence: list[FraudSignal] = []
     breakdown: dict[str, float] = {}
     skipped: list[dict[str, str]] = []
@@ -496,6 +514,83 @@ async def score(bundle: CompanyBundle, ctx: ScoringContext) -> RiskReport:
         skipped_modules=skipped,
         p_fraud_calibrated=meta_pred.p_fraud,
         p_fraud_interval=meta_pred.interval,
+    )
+
+
+# Severity + score mapping for M0 atlas hits — kept conservative so
+# atlas signals never single-handedly push a TN CIN to CRITICAL. The
+# point is to give analyses on master-only CINs *some* evidence to
+# work with, not to fabricate high-confidence fraud findings from
+# clustering alone.
+_M0_SEVERITY_THRESHOLDS: dict[ShellSignalType, list[tuple[int, Severity, float]]] = {
+    # (min_size, severity, score_contribution) — first match wins, largest first.
+    "ADDRESS_CLUSTER": [
+        (50, Severity.HIGH, 40.0),
+        (15, Severity.MEDIUM, 25.0),
+        (0,  Severity.LOW, 10.0),
+    ],
+    "MASS_INCORPORATION": [
+        (100, Severity.HIGH, 35.0),
+        (25,  Severity.MEDIUM, 20.0),
+        (0,   Severity.LOW, 8.0),
+    ],
+    "PAPER_SHELL": [
+        (0, Severity.MEDIUM, 18.0),
+    ],
+}
+
+
+def _grade_m0_signal(cluster: ShellCluster) -> tuple[Severity, float]:
+    """Pick severity + score_contribution for one M0 cluster based on its
+    member count. ADDRESS_CLUSTER scales hardest because co-location at
+    N≥50 is the most damning master-data tell."""
+    for min_size, sev, contrib in _M0_SEVERITY_THRESHOLDS[cluster.signal_type]:
+        if cluster.size >= min_size:
+            return sev, contrib
+    return Severity.LOW, 5.0
+
+
+def _m0_atlas_result(cin: str) -> ModuleResult | None:
+    """Build a synthetic ModuleResult from any M0 atlas clusters this CIN
+    is a member of. Returns None if the CIN is not in the index (the
+    common case for demo CINs that aren't in the TN bulk). The atlas
+    is read-only here — first-call build happens in /shells or
+    eagerly via the startup wire."""
+    atlas = get_atlas()
+    cluster_ids = atlas.cin_to_clusters.get(cin)
+    if not cluster_ids:
+        return None
+    signals: list[FraudSignal] = []
+    for cid in cluster_ids:
+        cluster = atlas.clusters.get(cid)
+        if cluster is None:
+            continue
+        sev, contrib = _grade_m0_signal(cluster)
+        signals.append(
+            FraudSignal(
+                signal_type=f"MASTER_DATA_{cluster.signal_type}",
+                severity=sev,
+                score_contribution=contrib,
+                evidence_string=cluster.evidence_string,
+                module_name="m0_master_shell_atlas",
+                triggered_by=[{
+                    "label": "ShellCluster",
+                    "cluster_id": cluster.cluster_id,
+                    "size": cluster.size,
+                    "anchor": cluster.anchor_value,
+                    "source": cluster.source,
+                }],
+            )
+        )
+    if not signals:
+        return None
+    score = clamp_score(sum(s.score_contribution for s in signals))
+    return ModuleResult(
+        module_name="m0_master_shell_atlas",
+        cin=cin,
+        year=None,
+        score=score,
+        signals=signals,
     )
 
 

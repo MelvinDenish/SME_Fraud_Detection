@@ -10,6 +10,7 @@ import Reports from "./pages/Reports";
 import Login from "./pages/Login";
 import Search from "./pages/Search";
 import Sources from "./pages/Sources";
+import ShellAtlas from "./pages/ShellAtlas";
 import { CRITICAL_COUNT } from "./lib/demoCases";
 
 // Editorial masthead — dark ink band sitting over the parchment canvas.
@@ -221,6 +222,10 @@ export default function App() {
           {/* /sources is intentionally public — judges and auditors can verify the data
               lineage without an account. */}
           <Route path="/sources" element={<Sources />} />
+          {/* /shells is intentionally protected — the atlas surfaces names
+              of real companies in shell-like clusters, so the same audit
+              gate as /analyse applies. */}
+          <Route path="/shells" element={<ProtectedRoute><ShellAtlas /></ProtectedRoute>} />
           <Route path="*" element={<p>Not found</p>} />
         </Routes>
       </main>
