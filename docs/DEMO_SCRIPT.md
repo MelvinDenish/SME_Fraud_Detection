@@ -21,7 +21,10 @@ docker compose -f infra/docker-compose.dev.yml up -d
 # 3. Frontend
 cd frontend; npm run dev       # opens at :5173
 
-# 4. Seed demo users (idempotent)
+# 4. Seed Neo4j from scratch (--clean wipes stale nodes first)
+.venv\Scripts\python.exe scripts/seed_neo4j.py --clean
+
+# 5. Seed demo users (idempotent)
 .venv\Scripts\python.exe scripts/seed_users.py
 ```
 
