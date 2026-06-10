@@ -214,10 +214,12 @@ role can reach, see [docs/WALKTHROUGH.md](./WALKTHROUGH.md).
 Click around the dashboard:
 
 1. **Search** → enter `U45201MH2005PTC155294` (IL&FS, a confirmed fraud) → click Analyse. You should land on a Dashboard with score **75/100 CRITICAL** and a populated evidence chain (PRD §7.3 override forces the floor).
-2. **Graph Explorer** → click any signal node → the inspector rail on the right shows the exact `evidence_string` with ₹-numbers.
-3. **ITC Carousel** → three cards staggered-fade in, all CRITICAL band; the SVG ring diagram at the top animates the A→B→C→A arrows.
-4. **Reports** → only visible / loadable to `auditor` / `investigator` / `admin`. Click any quick-target chip to download a PDF dossier.
-5. **Health** → http://localhost:8000/health/ml should show `loaded: true, feature_width: 45`, and `/analyse/U45201MH2005PTC155294` should return non-null `p_fraud_calibrated` and `p_fraud_interval`.
+2. **Dashboard UI** → company metadata row shows **Construction (NIC 45201)** — human-readable industry name. Below the band stamp, a green source badge reads "SFIO · NCLT · RBI — public court record". Severity filter chips (CRITICAL / HIGH / MEDIUM / LOW) appear between the ScorePlate and evidence chain; clicking one narrows the chain.
+3. **Graph Explorer** → click any signal node → the inspector rail on the right shows the exact `evidence_string` with ₹-numbers.
+4. **ITC Carousel** (`/itc`) → ring SVG diagram at the **top of the page** shows A→B→C→A with ₹512 cr; three company cards below it, all CRITICAL band. An amber badge reads "DGGI Mumbai · company names redacted".
+5. **Evergreening** (`/evergreening`) → shimmer skeleton animates during load (not plain text). After load, a grey badge reads "SFIO patterns · synthetic demonstration" and the 4-column metrics grid appears.
+6. **Reports** → only visible / loadable to `auditor` / `investigator` / `admin`. Click any quick-target chip to download a PDF dossier.
+7. **Health** → http://localhost:8000/health/ml should show `loaded: true, feature_width: 45`, and `/analyse/U45201MH2005PTC155294` should return non-null `p_fraud_calibrated` and `p_fraud_interval`.
 
 ---
 
@@ -251,7 +253,7 @@ Your `RATE_LIMIT_PER_MIN` is too low for development. Edit `.env.local` and bump
 
 ### Meta-learner returns null `p_fraud_calibrated` / `p_fraud_interval`
 
-`/health/ml` shows `loaded: false` and the log has `ml_inference: failed to load artefacts (No module named 'ml.meta.f1c_mapie')`. That's the joblib unpickling shim — fixed on the `frontend/design-polish` branch by `ml/meta/f1c_mapie.py`. If it's missing on `main`, this is the regression to merge from PR #5 / Track B.
+`/health/ml` shows `loaded: false` and the log has `ml_inference: failed to load artefacts`. Check that all three artifact files exist:
 
 You can also check the artefact files exist:
 

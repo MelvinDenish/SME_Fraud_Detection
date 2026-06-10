@@ -137,6 +137,12 @@ class RiskReport:
     module_breakdown: dict[str, float]
     override_applied: bool
     skipped_modules: list[dict[str, str]]
+    # Company master fields — surfaced so the frontend never displays a
+    # raw CIN in place of a human-readable company identity.
+    company_name: str = ""
+    company_state: str = ""
+    company_nic_code: int = 0
+    company_incorporation_date: str = ""
     # Stream 5.1 — audit trail: which FraudSignal.signal_id values
     # tripped the NCLT/WD override floor. Empty when override_applied
     # is False. Lets investigators answer "what specifically forced
@@ -152,6 +158,10 @@ class RiskReport:
     def to_dict(self) -> dict[str, Any]:
         return {
             "cin": self.cin,
+            "company_name": self.company_name,
+            "company_state": self.company_state,
+            "company_nic_code": self.company_nic_code,
+            "company_incorporation_date": self.company_incorporation_date,
             "fraud_risk_score": round(self.fraud_risk_score, 2),
             "risk_band": self.risk_band,
             "p_fraud_calibrated": (
@@ -503,6 +513,10 @@ async def score(bundle: CompanyBundle, ctx: ScoringContext) -> RiskReport:
 
     return RiskReport(
         cin=bundle.company.cin,
+        company_name=bundle.company.name,
+        company_state=bundle.company.state,
+        company_nic_code=bundle.company.nic_code,
+        company_incorporation_date=bundle.company.incorporation_date.isoformat(),
         fraud_risk_score=final_score,
         risk_band=assign_band(final_score),
         data_confidence=compute_data_confidence(bundle),

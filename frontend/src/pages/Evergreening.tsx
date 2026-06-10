@@ -75,12 +75,24 @@ export default function Evergreening() {
           behaviour — and because DHFL is under active insolvency proceedings, the
           risk score is automatically raised to reflect the legal record.
         </p>
+        <div style={{ marginTop: "var(--s-3)", display: "inline-flex", gap: 6, alignItems: "center", fontFamily: "monospace", fontSize: "0.68rem", color: "#585045", letterSpacing: "0.05em" }}>
+          <span aria-hidden style={{ width: 6, height: 6, background: "#585045", borderRadius: "50%", display: "inline-block" }} />
+          SFIO patterns · synthetic demonstration
+        </div>
       </header>
 
       {query.isLoading && (
-        <p style={{ color: "var(--ink-4)", fontFamily: "var(--font-body)", fontSize: "var(--t-meta)", margin: 0 }}>
-          Resolving DHFL evidence chain…
-        </p>
+        <div style={{ display: "grid", gap: "var(--s-4)" }}>
+          <style>{`@keyframes eg-skeleton { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }`}</style>
+          {[{ w: "55%", h: 72 }, { w: "85%", h: 14 }, { w: "70%", h: 14 }, { w: "78%", h: 14 }].map((b, i) => (
+            <div key={i} style={{
+              height: b.h, width: b.w,
+              background: "linear-gradient(90deg,var(--paper-deep)0%,var(--paper-elevated)50%,var(--paper-deep)100%)",
+              backgroundSize: "200% 100%",
+              animation: `eg-skeleton 1.4s ease-in-out infinite ${i * 0.1}s`,
+            }} />
+          ))}
+        </div>
       )}
       {query.error && (
         <article style={{ ...cardStyle, borderLeft: `4px solid var(--risk-critical)` }}>

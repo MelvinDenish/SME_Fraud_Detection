@@ -448,5 +448,86 @@
     "status": "admitted",
     "amount_claimed": 250000000.0,
     "bench": "NCLT Mumbai"
+  },
+  {
+    "case_number": "C.P.(IB)/21/AHM/2017",
+    "cin": "U74899DL2001PTC108944",
+    "petition_type": "CIRP",
+    "filing_date": "2017-02-01",
+    "status": "admitted",
+    "amount_claimed": 228420000000.0,
+    "bench": "NCLT Ahmedabad"
+  },
+  {
+    "case_number": "C.P.(IB)/201/ND/2017",
+    "cin": "L45200GJ1988PLC011533",
+    "petition_type": "CIRP",
+    "filing_date": "2017-05-09",
+    "status": "admitted",
+    "amount_claimed": 562000000000.0,
+    "bench": "NCLT New Delhi"
+  },
+  {
+    "case_number": "C.P.(IB)/2205/MB/2019",
+    "cin": "L99999MH1992PLC066213",
+    "petition_type": "CIRP",
+    "filing_date": "2019-06-10",
+    "status": "admitted",
+    "amount_claimed": 85000000000.0,
+    "bench": "NCLT Mumbai"
+  },
+  {
+    "case_number": "C.P.(IB)/105/HDB/2017",
+    "cin": "L45203AP1993PLC014991",
+    "petition_type": "CIRP",
+    "filing_date": "2017-06-26",
+    "status": "admitted",
+    "amount_claimed": 450000000000.0,
+    "bench": "NCLT Hyderabad"
+  },
+  {
+    "case_number": "C.P.(IB)/2943/MB/2018",
+    "cin": "L22219MH1985PLC036572",
+    "petition_type": "CIRP",
+    "filing_date": "2018-06-01",
+    "status": "admitted",
+    "amount_claimed": 401000000000.0,
+    "bench": "NCLT Mumbai"
+  },
+  {
+    "case_number": "C.P.(IB)/3281/AHM/2018",
+    "cin": "U24232GJ1995PLC025935",
+    "petition_type": "CIRP",
+    "filing_date": "2018-08-05",
+    "status": "admitted",
+    "amount_claimed": 14500000000.0,
+    "bench": "NCLT Ahmedabad"
+  },
+  {
+    "case_number": "C.P.(IB)/2083/MB/2019",
+    "cin": "L23209UP1989PLC020525",
+    "petition_type": "CIRP",
+    "filing_date": "2019-05-15",
+    "status": "admitted",
+    "amount_claimed": 470000000000.0,
+    "bench": "NCLT Mumbai"
+  },
+  {
+    "case_number": "O.A./SBI/2016/KFA",
+    "cin": "L74110WB1933PLC008002",
+    "petition_type": "DRT",
+    "filing_date": "2016-04-01",
+    "status": "in_progress",
+    "amount_claimed": 90000000000.0,
+    "bench": "DRT Bengaluru"
+  },
+  {
+    "case_number": "C.P.(IB)/4192/MB/2018",
+    "cin": "L99999GJ1995PLC026167",
+    "petition_type": "CIRP",
+    "filing_date": "2018-07-02",
+    "status": "admitted",
+    "amount_claimed": 73800000000.0,
+    "bench": "NCLT Mumbai"
   }
 ]

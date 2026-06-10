@@ -17,6 +17,10 @@ export interface FraudSignal {
 // PRD §7.1 dual-output payload, plus Day-16 propagation fields.
 export interface AnalyseResponse {
   cin: string;
+  company_name: string;
+  company_state: string;
+  company_nic_code: number;
+  company_incorporation_date: string;
   fraud_risk_score: number;
   risk_band: RiskBand;
   p_fraud_calibrated: number | null;

@@ -78,5 +78,85 @@
     "amount": 5230000000.0,
     "declared_date": "2023-09-12",
     "source": "CIBIL"
+  },
+  {
+    "cin": "U74899DL2001PTC108944",
+    "din": "00015261",
+    "bank_name": "ICICI Bank Limited",
+    "amount": 70890000000.0,
+    "declared_date": "2019-02-14",
+    "source": "RBI"
+  },
+  {
+    "cin": "L45200GJ1988PLC011533",
+    "din": "00306695",
+    "bank_name": "State Bank of India",
+    "amount": 120000000000.0,
+    "declared_date": "2018-08-22",
+    "source": "RBI"
+  },
+  {
+    "cin": "L99999MH1992PLC066213",
+    "din": "00056559",
+    "bank_name": "State Bank of India",
+    "amount": 32000000000.0,
+    "declared_date": "2020-03-18",
+    "source": "RBI"
+  },
+  {
+    "cin": "L74110WB1933PLC008002",
+    "din": "00166093",
+    "bank_name": "State Bank of India",
+    "amount": 42000000000.0,
+    "declared_date": "2016-09-20",
+    "source": "RBI"
+  },
+  {
+    "cin": "L45203AP1993PLC014991",
+    "din": "00106635",
+    "bank_name": "IDBI Bank Limited",
+    "amount": 124000000000.0,
+    "declared_date": "2017-12-01",
+    "source": "RBI"
+  },
+  {
+    "cin": "L22219MH1985PLC036572",
+    "din": "00012084",
+    "bank_name": "ICICI Bank Limited",
+    "amount": 32500000000.0,
+    "declared_date": "2021-04-08",
+    "source": "CBI"
+  },
+  {
+    "cin": "U24232GJ1995PLC025935",
+    "din": "00027244",
+    "bank_name": "State Bank of India",
+    "amount": 42000000000.0,
+    "declared_date": "2018-02-10",
+    "source": "RBI"
+  },
+  {
+    "cin": "L23209UP1989PLC020525",
+    "din": "00004878",
+    "bank_name": "State Bank of India",
+    "amount": 82000000000.0,
+    "declared_date": "2020-06-15",
+    "source": "RBI"
+  },
+  {
+    "cin": "U99999MH1996PLC163336",
+    "din": "00004567",
+    "bank_name": "Punjab National Bank",
+    "amount": 48920000000.0,
+    "declared_date": "2018-03-15",
+    "source": "CBI"
+  },
+  {
+    "cin": "L99999GJ1995PLC026167",
+    "din": "00007789",
+    "bank_name": "Punjab National Bank",
+    "amount": 48920000000.0,
+    "declared_date": "2018-04-02",
+    "source": "CBI"
   }
 ]

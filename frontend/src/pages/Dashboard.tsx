@@ -7,6 +7,7 @@ import {
   BarChart,
   Cell,
   ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
@@ -14,6 +15,7 @@ import {
   AnalyseResponse,
   BAND_PALETTE,
   RiskBand,
+  Severity,
   SEVERITY_PALETTE,
   api,
   downloadReport,
@@ -58,17 +60,54 @@ const HEX = {
 } as const;
 
 const MODULE_DISPLAY_NAMES: Record<string, string> = {
-  m01_beneish:           "Financial Statement Quality",
-  m02_cross_statement:   "Revenue vs. Tax Consistency",
-  m03_benford:           "Number Pattern Check",
-  m04_graph_patterns:    "Network Connections",
-  m05_peer_deviation:    "Industry Benchmark",
-  m06_temporal:          "Timeline Red Flags",
-  m07_auditor_nlp:       "Auditor Report",
-  m08_document_forensics:"Document Integrity",
-  m09_nclt_defaulter:    "Legal & Default Records",
-  m10_hypergraph_shell:  "Shell Entity Check",
-  m11_anomaly:           "Statistical Anomalies",
+  m01_beneish:            "Earnings Manipulation Check",
+  m02_cross_statement:    "Revenue vs. Tax Records",
+  m03_benford:            "Number Pattern Analysis",
+  m04_graph_patterns:     "Director & Shareholder Network",
+  m05_peer_deviation:     "Industry Comparison",
+  m06_temporal:           "Timeline Red Flags",
+  m07_auditor_nlp:        "Auditor Report Analysis",
+  m08_document_forensics: "Document Authenticity",
+  m09_nclt_defaulter:     "Court & Default Records",
+  m10_hypergraph_shell:   "Shell Company Network",
+  m11_anomaly:            "Statistical Outlier Detection",
+  m0_master_shell_atlas:  "Shell Company Registry",
+};
+
+const NIC_LABELS: Record<number, string> = {
+  15140: "Edible Oils & FMCG",
+  18101: "Textiles & Innerwear",
+  24201: "Paints & Coatings",
+  24232: "Pharmaceuticals",
+  26211: "Consumer Electronics",
+  27101: "Auto Parts",
+  27209: "Steel",
+  35110: "Shipbuilding",
+  36911: "Gems & Jewellery",
+  36912: "Diamonds & Precious Stones",
+  45201: "Construction",
+  45203: "Civil Engineering",
+  62200: "Air Transport",
+  64201: "Telecom Services",
+  65910: "Non-Banking Finance",
+  70100: "Real Estate",
+  74999: "Consumer Goods",
+  85110: "IT Services",
+};
+
+const MODULE_METHODOLOGY: Record<string, string> = {
+  m01_beneish:            "8 Beneish accrual ratios (DSRI, GMI, AQI, SGI, DEPI, SGAI, LVGI, TATA) — detects earnings manipulation via accounting distortions",
+  m02_cross_statement:    "7 cross-statement checks: Revenue vs. GST taxable turnover, bank credits, CWIP spike, trade-payable squeeze, and more",
+  m03_benford:            "First-digit frequency analysis on financial line items — deviations from Benford's Law suggest manual number entry or fabrication",
+  m04_graph_patterns:     "17 graph patterns across director networks: round-trip transactions, circular shareholding, related-party overdraft clusters, common DIN chains",
+  m05_peer_deviation:     "IQR deviation from BSE SME industry peers on 6 key ratios (leverage, margins, receivables, payables, coverage, current ratio)",
+  m06_temporal:           "8 temporal signals: rapid director exits, sudden auditor changes, CWIP perpetual freeze, revenue cliff, late filing patterns",
+  m07_auditor_nlp:        "spaCy NLP on audit opinion text: emphasis-of-matter density, going-concern flags, adverse opinions, auditor-name consistency",
+  m08_document_forensics: "PDF metadata anomalies: creation software, modification timestamps, font embedding inconsistencies across filing years",
+  m09_nclt_defaulter:     "Direct NCLT CIRP filing lookup + RBI / CIBIL wilful-defaulter registry match — any hit forces score ≥ 75",
+  m10_hypergraph_shell:   "Cross-company hypergraph: shared address / phone / auditor-DIN clusters across the full fixture corpus — requires batch precompute",
+  m11_anomaly:            "Isolation Forest + LOF on 7-D graph features and 20-D financial ratios — population-level outlier detection",
+  m0_master_shell_atlas:  "Master-record-only shell signals: address clusters ≥15 companies, mass-incorporation within 30 days, paid-up capital ≤ ₹1 lakh",
 };
 
 function prettySignalType(raw: string): string {
@@ -157,6 +196,44 @@ function ScorePlate({ data }: { data: AnalyseResponse }) {
 
       <div style={{ display: "grid", gap: "var(--s-3)", alignContent: "start" }}>
         <Eyebrow>Subject · {data.cin}</Eyebrow>
+        {data.company_name && (
+          <h2
+            style={{
+              fontFamily: "var(--font-display)",
+              fontSize: "1.45rem",
+              fontWeight: 500,
+              color: "var(--ink)",
+              margin: 0,
+              lineHeight: 1.2,
+              letterSpacing: "-0.01em",
+            }}
+          >
+            {data.company_name}
+          </h2>
+        )}
+        {(data.company_state || data.company_nic_code || data.company_incorporation_date) && (
+          <div style={{
+            display: "flex", flexWrap: "wrap", gap: "var(--s-4)",
+            fontFamily: "var(--font-mono)", fontSize: "0.76rem",
+            color: "var(--ink-3)", letterSpacing: "0.03em",
+            marginBottom: "var(--s-1)",
+          }}>
+            {data.company_state && (
+              <span title="Registered state">State: <strong style={{ color: "var(--ink-2)" }}>{data.company_state}</strong></span>
+            )}
+            {data.company_nic_code > 0 && (
+              <span title="National Industrial Classification code">
+                {NIC_LABELS[data.company_nic_code]
+                  ? <><strong style={{ color: "var(--ink-2)" }}>{NIC_LABELS[data.company_nic_code]}</strong>{" "}<span style={{ opacity: 0.55 }}>(NIC {data.company_nic_code})</span></>
+                  : <>NIC: <strong style={{ color: "var(--ink-2)" }}>{data.company_nic_code}</strong></>
+                }
+              </span>
+            )}
+            {data.company_incorporation_date && (
+              <span title="Incorporation date">Est. <strong style={{ color: "var(--ink-2)" }}>{data.company_incorporation_date.slice(0, 4)}</strong></span>
+            )}
+          </div>
+        )}
         <div
           style={{
             fontFamily: "var(--font-display)",
@@ -185,6 +262,22 @@ function ScorePlate({ data }: { data: AnalyseResponse }) {
           </span>
         </div>
         <BandStamp band={data.risk_band} />
+        {(() => {
+          const demo = DEMO_CASES.find((d) => d.cin === data.cin);
+          if (!demo) return null;
+          const color = demo.dataType === "real" ? "#15803d" : demo.dataType === "synthetic" ? "#585045" : "#a16207";
+          return (
+            <div style={{
+              marginTop: "var(--s-2)",
+              display: "inline-flex", gap: 6, alignItems: "center",
+              fontFamily: "var(--font-mono)", fontSize: "0.68rem",
+              color, letterSpacing: "0.05em",
+            }}>
+              <span aria-hidden style={{ width: 6, height: 6, background: color, display: "inline-block", borderRadius: "50%", flexShrink: 0 }} />
+              {demo.sourceLabel}
+            </div>
+          );
+        })()}
         {data.override_applied && (
           <div
             style={{
@@ -220,33 +313,51 @@ function ScorePlate({ data }: { data: AnalyseResponse }) {
           borderLeft: "1px solid var(--rule-soft)",
         }}
       >
-        <MetaLine label="Information Quality">
-          <span className="num">{data.data_confidence}%</span>
+        <MetaLine
+          label="Data Quality"
+          tooltip={`How complete the evidence is: 100% = full financials + GST + directors on file. ${data.data_confidence < 50 ? "LOW — scores may be understated because key inputs are missing." : data.data_confidence < 75 ? "MODERATE — most modules ran." : "HIGH — full analysis."}`}
+        >
+          <span className="num" style={{ color: data.data_confidence < 50 ? "var(--risk-high)" : data.data_confidence < 75 ? "var(--risk-medium)" : "inherit" }}>
+            {data.data_confidence}%
+          </span>
+          {data.data_confidence < 50 && <span style={{ fontSize: "0.7rem", color: "var(--risk-high)", fontWeight: 700, letterSpacing: "0.1em" }}>LOW</span>}
         </MetaLine>
-        <MetaLine label="Fraud Likelihood">
+        <MetaLine
+          label="Calibrated P(fraud)"
+          tooltip="Isotonic-calibrated probability from the LightGBM meta-learner trained on SFIO-confirmed fraud labels. Not the same as the Tier-1 score — it accounts for base-rate fraud prevalence in the SME corpus."
+        >
           <span className="num">
             {data.p_fraud_calibrated !== null
               ? (data.p_fraud_calibrated * 100).toFixed(1) + "%"
               : "—"}
           </span>
         </MetaLine>
-        <MetaLine label="Likelihood Range (90%)">
+        <MetaLine
+          label="90% Conformal Interval"
+          tooltip="Split-conformal prediction interval at α=0.10 — there is a 90% coverage guarantee that the true fraud probability lies within this range. Wider intervals indicate less certainty."
+        >
           <span className="num">
             {interval
               ? `[${(interval[0] * 100).toFixed(1)}%, ${(interval[1] * 100).toFixed(1)}%]`
               : "—"}
           </span>
         </MetaLine>
-        <MetaLine label="Check Agreement">
+        <MetaLine
+          label="Module Agreement"
+          tooltip="Flags when any two Tier-1 module scores diverge by more than 30 points — suggests mixed evidence (e.g. clean financials but bad director network)."
+        >
           {data.ensemble_disagreement_flag ? (
             <span style={{ color: "var(--risk-high)", fontWeight: 600 }}>
-              Checks disagree
+              Modules disagree
             </span>
           ) : (
-            "All checks agree"
+            <span style={{ color: "var(--ink-3)" }}>All modules agree</span>
           )}
         </MetaLine>
-        <MetaLine label="Network Risk Spread">
+        <MetaLine
+          label="Network Contagion"
+          tooltip="Belief-propagation score from shared-attribute neighbours (same address / auditor DIN / phone). A HIGH/CRITICAL band here means closely linked companies are also flagged — raising the prior for this CIN."
+        >
           <span className="num">{data.propagation_score.toFixed(1)}</span>
           <BandStamp band={data.propagation_band} compact />
         </MetaLine>
@@ -257,14 +368,17 @@ function ScorePlate({ data }: { data: AnalyseResponse }) {
 
 function MetaLine({
   label,
+  tooltip,
   children,
 }: {
   label: string;
+  tooltip?: string;
   children: React.ReactNode;
 }) {
   return (
     <>
       <dt
+        title={tooltip}
         style={{
           fontFamily: "var(--font-body)",
           fontSize: "var(--t-eyebrow)",
@@ -274,6 +388,8 @@ function MetaLine({
           fontWeight: 600,
           whiteSpace: "nowrap",
           alignSelf: "center",
+          cursor: tooltip ? "help" : undefined,
+          borderBottom: tooltip ? "1px dotted var(--ink-4)" : undefined,
         }}
       >
         {label}
@@ -340,7 +456,9 @@ function BandStamp({
 function ModuleBreakdown({ data }: { data: AnalyseResponse }) {
   const rows = Object.entries(data.module_breakdown)
     .map(([key, score]) => ({
+      key,
       name: MODULE_DISPLAY_NAMES[key] ?? key.replace(/^m\d+_/, "").replace(/_/g, " "),
+      methodology: MODULE_METHODOLOGY[key] ?? "",
       score: Number(score.toFixed(2)),
     }))
     .sort((a, b) => b.score - a.score);
@@ -395,6 +513,31 @@ function ModuleBreakdown({ data }: { data: AnalyseResponse }) {
                 fill: "#0e0d0a",
               }}
             />
+            <Tooltip
+              cursor={{ fill: "rgba(14,13,10,0.04)" }}
+              content={({ active, payload }) => {
+                if (!active || !payload?.length) return null;
+                const row = payload[0].payload as typeof rows[0];
+                return (
+                  <div style={{
+                    background: "var(--paper-elevated, #f5f0e8)",
+                    border: "1px solid #1a1a1a",
+                    padding: "10px 14px",
+                    maxWidth: 320,
+                    boxShadow: "2px 4px 12px rgba(0,0,0,0.12)",
+                  }}>
+                    <div style={{ fontFamily: "var(--font-body, serif)", fontWeight: 700, fontSize: "0.82rem", marginBottom: 4 }}>
+                      {row.name} — score {row.score.toFixed(1)}
+                    </div>
+                    {row.methodology && (
+                      <div style={{ fontFamily: "var(--font-body, serif)", fontSize: "0.75rem", color: "#585045", lineHeight: 1.45 }}>
+                        {row.methodology}
+                      </div>
+                    )}
+                  </div>
+                );
+              }}
+            />
             <Bar
               dataKey="score"
               isAnimationActive
@@ -404,7 +547,7 @@ function ModuleBreakdown({ data }: { data: AnalyseResponse }) {
               {rows.map((r, i) => (
                 <Cell
                   key={r.name}
-                  fill={fillForScore(r.score, max)}
+                  fill={fillForScore(r.score)}
                   stroke="#0e0d0a"
                   strokeWidth={i === 0 ? 1 : 0.4}
                 />
@@ -412,25 +555,124 @@ function ModuleBreakdown({ data }: { data: AnalyseResponse }) {
             </Bar>
           </BarChart>
         </ResponsiveContainer>
+        {/* Color scale key — absolute thresholds */}
+        <div style={{
+          display: "flex", flexWrap: "wrap", gap: "var(--s-4)",
+          padding: "var(--s-3) var(--s-2) var(--s-2)",
+          borderTop: "1px solid var(--rule-soft)",
+          marginTop: "var(--s-2)",
+        }}>
+          {[
+            { color: HEX.riskCritical, label: "≥ 60  Critical" },
+            { color: HEX.riskHigh,     label: "≥ 35  High" },
+            { color: HEX.riskMedium,   label: "≥ 12  Medium" },
+            { color: HEX.ink3,         label: "< 12  Low" },
+            { color: HEX.paperDeep,    label: "0  Not triggered" },
+          ].map(({ color, label }) => (
+            <span key={label} style={{ display: "flex", alignItems: "center", gap: 6,
+              fontFamily: "var(--font-mono)", fontSize: "0.7rem", color: "var(--ink-3)" }}>
+              <span style={{ width: 12, height: 12, background: color, border: "1px solid rgba(0,0,0,0.2)", display: "inline-block", flexShrink: 0 }} />
+              {label}
+            </span>
+          ))}
+          <span style={{ fontFamily: "var(--font-body)", fontSize: "0.7rem", color: "var(--ink-4)", fontStyle: "italic", marginLeft: "auto" }}>
+            hover a bar for methodology
+          </span>
+        </div>
       </div>
     </motion.section>
   );
 }
 
-function fillForScore(score: number, max: number): string {
+// Absolute thresholds — a score of 60 is always red regardless of
+// what the highest module scored. Relative coloring made every company
+// look identical because the top bar was always critical-red.
+function fillForScore(score: number): string {
   if (score === 0) return HEX.paperDeep;
-  const ratio = score / max;
-  if (ratio > 0.7) return HEX.riskCritical;
-  if (ratio > 0.4) return HEX.riskHigh;
-  if (ratio > 0.15) return HEX.riskMedium;
+  if (score >= 60) return HEX.riskCritical;
+  if (score >= 35) return HEX.riskHigh;
+  if (score >= 12) return HEX.riskMedium;
   return HEX.ink3;
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Severity summary bar — chip pills that filter the evidence chain.
+
+function SeveritySummary({
+  signals,
+  filter,
+  onFilter,
+}: {
+  signals: AnalyseResponse["evidence_chain"];
+  filter: Severity | null;
+  onFilter: (sev: Severity | null) => void;
+}) {
+  const ORDERED: Severity[] = ["CRITICAL", "HIGH", "MEDIUM", "LOW"];
+  const counts = signals.reduce<Partial<Record<Severity, number>>>((acc, s) => {
+    acc[s.severity] = (acc[s.severity] ?? 0) + 1;
+    return acc;
+  }, {});
+  const present = ORDERED.filter((s) => (counts[s] ?? 0) > 0);
+  if (present.length === 0) return null;
+  return (
+    <div style={{
+      display: "flex", flexWrap: "wrap", gap: "var(--s-3)", alignItems: "center",
+      padding: "var(--s-4) var(--s-6)",
+      background: "var(--paper-elevated)",
+      boxShadow: "var(--shadow-card)",
+    }}>
+      <span style={{
+        fontFamily: "var(--font-mono)", fontSize: "0.7rem",
+        color: "var(--ink-4)", letterSpacing: "0.1em", textTransform: "uppercase", whiteSpace: "nowrap",
+      }}>
+        Filter signals:
+      </span>
+      {present.map((sev) => {
+        const active = filter === sev;
+        return (
+          <button
+            key={sev}
+            type="button"
+            onClick={() => onFilter(active ? null : sev)}
+            style={{
+              display: "inline-flex", alignItems: "center", gap: 5,
+              padding: "4px 11px",
+              background: active ? SEVERITY_PALETTE[sev] : "transparent",
+              color: active ? "white" : SEVERITY_PALETTE[sev],
+              border: `1.5px solid ${SEVERITY_PALETTE[sev]}`,
+              cursor: "pointer", borderRadius: 0,
+              fontFamily: "var(--font-body)", fontWeight: 700,
+              fontSize: "0.7rem", letterSpacing: "0.14em", textTransform: "uppercase",
+            }}
+          >
+            <span aria-hidden>●</span> {counts[sev]} {sev}
+          </button>
+        );
+      })}
+      {filter && (
+        <button
+          type="button"
+          onClick={() => onFilter(null)}
+          style={{
+            padding: "4px 10px", background: "transparent",
+            border: "1px solid var(--rule-soft)", cursor: "pointer", borderRadius: 0,
+            fontFamily: "var(--font-mono)", fontSize: "0.7rem", color: "var(--ink-3)",
+          }}
+        >
+          ✕ show all
+        </button>
+      )}
+    </div>
+  );
 }
 
 // ──────────────────────────────────────────────────────────────────────────
 // Evidence chain — editorial signal cards with drop-cap on the first.
 
-function EvidenceChain({ data }: { data: AnalyseResponse }) {
-  const signals = data.evidence_chain;
+function EvidenceChain({ data, severityFilter }: { data: AnalyseResponse; severityFilter: Severity | null }) {
+  const signals = severityFilter
+    ? data.evidence_chain.filter((s) => s.severity === severityFilter)
+    : data.evidence_chain;
 
   return (
     <motion.section
@@ -443,8 +685,8 @@ function EvidenceChain({ data }: { data: AnalyseResponse }) {
         title="Why We're Flagging This"
         meta={
           signals.length === 0
-            ? "no warning signs found"
-            : `${signals.length} warning sign${signals.length === 1 ? "" : "s"} found`
+            ? (severityFilter ? `no ${severityFilter.toLowerCase()} signals` : "no warning signs found")
+            : `${signals.length} warning sign${signals.length === 1 ? "" : "s"}${severityFilter ? ` · ${severityFilter} only` : ""}`
         }
       />
       {signals.length === 0 ? (
@@ -503,7 +745,15 @@ function EvidenceChain({ data }: { data: AnalyseResponse }) {
                 >
                   +{s.score_contribution.toFixed(1)}
                 </span>
-                <span className="eyebrow" style={{ color: "var(--ink-4)" }}>
+                <span
+                  className="eyebrow"
+                  title={MODULE_METHODOLOGY[s.module_name]}
+                  style={{
+                    color: "var(--ink-4)",
+                    cursor: MODULE_METHODOLOGY[s.module_name] ? "help" : undefined,
+                    borderBottom: MODULE_METHODOLOGY[s.module_name] ? "1px dotted var(--ink-4)" : undefined,
+                  }}
+                >
                   {prettyModuleName(s.module_name)}
                 </span>
               </div>
@@ -1223,6 +1473,7 @@ export default function Dashboard() {
   const initialCin = (searchParams.get("cin") || "").toUpperCase();
   const [submitted, setSubmitted] = useState(initialCin);
   const [recentCins, setRecentCins] = useState<string[]>(() => readRecentCins());
+  const [severityFilter, setSeverityFilter] = useState<Severity | null>(null);
 
   // Re-sync when the URL ?cin= changes (e.g. Search → Dashboard during the
   // same session without a full reload).
@@ -1244,6 +1495,9 @@ export default function Dashboard() {
       setRecentCins(readRecentCins());
     }
   }, [query.isSuccess, submitted]);
+
+  // Reset severity filter when the CIN changes.
+  useEffect(() => { setSeverityFilter(null); }, [submitted]);
 
   // Quick-start chip clicks: navigate via the demo's preferred route OR
   // submit a CIN inline. The latter keeps the user on /dashboard without
@@ -1325,7 +1579,14 @@ export default function Dashboard() {
           )}
           <NarrativeCard cin={submitted} />
           <ModuleBreakdown data={query.data} />
-          <EvidenceChain data={query.data} />
+          {query.data.evidence_chain.length > 0 && (
+            <SeveritySummary
+              signals={query.data.evidence_chain}
+              filter={severityFilter}
+              onFilter={setSeverityFilter}
+            />
+          )}
+          <EvidenceChain data={query.data} severityFilter={severityFilter} />
 
           {query.data.skipped_modules.length > 0 && (
             <section style={{ display: "grid", gap: "var(--s-2)" }}>

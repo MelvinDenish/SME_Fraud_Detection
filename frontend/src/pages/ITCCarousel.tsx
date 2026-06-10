@@ -173,6 +173,40 @@ function isRetriable(err: unknown): boolean {
   return RETRIABLE_HTTP_CODES.has(Number(match[1]));
 }
 
+function CarouselRingDiagram() {
+  return (
+    <svg
+      width={300}
+      height={210}
+      viewBox="0 0 300 210"
+      style={{ display: "block", margin: "0 auto" }}
+      aria-label="ITC carousel ring: A → B → C → A, ₹512 crore"
+    >
+      <defs>
+        <marker id="arr" markerWidth={8} markerHeight={8} refX={6} refY={3} orient="auto">
+          <path d="M0,0 L0,6 L8,3 z" fill="var(--accent-gold)" />
+        </marker>
+      </defs>
+      {/* edges */}
+      <line x1={75} y1={170} x2={218} y2={42} stroke="var(--accent-gold)" strokeWidth={1.5} markerEnd="url(#arr)" />
+      <line x1={232} y1={55} x2={232} y2={162} stroke="var(--accent-gold)" strokeWidth={1.5} markerEnd="url(#arr)" />
+      <line x1={218} y1={178} x2={90} y2={178} stroke="var(--accent-gold)" strokeWidth={1.5} markerEnd="url(#arr)" />
+      {/* nodes */}
+      <circle cx={68} cy={178} r={22} fill="var(--paper-elevated)" stroke="var(--accent-gold)" strokeWidth={1.5} />
+      <text x={68} y={175} textAnchor="middle" fill="var(--ink)" fontSize={11} fontFamily="var(--font-mono)">A</text>
+      <text x={68} y={189} textAnchor="middle" fill="var(--ink-3)" fontSize={8} fontFamily="var(--font-body)">Issuer</text>
+      <circle cx={232} cy={36} r={22} fill="var(--paper-elevated)" stroke="var(--accent-gold)" strokeWidth={1.5} />
+      <text x={232} y={33} textAnchor="middle" fill="var(--ink)" fontSize={11} fontFamily="var(--font-mono)">B</text>
+      <text x={232} y={47} textAnchor="middle" fill="var(--ink-3)" fontSize={8} fontFamily="var(--font-body)">Recipient</text>
+      <circle cx={232} cy={178} r={22} fill="var(--paper-elevated)" stroke="var(--accent-gold)" strokeWidth={1.5} />
+      <text x={232} y={175} textAnchor="middle" fill="var(--ink)" fontSize={11} fontFamily="var(--font-mono)">C</text>
+      <text x={232} y={189} textAnchor="middle" fill="var(--ink-3)" fontSize={8} fontFamily="var(--font-body)">Conduit</text>
+      {/* centre label */}
+      <text x={150} y={107} textAnchor="middle" fill="var(--ink-2)" fontSize={10} fontFamily="var(--font-mono)">₹512 cr</text>
+    </svg>
+  );
+}
+
 export default function ITCCarousel() {
   const results = useQueries({
     queries: CAROUSEL_CINS.map((c) => ({
@@ -214,7 +248,12 @@ export default function ITCCarousel() {
           share registered addresses and bank branches, which our network and
           shell-entity checks have flagged.
         </p>
+        <div style={{ marginTop: "var(--s-3)", display: "inline-flex", gap: 6, alignItems: "center", fontFamily: "monospace", fontSize: "0.68rem", color: "#a16207", letterSpacing: "0.05em" }}>
+          <span aria-hidden style={{ width: 6, height: 6, background: "#a16207", borderRadius: "50%", display: "inline-block" }} />
+          DGGI Mumbai · company names redacted
+        </div>
       </header>
+      <CarouselRingDiagram />
       {CAROUSEL_CINS.map((c, i) => (
         <CarouselCard
           key={c.cin}

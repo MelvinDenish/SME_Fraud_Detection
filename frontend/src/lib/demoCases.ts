@@ -25,6 +25,10 @@ export interface DemoCase {
   evidence: number;
   /** Where the chip routes. */
   route: string;
+  /** Short provenance stamp shown as a badge in the UI. */
+  sourceLabel: string;
+  /** Whether the data is fully real, topology-real with redacted names, or synthetic. */
+  dataType: "real" | "synthetic" | "real-topology";
 }
 
 export const DEMO_CASES: readonly DemoCase[] = [
@@ -37,6 +41,8 @@ export const DEMO_CASES: readonly DemoCase[] = [
     source: "SFIO 2019 report + NCLT CP(IB) 3334/MB/2018",
     evidence: 19,
     route: "/dashboard?cin=U45201MH2005PTC155294",
+    sourceLabel: "SFIO · NCLT · RBI — public court record",
+    dataType: "real",
   },
   {
     key: "dhfl",
@@ -47,6 +53,8 @@ export const DEMO_CASES: readonly DemoCase[] = [
     source: "SFIO + RBI + NCLT CP(IB) 4258/MB/2019",
     evidence: 18,
     route: "/evergreening",
+    sourceLabel: "SFIO patterns · synthetic demonstration",
+    dataType: "synthetic",
   },
   {
     key: "amtek",
@@ -57,6 +65,8 @@ export const DEMO_CASES: readonly DemoCase[] = [
     source: "SFIO + NCLT Mumbai CIRP",
     evidence: 11,
     route: "/dashboard?cin=U27101MH2010PTC215432",
+    sourceLabel: "SFIO · NCLT · RBI — public court record",
+    dataType: "real",
   },
   {
     key: "itc",
@@ -67,6 +77,8 @@ export const DEMO_CASES: readonly DemoCase[] = [
     source: "DGGI Mumbai Zonal Unit · cbic.gov.in",
     evidence: 12,
     route: "/itc",
+    sourceLabel: "DGGI Mumbai · company names redacted",
+    dataType: "real-topology",
   },
 ] as const;
 
