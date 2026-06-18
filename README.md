@@ -33,6 +33,8 @@ Indian banks and NBFCs lost an estimated ₹25,000–40,000 crore to SME loan fr
 
 ### Team Members
 - MelvinDenish ([@MelvinDenish](https://github.com/MelvinDenish)) — Build lead
+- JeiKarthik Pandi ([@JeiKarthik](https://github.com/JeiKarthik))
+- Ahamed Vifaaq ([@ahamedvifaaq](https://github.com/ahamedvifaaq))
 
 ### Approach
 - **Two-tier intelligence.** 11 deterministic rule modules feed a 6-detector ML ensemble. The rules catch what they were designed for, the ML learns the optimal combination, the anomaly detectors catch what neither knows about.
@@ -77,7 +79,7 @@ Indian banks and NBFCs lost an estimated ₹25,000–40,000 crore to SME loan fr
 
 ---
 
-## Demo & Deliverables
+## Deliverables
 
 - **Live Frontend:** https://sentinel-g-theta.vercel.app
 - **API Backend:** https://13.126.114.27.sslip.io (AWS Lightsail, Mumbai)
@@ -151,7 +153,7 @@ Verify `RETURN gds.version()` works at http://localhost:7474 — that's the PRD 
 
 | Component | Target | How |
 |---|---|---|
-| FastAPI backend + Neo4j 5 + GDS | AWS Lightsail (4 GB, $20/mo) | `bash infra/aws/lightsail_bootstrap.sh` — see [docs/DEPLOY_AWS_LIGHTSAIL.md](./docs/DEPLOY_AWS_LIGHTSAIL.md) |
+| FastAPI backend + Neo4j 5 + GDS | AWS Lightsail (4 GB, $20/mo) | `bash infra/aws/lightsail_bootstrap.sh` (see [infra/aws/](./infra/aws/)) |
 | GHCR image build | GitHub Actions | auto-fires on `backend/**`, `ml/**`, `pyproject.toml` changes |
 | Frontend | Vercel | auto-deploy on push to `main` (rewrites `/api/*` to the Lightsail backend) |
 
