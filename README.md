@@ -8,7 +8,7 @@
 
 ## Problem & Domain
 
-Indian banks and NBFCs lost an estimated ₹25,000–40,000 crore to SME loan fraud in FY 2024–25. DGGI detected over ₹58,772 crore in fake ITC fraud the same year — a 140% year-on-year increase. Listed companies have SEBI oversight; SMEs file once a year, often late, often rubber-stamped. Existing credit teams cannot cross-reference MCA21, CERSAI, GSTN, and the director-company ownership graph simultaneously.
+Indian banks reported **₹33,148 crore in loan-related bank fraud in FY25 — a 229% year-on-year surge** (RBI Annual Report 2024-25; loan-linked frauds rose from ₹10,072 cr in FY24, with public-sector banks accounting for over 71% of the total fraud value). The same year, GST authorities detected **₹61,545 crore in fake input-tax-credit (ITC) fraud across 25,009 fake firms** (Ministry of Finance, April 2025). Listed companies have SEBI oversight; SMEs file once a year, often late, often rubber-stamped. Existing credit teams cannot cross-reference MCA21, CERSAI, GSTN, and the director-company ownership graph simultaneously.
 
 **Sentinel-G does.** It produces a calibrated fraud risk score with a conformal prediction interval, a DataConfidence percentage, and — most importantly — a typed evidence provenance chain rooted in the graph that holds up in a legal filing.
 
@@ -37,9 +37,9 @@ Indian banks and NBFCs lost an estimated ₹25,000–40,000 crore to SME loan fr
 - Ahamed Vifaaq ([@ahamedvifaaq](https://github.com/ahamedvifaaq))
 
 ### Approach
-- **Two-tier intelligence.** 11 deterministic rule modules feed a 6-detector ML ensemble. The rules catch what they were designed for, the ML learns the optimal combination, the anomaly detectors catch what neither knows about.
+- **Two-tier intelligence.** 12 deterministic rule modules (M0–M11) feed a 4-detector ML ensemble. The rules catch what they were designed for, the ML learns the optimal combination, the anomaly detectors catch what neither knows about. (The PRD specified 6 detectors; D1/D2 were dropped as redundant — see [docs/SYSTEM_DESIGN.md §5.5](./docs/SYSTEM_DESIGN.md) for the sufficiency analysis.)
 - **Graph-native explainability.** No SHAP, no LLM-generated numbers. Every fraud flag is a `FraudSignal` node with `TRIGGERED_BY` edges to the exact data point that triggered it. Court-defensible by construction.
-- **Calibration first.** Isotonic regression on a separate hold-out. Conformal prediction (MAPIE) gives prediction intervals at α=0.10. We report uncertainty, not just a number.
+- **Calibration first.** Isotonic regression on a separate hold-out. Split-conformal prediction gives prediction intervals at α=0.10 (a hand-rolled implementation; MAPIE was deferred due to API instability — same 90% coverage guarantee). We report uncertainty, not just a number.
 
 ---
 
@@ -49,7 +49,7 @@ Indian banks and NBFCs lost an estimated ₹25,000–40,000 crore to SME loan fr
 - **Frontend:** React 18 + Vite, TailwindCSS, d3-force, recharts, @tanstack/react-query
 - **Backend:** FastAPI + uvicorn (async), Pydantic v2, python-jose JWT
 - **Database:** Neo4j 5 Community + Graph Data Science (GDS) plugin — single data store
-- **ML:** LightGBM (OOF meta-learner), scikit-learn (Isolation Forest, LOF, Isotonic), PyTorch Geometric (TGN), Mamba SSM, MAPIE (conformal), CatBoost, NetworkX
+- **ML:** LightGBM (OOF meta-learner), scikit-learn (Isolation Forest, LOF, Isotonic), PyTorch Geometric (TGN), Mamba SSM (TCN fallback), split-conformal intervals, NetworkX
 - **NLP / Docs:** spaCy, pdfplumber, camelot, pytesseract, reportlab
 - **LLM (narrative only):** Gemini Flash (Google AI Studio free tier)
 - **APIs:** MCA21, CERSAI, BSE SME, NCLT, RBI wilful defaulter, data.gov.in MCA bulk (CC-BY)
@@ -73,7 +73,7 @@ Indian banks and NBFCs lost an estimated ₹25,000–40,000 crore to SME loan fr
 ## Key Features
 
 - ✅ **Three fraud types in one engine.** SME loan fraud, GST ITC carousels, bank loan evergreening.
-- ✅ **17 graph patterns + 11 deterministic modules + 6 ML detectors.** All scores in <2s/report.
+- ✅ **17 graph patterns + 12 deterministic modules (M0–M11) + 4 ML detectors.** All scores in <2s/report.
 - ✅ **Calibrated P(fraud) with 90% conformal prediction intervals.** Honest about uncertainty.
 - ✅ **Graph evidence provenance.** Every finding cites specific numbers from a specific data row in the graph.
 
@@ -85,6 +85,7 @@ Indian banks and NBFCs lost an estimated ₹25,000–40,000 crore to SME loan fr
 - **API Backend:** https://13.126.114.27.sslip.io (AWS Lightsail, Mumbai)
 - **Demo Logins:** four personas (Loan Officer, Investigator, Auditor, Admin) — credentials in [docs/WALKTHROUGH.md](./docs/WALKTHROUGH.md)
 - **Demo Video:** _to be added after Week 4 rehearsals (PRD §10 Day 28)_
+- **System Design:** see [docs/SYSTEM_DESIGN.md](./docs/SYSTEM_DESIGN.md) — full technical reference with the rationale behind every layer (data sources, graph schema, all 12 rule modules, the 4-detector ML ensemble + sufficiency analysis, calibration, coverage matrix, personas, honest gaps).
 - **PRD:** see [Sentinel_G_Final.docx](./Sentinel_G_Final.docx)
 
 ### Data lineage — every signal traces back to a public-record source
@@ -101,7 +102,7 @@ Every fraud signal Sentinel-G fires is backed by a publicly-published government
 | [CERSAI charges register](https://www.cersai.org.in) | Government scraper | Real charges for demo CINs | M4 P03, P14 | Manual |
 | BSE SME platform disclosures | Industry benchmark | NIC sector averages | M5 peer deviation | Quarterly |
 | 17 graph patterns (M4) | Real async Cypher + GDS | All 17 implemented | M4 module | n/a |
-| 11 Tier-1 modules (M1-M11) | Real implementations | Beneish, Benford, peer dev, etc. | Tier-1 scoring | n/a |
+| 12 Tier-1 modules (M0-M11) | Real implementations | M0 master-data shell atlas + Beneish, Benford, peer dev, etc. | Tier-1 scoring | n/a |
 | ML meta-learner (F1a/F1b/F1c) | LightGBM OOF + Isotonic + Split Conformal | Trained on the 14-case label set | `p_fraud_calibrated`, `p_fraud_interval` | Re-train on label update |
 
 ### What's honestly NOT live in this deployment
@@ -175,8 +176,9 @@ Items below are correctly deferred (PRD §15). Not missing — out of 30-day sco
 ## Resources / Credits
 
 - **Data sources:** MCA21 · CERSAI · BSE SME · NCLT · RBI Wilful Defaulter list · CIBIL public defaulter list
-- **Frameworks:** FastAPI, Neo4j GDS, PyTorch Geometric, LightGBM, scikit-learn, MAPIE
-- **Methodology references:** SFIO IL&FS forensic report (FY2014-18), Beneish 1999 ("The Detection of Earnings Manipulation"), Nigrini 2012 ("Benford's Law"), MAPIE (Conformal Prediction for Classification)
+- **Frameworks:** FastAPI, Neo4j GDS, PyTorch Geometric, LightGBM, scikit-learn
+- **Methodology references:** SFIO IL&FS forensic report (FY2014-18), Beneish 1999 ("The Detection of Earnings Manipulation"), Nigrini 2012 ("Benford's Law"), Vovk et al. (Conformal Prediction), Rossi et al. 2020 (Temporal Graph Networks), Gu & Dao 2023 (Mamba)
+- **Statistics:** RBI Annual Report 2024-25 (loan-fraud figures); Ministry of Finance / GST data, April 2025 (fake-ITC figures)
 - **Tooling:** [Claude Code](https://claude.com/claude-code) + [obra/superpowers](https://github.com/obra/superpowers) + [affaan-m/everything-claude-code](https://github.com/affaan-m/everything-claude-code)
 
 ---
