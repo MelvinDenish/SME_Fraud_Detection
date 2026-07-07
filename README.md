@@ -51,7 +51,7 @@ Indian banks reported **₹33,148 crore in loan-related bank fraud in FY25 — a
 - **Database:** Neo4j 5 Community + Graph Data Science (GDS) plugin — single data store
 - **ML:** LightGBM (OOF meta-learner), scikit-learn (Isolation Forest, LOF, Isotonic), PyTorch Geometric (TGN), Mamba SSM (TCN fallback), split-conformal intervals, NetworkX
 - **NLP / Docs:** spaCy, pdfplumber, camelot, pytesseract, reportlab
-- **LLM (narrative only):** Gemini Flash (Google AI Studio free tier)
+- **LLM (narrative only):** Mistral (Mistral API)
 - **APIs:** MCA21, CERSAI, BSE SME, NCLT, RBI wilful defaulter, data.gov.in MCA bulk (CC-BY)
 - **Hosting:** AWS Lightsail (FastAPI + Neo4j co-located, Caddy + Let's Encrypt) · Vercel (frontend)
 
@@ -112,7 +112,7 @@ Every fraud signal Sentinel-G fires is backed by a publicly-published government
 | **MCA21 V3 live API** | Paid subscription (~₹5-20k/mo) — out of hackathon budget | data.gov.in bulk covers TN; composite source falls through |
 | **GSTN live ITC feed** | Restricted to licensed GSPs (₹25 lakh capital + MoU with GSTN) | Use DGGI press release archive — real bust topologies with amounts, zones, sectors |
 | **MCA Public Portal live scrape** | Playwright + Chromium too heavy for 4 GB Lightsail (+ 250 MB image bloat) | Local-dev only — see [docs/INGEST_MCA_PUBLIC.md](./docs/INGEST_MCA_PUBLIC.md) |
-| **Gemini Flash narrative** | Optional; needs free Google AI Studio key | Deterministic template fallback cites only structured-evidence numbers (never hallucinates); UI surfaces "Live LLM unavailable" notice |
+| **Mistral narrative** | Optional; needs free Mistral API key | Deterministic template fallback cites only structured-evidence numbers (never hallucinates); UI surfaces "Live LLM unavailable" notice |
 
 ### Honest framing of the DGGI ITC ring fixtures
 

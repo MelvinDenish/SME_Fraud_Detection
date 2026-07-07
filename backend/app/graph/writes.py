@@ -1,4 +1,4 @@
-"""Async Cypher writers for the ingestion pipeline (PRD §3 schema).
+"""Async Cypher writers for the ingestion pipeline (PRD Â§3 schema).
 
 All writes are idempotent (MERGE on natural key) so a re-run is safe.
 """
@@ -399,7 +399,19 @@ SET g.name = $name,
     g.taxpayer_type = $taxpayer_type,
     g.aggregate_turnover = $aggregate_turnover,
     g.tax_paid_ytd = $tax_paid_ytd,
+    g.cancellation_date = CASE WHEN $cancellation_date IS NULL THEN NULL ELSE date($cancellation_date) END,
     g.is_synthetic = true
+WITH g
+FOREACH (_ IN CASE WHEN $cin IS NULL THEN [] ELSE [1] END |
+    MERGE (c:Company {cin: $cin})
+    SET c.name = $name,
+        c.nic_code = coalesce(c.nic_code, 51100),
+        c.state = coalesce(c.state, "MH"),
+        c.incorporation_date = coalesce(c.incorporation_date, date($registration_date)),
+        c.gstin = $gstin,
+        c.last_refreshed_at = datetime()
+    MERGE (c)-[:HAS_GST_ENTITY]->(g)
+)
 WITH g
 FOREACH (_ IN CASE WHEN $is_missing_trader THEN [1] ELSE [] END |
     MERGE (m:MissingTrader {gstin: $gstin})
@@ -482,7 +494,9 @@ async def upsert_carousel_gst_entity(driver: AsyncDriver, entity: RawCarouselGST
             taxpayer_type=entity.taxpayer_type,
             aggregate_turnover=entity.aggregate_turnover,
             tax_paid_ytd=entity.tax_paid_ytd,
+            cancellation_date=entity.cancellation_date.isoformat() if entity.cancellation_date else None,
             is_missing_trader=entity.is_missing_trader,
+            cin=entity.cin,
         )
         record = await result.single()
     if record is None:
@@ -527,7 +541,7 @@ async def upsert_claims_itc_from(driver: AsyncDriver, edge: RawClaimsITCFrom) ->
     return int(record["id"])
 
 
-# --- Day 8 additions: FraudSignal + TRIGGERED_BY (PRD §6 evidence provenance)
+# --- Day 8 additions: FraudSignal + TRIGGERED_BY (PRD Â§6 evidence provenance)
 
 _UPSERT_FRAUD_SIGNAL = """
 MERGE (s:FraudSignal {signal_id: $signal_id})
@@ -613,7 +627,7 @@ async def upsert_fraud_signal(
         )
         record = await result.single()
 
-        # TRIGGERED_BY edges — one Cypher per source type
+        # TRIGGERED_BY edges â€” one Cypher per source type
         for ref in signal.triggered_by:
             label = ref.get("label")
             if label == "FinancialStatement":
@@ -655,9 +669,9 @@ async def upsert_fraud_signal(
 
 def _year_from_signal(signal: FraudSignal) -> int | None:
     """Pull a fiscal year off the signal's `triggered_by` refs if any
-    point at a FinancialStatement — needed for the FS-mediated edge
+    point at a FinancialStatement â€” needed for the FS-mediated edge
     in `_UPSERT_FRAUD_SIGNAL`. Returns None when no year is available
-    (M9 NCLT, M10 hypergraph, M11 anomaly, etc.) which is fine — the
+    (M9 NCLT, M10 hypergraph, M11 anomaly, etc.) which is fine â€” the
     FOREACH in the Cypher will then skip the FS edge."""
     for ref in signal.triggered_by:
         if ref.get("label") == "FinancialStatement" and "year" in ref:
@@ -673,7 +687,7 @@ async def persist_fraud_signals(
 
     Used by the scorer after `apply_override` so the /provenance endpoint
     can later traverse the live graph (Stream 3.4) instead of re-running
-    the whole scorer. Idempotent — the underlying MERGE is keyed by
+    the whole scorer. Idempotent â€” the underlying MERGE is keyed by
     `signal_id`, so calling this twice on the same RiskReport is a no-op.
 
     Never raises: any Neo4j-side failure is logged + the in-memory
@@ -739,7 +753,7 @@ async def persist_fraud_signals(
                             "ref %r on %s (%s)", ref, signal.signal_id, missing,
                         )
                 count += 1
-    except Exception as exc:  # noqa: BLE001 — must never crash the request path
+    except Exception as exc:  # noqa: BLE001 â€” must never crash the request path
         logger.warning(
             "persist_fraud_signals: failed after %d/%d for cin=%s (%s)",
             count, len(signals), cin, exc,
@@ -771,7 +785,7 @@ ORDER BY s.created_at
 
 async def read_provenance_for_cin(driver: AsyncDriver, cin: str) -> dict | None:
     """Return the `{signals, triggered_by}` provenance payload directly
-    from Neo4j for `cin`. None on driver/Cypher failure — callers fall
+    from Neo4j for `cin`. None on driver/Cypher failure â€” callers fall
     back to the in-memory evidence chain.
 
     Shape mirrors the in-memory builder in `analyse.py` so the route can
@@ -781,7 +795,7 @@ async def read_provenance_for_cin(driver: AsyncDriver, cin: str) -> dict | None:
         async with driver.session(database=settings.neo4j_database) as session:
             result = await session.run(_READ_PROVENANCE_FOR_CIN, cin=cin)
             records = [r.data() async for r in result]
-    except Exception as exc:  # noqa: BLE001 — defensive
+    except Exception as exc:  # noqa: BLE001 â€” defensive
         logger.warning("read_provenance_for_cin failed for %s (%s)", cin, exc)
         return None
 

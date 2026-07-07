@@ -60,7 +60,7 @@ JWT_SECRET=<paste the generated hex here>
 RATE_LIMIT_PER_MIN=2000
 ```
 
-All other keys (`GEMINI_API_KEY`, `MCA21_API_KEY`, `FLY_API_TOKEN`, etc.) can stay as `PLACEHOLDER_…` for local development — they're only consumed by deployment scripts or optional integrations.
+All other keys (`MISTRAL_API_KEY`, `MCA21_API_KEY`, `FLY_API_TOKEN`, etc.) can stay as `PLACEHOLDER_…` for local development — they're only consumed by deployment scripts or optional integrations.
 
 ### 2.3 — Start Neo4j
 
@@ -217,7 +217,7 @@ Click around the dashboard:
 2. **Dashboard UI** → company metadata row shows **Construction (NIC 45201)** — human-readable industry name. Below the band stamp, a green source badge reads "SFIO · NCLT · RBI — public court record". Severity filter chips (CRITICAL / HIGH / MEDIUM / LOW) appear between the ScorePlate and evidence chain; clicking one narrows the chain.
 3. **Graph Explorer** → click any signal node → the inspector rail on the right shows the exact `evidence_string` with ₹-numbers.
 4. **ITC Carousel** (`/itc`) → ring SVG diagram at the **top of the page** shows A→B→C→A with ₹512 cr; three company cards below it, all CRITICAL band. An amber badge reads "DGGI Mumbai · company names redacted".
-5. **Evergreening** (`/evergreening`) → shimmer skeleton animates during load (not plain text). After load, a grey badge reads "SFIO patterns · synthetic demonstration" and the 4-column metrics grid appears.
+5. **Evergreening** (`/evergreening`) → shimmer skeleton animates during load (not plain text). After load, a grey badge reads "SFIO / RBI public-record pattern - graph fixture active" and the 4-column metrics grid appears.
 6. **Reports** → only visible / loadable to `auditor` / `investigator` / `admin`. Click any quick-target chip to download a PDF dossier.
 7. **Health** → http://localhost:8000/health/ml should show `loaded: true, feature_width: 45`, and `/analyse/U45201MH2005PTC155294` should return non-null `p_fraud_calibrated` and `p_fraud_interval`.
 

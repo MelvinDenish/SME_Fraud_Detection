@@ -37,6 +37,7 @@ ml/artifacts/*.bin
 data/raw/
 data/interim/
 data/processed/
+data/uploads/
 *.parquet
 *.feather
 

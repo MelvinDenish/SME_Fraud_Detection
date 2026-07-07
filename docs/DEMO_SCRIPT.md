@@ -116,7 +116,7 @@ Expand "Source records" for a CRITICAL signal to show `triggered_by` provenance.
 > The grey badge confirms SFIO-pattern demonstration on real financial structure."
 
 **On-screen:** `/evergreening`.
-- Grey badge: "SFIO patterns · synthetic demonstration"
+- Grey badge: "SFIO / RBI public-record pattern - graph fixture active"
 - Show the 4-column metrics grid (score, override, confidence, signals)
 - Scroll the evidence list
 

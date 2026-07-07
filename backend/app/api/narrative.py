@@ -1,11 +1,11 @@
-"""GET /narrative/{cin} — Gemini Flash executive summary.
+"""GET /narrative/{cin} — Mistral executive summary.
 
 PRD §5.5: numbers come from the graph; the LLM writes prose only. The
 route composes the dual-output payload via the same scoring helper
 that /analyse uses (so the narrative cites the same numbers the
 Dashboard renders), passes a structured evidence-JSON to
-`backend.app.narrative.GeminiNarrator`, and returns the result —
-either a Gemini Flash completion or a deterministic template fallback
+`backend.app.narrative.MistralNarrator`, and returns the result —
+either a Mistral completion or a deterministic template fallback
 when the API key is missing / rate-limited / failed.
 
 Response shape:
@@ -13,7 +13,7 @@ Response shape:
     {
       "cin": "U…",
       "summary": "…",                # 90-140 word prose
-      "model": "gemini-1.5-flash" | "template-fallback (…reason)",
+      "model": "mistral-small-latest" | "template-fallback (…reason)",
       "generated_at": "2026-05-22T…Z",
       "cached": true | false,
       "evidence_hash": "ab12cd34…",  # short SHA — frontend ETag
@@ -43,7 +43,7 @@ async def narrative(
     cin: CIN_PATH,
     _user: dict = Depends(get_current_user),
 ) -> dict:
-    """Compose a Gemini-Flash narrative for the dual-output payload."""
+    """Compose a Mistral-Flash narrative for the dual-output payload."""
     report = await score_cin_full(cin)
     ni = serialize_for_narrative(report)
     result = await get_narrator().narrate(ni)

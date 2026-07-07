@@ -17,6 +17,7 @@ from __future__ import annotations
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import JSONResponse
 
 from backend.app.analytics_cache import get_or_build as get_analytics_cache
 from backend.app.api.upload_store import get_upload_store
@@ -187,6 +188,18 @@ async def analyse(
     return report.to_dict()
 
 
+
+@router.get("/{cin}/provenance/export")
+async def provenance_export(
+    cin: CIN_PATH,
+    _user: dict = Depends(get_current_user),
+) -> JSONResponse:
+    """Download the evidence graph as JSON for audit handoff."""
+    payload = await provenance(cin, _user)
+    return JSONResponse(
+        payload,
+        headers={"Content-Disposition": f"attachment; filename=sentinel-g-{cin}-provenance.json"},
+    )
 @router.get("/{cin}/provenance")
 async def provenance(
     cin: CIN_PATH,

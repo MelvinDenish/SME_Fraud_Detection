@@ -1,24 +1,9 @@
-"""Gemini Flash narrative — PRD §5.5.
+"""Mistral narrative provider for Sentinel-G executive summaries.
 
-Three concerns:
-
-1. `serialize_for_narrative(report)` — pure function. Picks the subset
-   of the dual-output payload that the LLM is allowed to see + cite.
-   No numbers come from the LLM; the LLM may quote *only* the numbers
-   below. The serializer also computes the "allowed-numbers" set that
-   the route's golden-string test asserts against.
-
-2. `GeminiNarrator` — thin wrapper around `google.generativeai` with
-   a 60 req/min sliding-window cap (PRD §2.1 / free tier) and an
-   in-process evidence-hash cache so the same (cin, evidence) pair
-   only hits the API once.
-
-3. `_template_fallback(serialized)` — deterministic prose used when:
-   * `GEMINI_API_KEY` is missing or placeholder (local dev, CI),
-   * the rate-limit window is exhausted,
-   * the SDK call raises.
-   The template still cites the exact numbers from the structured
-   evidence — never hallucinates, never blocks the page.
+The LLM is allowed to write prose only. Every cited number must already
+exist in the structured RiskReport payload; a hallucination guard rejects
+any completion that introduces new numeric facts and falls back to a
+local deterministic template.
 """
 
 from __future__ import annotations
@@ -39,14 +24,13 @@ from backend.app.scorer import RiskReport
 
 logger = logging.getLogger(__name__)
 
-# Hard cap from PRD §2.1: Gemini Flash free tier is 60 req/min. Stay
-# slightly below to leave headroom for the route's own retries.
+# Conservative client-side cap for the external narrative API. Operators can
+# still enforce stricter limits through Mistral account controls.
 _RATE_LIMIT_PER_MIN = 55
 _WINDOW_SECONDS = 60.0
 
-# Evidence summary cap — Gemini Flash takes ~30k tokens of input cheaply
-# but we want narrow, traceable prompts. 8 signals is enough to cover
-# IL&FS' 19 (each signal collapses to one line).
+# Evidence summary cap. Keep prompts narrow and traceable; 8 signals is enough
+# to cover the demo cases while preserving the important severe evidence.
 _MAX_SIGNALS_IN_PROMPT = 8
 
 # Cache size — small in-process LRU. Stream 2 explicitly avoids Redis.
@@ -207,7 +191,7 @@ def numbers_outside_allowed(text: str, allowed: set[str]) -> set[str]:
 
 
 # ---------------------------------------------------------------------------
-# Step 2 — Gemini client + 60/min cap + per-evidence cache.
+# Step 2 — Mistral client + 60/min cap + per-evidence cache.
 # ---------------------------------------------------------------------------
 
 _PROMPT_INSTRUCTIONS = """\
@@ -239,7 +223,7 @@ HARD RULES:
 @dataclass
 class NarrativeResult:
     summary: str
-    model: str           # "gemini-1.5-flash" or "template-fallback"
+    model: str           # "mistral-1.5-flash" or "template-fallback"
     generated_at: str
     cached: bool
     evidence_hash: str
@@ -266,45 +250,48 @@ class _SlidingWindow:
             return True
 
 
-class GeminiNarrator:
-    """Lazily-loaded Gemini Flash client. Falls back to template when:
-       * `GEMINI_API_KEY` is missing / placeholder
-       * the SDK fails to import
-       * the rate-limit window is exhausted
-       * any call raises
-    """
+class MistralNarrator:
+    """Lazy Mistral chat-completions client with deterministic fallback."""
 
     def __init__(self) -> None:
         self._window = _SlidingWindow(_RATE_LIMIT_PER_MIN, _WINDOW_SECONDS)
         self._cache: dict[str, NarrativeResult] = {}
         self._lru: deque[str] = deque()
-        self._model: Any | None = None
+        self._client: Any | None = None
         self._model_name: str = "template-fallback"
         self._init_lock = asyncio.Lock()
         self._init_attempted = False
+        self._configured = False
 
-    async def _ensure_model(self) -> Any | None:
+    async def _ensure_client(self) -> Any | None:
         if self._init_attempted:
-            return self._model
+            return self._client
         async with self._init_lock:
             if self._init_attempted:
-                return self._model
+                return self._client
             self._init_attempted = True
             settings = get_settings()
-            key = (settings.gemini_api_key or "").strip()
-            if not key or key.startswith("PLACEHOLDER"):
-                logger.info("Gemini narrator: no API key — template fallback only")
+            key = (settings.mistral_api_key or "").strip()
+            self._configured = bool(key) and not key.startswith("PLACEHOLDER")
+            if not self._configured:
+                logger.info("Mistral narrator: no API key - template fallback only")
                 return None
             try:
-                import google.generativeai as genai  # noqa: WPS433 — lazy import
-                genai.configure(api_key=key)
-                self._model = genai.GenerativeModel(settings.gemini_model)
-                self._model_name = settings.gemini_model
-                logger.info("Gemini narrator: model %s ready", self._model_name)
-            except Exception as exc:  # noqa: BLE001 — defensive
-                logger.warning("Gemini narrator: SDK init failed (%s) — template fallback", exc)
-                self._model = None
-            return self._model
+                import httpx  # noqa: WPS433 - lazy import
+                self._client = httpx.AsyncClient(
+                    base_url=settings.mistral_base_url.rstrip("/"),
+                    headers={
+                        "Authorization": f"Bearer {key}",
+                        "Content-Type": "application/json",
+                    },
+                    timeout=settings.mistral_timeout_sec,
+                )
+                self._model_name = settings.mistral_model
+                logger.info("Mistral narrator: model %s ready", self._model_name)
+            except Exception as exc:  # noqa: BLE001 - defensive
+                logger.warning("Mistral narrator: client init failed (%s) - template fallback", exc)
+                self._client = None
+            return self._client
 
     def _cache_put(self, key: str, value: NarrativeResult) -> None:
         if key in self._cache:
@@ -327,39 +314,41 @@ class GeminiNarrator:
                 evidence_hash=ni.evidence_hash,
             )
 
-        model = await self._ensure_model()
-        summary: str
-        model_label: str
-
-        if model is None:
+        client = await self._ensure_client()
+        if client is None:
             summary = _template_fallback(ni)
             model_label = "template-fallback"
         elif not await self._window.try_acquire():
-            logger.info("Gemini narrator: rate-limited (60/min) — serving template")
+            logger.info("Mistral narrator: rate-limited - serving template")
             summary = _template_fallback(ni)
             model_label = "template-fallback (rate-limited)"
         else:
             try:
-                prompt = _PROMPT_INSTRUCTIONS + "\n\nINPUT JSON:\n" + ni.to_prompt_json()
-                # The SDK call is sync; offload so we don't block the loop.
-                resp = await asyncio.to_thread(model.generate_content, prompt)
-                summary = (getattr(resp, "text", "") or "").strip()
+                settings = get_settings()
+                payload = {
+                    "model": settings.mistral_model,
+                    "temperature": 0.2,
+                    "max_tokens": 240,
+                    "messages": [
+                        {"role": "system", "content": _PROMPT_INSTRUCTIONS},
+                        {"role": "user", "content": "INPUT JSON:\n" + ni.to_prompt_json()},
+                    ],
+                }
+                resp = await client.post("/chat/completions", json=payload)
+                resp.raise_for_status()
+                data = resp.json()
+                summary = (data.get("choices", [{}])[0].get("message", {}).get("content") or "").strip()
                 if not summary:
                     raise RuntimeError("empty completion")
-                # Hallucination guard — if the LLM cites a number we didn't
-                # whitelist, drop the completion and fall through to template.
                 bad = numbers_outside_allowed(summary, ni.allowed_numbers)
                 if bad:
-                    logger.warning(
-                        "Gemini narrator: hallucinated numbers %r — falling back to template",
-                        sorted(bad),
-                    )
+                    logger.warning("Mistral narrator: hallucinated numbers %r - falling back", sorted(bad))
                     summary = _template_fallback(ni)
                     model_label = "template-fallback (hallucination-guard)"
                 else:
                     model_label = self._model_name
-            except Exception as exc:  # noqa: BLE001 — defensive
-                logger.warning("Gemini narrator: call failed (%s) — template fallback", exc)
+            except Exception as exc:  # noqa: BLE001 - defensive
+                logger.warning("Mistral narrator: call failed (%s) - template fallback", exc)
                 summary = _template_fallback(ni)
                 model_label = "template-fallback (api-error)"
 
@@ -377,24 +366,21 @@ class GeminiNarrator:
         self._cache.clear()
         self._lru.clear()
         self._init_attempted = False
-        self._model = None
+        self._client = None
         self._model_name = "template-fallback"
+        self._configured = False
 
     async def status(self) -> dict[str, Any]:
-        """Lightweight readiness probe — never calls the API. Reports
-        whether the key is configured and whether the SDK initialised
-        successfully. Triggers lazy init on first call so the second
-        call returns a stable state."""
         settings = get_settings()
-        key = (settings.gemini_api_key or "").strip()
+        key = (settings.mistral_api_key or "").strip()
         configured = bool(key) and not key.startswith("PLACEHOLDER")
-        # Force init so subsequent calls report `live` accurately.
-        await self._ensure_model()
-        live = self._model is not None
+        await self._ensure_client()
+        live = self._client is not None
         return {
             "configured": configured,
             "live": live,
             "model": self._model_name,
+            "provider": "mistral",
             "init_attempted": self._init_attempted,
             "cache_entries": len(self._cache),
         }
@@ -457,8 +443,8 @@ def _template_fallback(ni: NarrativeInput) -> str:
 
 # Module-level singleton — narration state lives across requests inside
 # the FastAPI worker process. Tests use `reset_for_tests()`.
-_narrator = GeminiNarrator()
+_narrator = MistralNarrator()
 
 
-def get_narrator() -> GeminiNarrator:
+def get_narrator() -> MistralNarrator:
     return _narrator

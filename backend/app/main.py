@@ -82,9 +82,9 @@ def create_app() -> FastAPI:
         body = {"ok": ok, "meta_learner": ml, "analytics_cache": cache}
         return JSONResponse(body, status_code=200 if ok else 503)
 
-    @app.get("/health/gemini", tags=["meta"])
-    async def gemini_health() -> JSONResponse:
-        """Gemini narrative service readiness. Returns 503 when the API
+    @app.get("/health/mistral", tags=["meta"])
+    async def mistral_health() -> JSONResponse:
+        """Mistral narrative service readiness. Returns 503 when the API
         key isn't configured OR the SDK failed to initialise — the
         narrative endpoint will still respond via the template fallback,
         but the frontend can surface a 'narrative service offline'

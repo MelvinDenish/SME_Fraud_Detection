@@ -657,7 +657,7 @@ model's prose; numbers come from `FraudSignal` nodes and their `TRIGGERED_BY` so
 | **ITC Carousel / Evergreening views** | [ITCCarousel.tsx](../frontend/src/pages/ITCCarousel.tsx), [Evergreening.tsx](../frontend/src/pages/Evergreening.tsx) | Investigator | Confirm ring topology | Medium |
 | **Shell Atlas** | [ShellAtlas.tsx](../frontend/src/pages/ShellAtlas.tsx) ← M0 / `/shells` | Investigator / Admin | Browse master-data shell clusters | Medium |
 | **Forensic PDF** | [api/report.py](../backend/app/api/report.py) (reportlab) | Forensic Auditor / committee | File / archive a defensible record | Low–Medium |
-| **Narrative prose** | [narrative.py](../backend/app/narrative.py) (Gemini Flash, template fallback) | Loan Officer | Quick human-readable summary | Low |
+| **Narrative prose** | [narrative.py](../backend/app/narrative.py) (Mistral, template fallback) | Loan Officer | Quick human-readable summary | Low |
 | **`/sources` lineage** | [api/sources.py](../backend/app/api/sources.py) | Judge / Auditor | Audit data provenance | Low |
 
 ### 8.2 What each persona *sees* (literacy-matched)
@@ -724,7 +724,7 @@ volume (14 SFIO cases)**, which limits supervised capacity — not detector coun
 | GSTN live ITC feed | Restricted to licensed GSPs (₹25 lakh + MoU) | DGGI press-release archive — real bust topologies |
 | MCA Public Portal live scrape | Playwright/Chromium too heavy for the 4 GB Lightsail box | local-dev only ([INGEST_MCA_PUBLIC.md](./INGEST_MCA_PUBLIC.md)) |
 | Live NCLT / RBI scrapers | Built but not scheduled in prod | curated real-case seeds; weekly CI refresh planned |
-| Gemini Flash narrative | Optional free-tier key | deterministic template fallback (cites only structured numbers; never hallucinates) |
+| Mistral narrative | Optional free-tier key | deterministic template fallback (cites only structured numbers; never hallucinates) |
 
 ### 10.3 Modelling / scope limitations
 - **Tier-1 weights M10/M11 are reserved** in the scorer but fire only via the cross-company

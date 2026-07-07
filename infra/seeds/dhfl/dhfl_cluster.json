@@ -1,9 +1,9 @@
 {
   "cluster_id": "DHFL-EVERGREENING-2018",
-  "description": "DHFL evergreening cluster: DHFL + 2 shell conduit borrowers (S1, S2). Round-trip repayment via S1, serial short-term charge cycling (3+ cycles within 45 days), shell conduit detection (S2 has 2 employees and 18 months old). PRD §14 demo: Patterns 13/14/15 fire simultaneously.",
+  "description": "DHFL evergreening cluster: DHFL + 2 shell conduit borrowers (S1, S2). Round-trip repayment via S1, serial short-term charge cycling (3+ cycles within 45 days), shell conduit detection (S2 has 2 employees and 18 months old). PRD Â§14 demo: Patterns 13/14/15 fire simultaneously.",
   "companies": [
     {
-      "cin": "L65910MH1984PLC032526",
+      "cin": "L65910MH1984PLC032662",
       "name": "Dewan Housing Finance Corporation Limited",
       "incorporation_date": "1984-04-11",
       "nic_code": 65910,
@@ -63,8 +63,8 @@
     }
   ],
   "director_cin_links": [
-    ["00448811", "L65910MH1984PLC032526"],
-    ["00448812", "L65910MH1984PLC032526"],
+    ["00448811", "L65910MH1984PLC032662"],
+    ["00448812", "L65910MH1984PLC032662"],
     ["00448811", "U70200MH2017PTC308912"],
     ["00112299", "U70200MH2017PTC308912"],
     ["00448812", "U70109MH2018PTC309111"],
@@ -72,7 +72,7 @@
   ],
   "charges": [
     {
-      "cin": "L65910MH1984PLC032526",
+      "cin": "L65910MH1984PLC032662",
       "charge_id": "DHFL-CHG-A-2018",
       "lender_name": "State Bank of India",
       "bank_branch_ifsc": "SBIN0000300",
@@ -82,7 +82,7 @@
       "charge_type": "hypothecation"
     },
     {
-      "cin": "L65910MH1984PLC032526",
+      "cin": "L65910MH1984PLC032662",
       "charge_id": "DHFL-CHG-B-2018",
       "lender_name": "State Bank of India",
       "bank_branch_ifsc": "SBIN0000300",
@@ -92,7 +92,7 @@
       "charge_type": "hypothecation"
     },
     {
-      "cin": "L65910MH1984PLC032526",
+      "cin": "L65910MH1984PLC032662",
       "charge_id": "DHFL-CHG-C-2019",
       "lender_name": "State Bank of India",
       "bank_branch_ifsc": "SBIN0000300",
@@ -123,7 +123,7 @@
   "repayments": [
     {
       "loan_id": "DHFL-CHG-A-2018",
-      "cin": "L65910MH1984PLC032526",
+      "cin": "L65910MH1984PLC032662",
       "repayment_date": "2018-08-04",
       "amount": 5000000000.0,
       "source_account_ifsc": "SBIN0000300",
@@ -131,7 +131,7 @@
     },
     {
       "loan_id": "DHFL-CHG-B-2018",
-      "cin": "L65910MH1984PLC032526",
+      "cin": "L65910MH1984PLC032662",
       "repayment_date": "2018-12-30",
       "amount": 5500000000.0,
       "source_account_ifsc": "SBIN0000300",
@@ -139,7 +139,7 @@
     },
     {
       "loan_id": "DHFL-CHG-C-2019",
-      "cin": "L65910MH1984PLC032526",
+      "cin": "L65910MH1984PLC032662",
       "repayment_date": "2019-05-29",
       "amount": 6000000000.0,
       "source_account_ifsc": "SBIN0000300",

@@ -53,7 +53,7 @@ export const DEMO_CASES: readonly DemoCase[] = [
     source: "SFIO + RBI + NCLT CP(IB) 4258/MB/2019",
     evidence: 18,
     route: "/evergreening",
-    sourceLabel: "SFIO patterns · synthetic demonstration",
+    sourceLabel: "SFIO / RBI public-record graph fixture",
     dataType: "synthetic",
   },
   {

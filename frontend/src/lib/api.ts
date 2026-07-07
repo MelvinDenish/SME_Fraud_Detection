@@ -182,6 +182,21 @@ export async function downloadReport(cin: string): Promise<{ reportId: string | 
   return { reportId, generatedAt };
 }
 
+
+/** Download the full evidence graph / provenance chain as JSON. */
+export async function downloadProvenance(cin: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/analyse/${cin}/provenance/export`, { headers: bearerHeader() });
+  if (!res.ok) await _throwHttp("GET", `/analyse/${cin}/provenance/export`, res);
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `sentinel-g-${cin}-provenance.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
 // Public data-lineage inventory — backs the /sources page judges hit
 // without logging in. Every fraud signal traces to one of these rows.
 export type SourceStatus = "live" | "stale" | "missing" | "external";
@@ -214,6 +229,7 @@ export const api = {
   health: () => getJson<{ status: string; version: string; env: string }>("/health"),
   analyse: (cin: string) => getJson<AnalyseResponse>(`/analyse/${cin}`),
   provenance: (cin: string) => getJson<ProvenanceResponse>(`/analyse/${cin}/provenance`),
+  downloadProvenance,
   narrative: (cin: string) => getJson<NarrativeResponse>(`/narrative/${cin}`),
   uploadFinancials: (cin: string, file: File) =>
     postFile<UploadAck>(`/upload/financials/${cin}`, file),

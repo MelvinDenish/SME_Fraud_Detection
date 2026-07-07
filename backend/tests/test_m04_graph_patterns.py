@@ -1,4 +1,4 @@
-"""Tests for Module 4 — 17 graph patterns (PRD §4.4 + §10 Day 9).
+"""Tests for Module 4 â€” 17 graph patterns (PRD Â§4.4 + Â§10 Day 9).
 
 These exercise the *pattern catalogue* and Cypher shapes without requiring a
 live Neo4j server. A real-DB integration test would be slow to run on the
@@ -52,7 +52,7 @@ def test_each_run_is_async_with_expected_signature() -> None:
 
 
 def test_severities_match_prd_buckets() -> None:
-    # PRD §4.4 expects core SME critical: P1, P3
+    # PRD Â§4.4 expects core SME critical: P1, P3
     # ITC critical: P8, P9, P12
     # Evergreening critical: P13, P16
     expected_critical = {"P01", "P03", "P08", "P09", "P12", "P13", "P16"}
@@ -83,14 +83,14 @@ def test_p16_cypher_uses_wilful_defaulter_flag() -> None:
 
 # --- ITC ring fixture is a 7-node SCC ----------------------------------------
 def test_itc_ring_fixture_is_seven_node_scc() -> None:
-    """PRD §10 Day 9 acceptance: 'SCC finds rings on synthetic data.'
+    """PRD Â§10 Day 9 acceptance: 'SCC finds rings on synthetic data.'
 
     Pre-check: the fixture itself is a 7-node directed cycle on CLAIMS_ITC_FROM.
     """
     ring_path = REPO / "infra" / "seeds" / "itc_carousel" / "ring.json"
     ring = json.loads(ring_path.read_text(encoding="utf-8"))
     edges = ring["edges"]
-    # Deduplicate by (from, to) pair — ring.json carries multiple periods per
+    # Deduplicate by (from, to) pair â€” ring.json carries multiple periods per
     # connection, so validate unique directed pairs rather than raw edge count.
     unique_pairs = {(e["from_gstin"], e["to_gstin"]) for e in edges}
     assert len(unique_pairs) == 7
@@ -110,11 +110,11 @@ def test_itc_ring_fixture_is_seven_node_scc() -> None:
 def test_dhfl_fixture_has_round_trip_and_serial_charges() -> None:
     dhfl_path = REPO / "infra" / "seeds" / "dhfl" / "dhfl_cluster.json"
     data = json.loads(dhfl_path.read_text(encoding="utf-8"))
-    # P13: round-trip — at least one FUNDED_REPAYMENT_OF with overlap >= 90%
+    # P13: round-trip â€” at least one FUNDED_REPAYMENT_OF with overlap >= 90%
     assert any(fr["amount_overlap_pct"] >= 90.0 for fr in data["funded_repayments"])
-    # P14: serial short-term charges — 3+ disbursements satisfied within 150 days
+    # P14: serial short-term charges â€” 3+ disbursements satisfied within 150 days
     dhfl_charges = [
-        c for c in data["charges"] if c["cin"] == "L65910MH1984PLC032526"
+        c for c in data["charges"] if c["cin"] == "L65910MH1984PLC032662"
         and c.get("satisfaction_date")
     ]
     assert len(dhfl_charges) >= 3
@@ -152,7 +152,7 @@ class _StubCursor:
 @pytest.mark.asyncio
 async def test_run_returns_zero_signals_on_empty_graph(monkeypatch) -> None:
     """All 17 patterns should execute without raising even when the graph
-    returns no rows. PRD §10 Day 9: 'All 17 patterns run.'"""
+    returns no rows. PRD Â§10 Day 9: 'All 17 patterns run.'"""
     from backend.app import config as cfg_mod
 
     class _Settings:

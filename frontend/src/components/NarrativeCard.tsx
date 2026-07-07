@@ -1,6 +1,6 @@
 /* NarrativeCard — Stream 2.5 of the production-grade closure plan.
  *
- * Renders the Gemini Flash executive summary for one CIN. Mounted on
+ * Renders the Mistral executive summary for one CIN. Mounted on
  * the Dashboard between the ScorePlate hero and the ModuleBreakdown
  * chart — gives the analyst a 90-140 word forensic-audit synopsis
  * before they dive into the bars + chain.
@@ -10,7 +10,7 @@
  *     the narrative resolves.
  *   - LLM unavailable / rate-limited / no API key: backend serves the
  *     deterministic template-fallback prose; the card surfaces the
- *     model label so the analyst knows whether they're seeing Gemini
+ *     model label so the analyst knows whether they're seeing Mistral
  *     output or the fallback.
  *   - Network or 5xx error: inline error pill, hero/chain still render.
  *   - 401: lets the layout's <ProtectedRoute> catch it via the standard
@@ -159,8 +159,8 @@ export default function NarrativeCard({ cin }: NarrativeCardProps) {
               <strong style={{ color: "var(--ink-2)" }}>Live LLM unavailable.</strong>{" "}
               This synopsis was composed by the deterministic template — every
               number above is drawn directly from the structured evidence, so
-              the prose is reliable but less varied than a Gemini-generated
-              summary. Restore the Gemini API key on the backend to enable
+              the prose is reliable but less varied than a Mistral-generated
+              summary. Set the Mistral API key on the backend to enable
               richer prose.
             </p>
           )}

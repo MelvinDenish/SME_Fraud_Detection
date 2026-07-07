@@ -409,9 +409,28 @@ export default function GraphExplorer() {
                 {query.data.signal_count} warning sign{query.data.signal_count === 1 ? "" : "s"} ·{" "}
                 {query.data.triggered_by.length} source record{query.data.triggered_by.length === 1 ? "" : "s"}
               </Eyebrow>
-              <Eyebrow style={{ color: "var(--ink-4)" }}>
-                Hover · Click to highlight evidence
-              </Eyebrow>
+              <div style={{ display: "inline-flex", alignItems: "center", gap: "var(--s-3)" }}>
+                <Eyebrow style={{ color: "var(--ink-4)" }}>
+                  Hover - Click to highlight evidence
+                </Eyebrow>
+                <button
+                  type="button"
+                  onClick={() => api.downloadProvenance(query.data.cin)}
+                  style={{
+                    background: "transparent",
+                    border: `1px solid ${HEX.accentGold}`,
+                    color: HEX.accentGold,
+                    fontSize: "0.72rem",
+                    fontWeight: 700,
+                    letterSpacing: "0.12em",
+                    textTransform: "uppercase",
+                    padding: "4px 10px",
+                    cursor: "pointer",
+                  }}
+                >
+                  Export JSON
+                </button>
+              </div>
             </div>
 
             {highlightedIds.size > 0 && (

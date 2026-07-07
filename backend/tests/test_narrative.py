@@ -5,7 +5,7 @@ Test surfaces (sequenced by failure-mode cost):
 * Serializer purity — `serialize_for_narrative()` is total + deterministic.
 * Allowed-numbers guard — `numbers_outside_allowed()` catches
   hallucinated figures while letting structural integers through.
-* Template fallback — when no Gemini key, never raises, always cites
+* Template fallback — when no Mistral key, never raises, always cites
   numbers from the structured payload.
 * Auth gate — anonymous /narrative/{cin} returns 401.
 * Caching — second call on the same (cin, evidence) hits the cache.
@@ -196,8 +196,8 @@ def test_authenticated_narrative_returns_200_with_summary():
     assert "model" in body
     assert "generated_at" in body
     assert "evidence_hash" in body
-    # No Gemini key in CI ⇒ falls back to template.
-    assert body["model"].startswith("template-fallback") or body["model"] == "gemini-1.5-flash"
+    # No Mistral key in CI ⇒ falls back to template.
+    assert body["model"].startswith("template-fallback") or body["model"] == "mistral-small-latest"
 
 
 def test_narrative_caches_repeat_calls():

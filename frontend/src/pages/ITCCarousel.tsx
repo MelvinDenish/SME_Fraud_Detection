@@ -1,272 +1,174 @@
+import { useMemo, useState } from "react";
 import { useQueries } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { AnalyseResponse, BAND_PALETTE, api } from "../lib/api";
+import { AnalyseResponse, BAND_PALETTE, SEVERITY_PALETTE, api } from "../lib/api";
+import ringSeed from "../../../infra/seeds/itc_carousel/ring.json";
 
-// Three CINs from the WD / NCLT seed set that map to ITC-style risk:
-// each /analyse call lands at CRITICAL via the Day-12 override path so
-// the carousel page lights up end-to-end on cold fixtures. The 7-node
-// synthetic ring at infra/seeds/itc_carousel/ring.json renders alongside
-// in the Graph Explorer; this view shows the SME-side of the carousel.
-const CAROUSEL_CINS: { cin: string; role: string; node: string }[] = [
-  { cin: "U27109MH2018PTC312456", node: "A", role: "Issuer · PNB WD-flagged" },
-  { cin: "U46101MH2017PTC289123", node: "B", role: "Recipient · Canara WD-flagged" },
-  { cin: "U46190MH2019PTC295432", node: "C", role: "Conduit · Suit filed" },
-];
+type RingEntity = {
+  gstin: string;
+  name: string;
+  cin?: string;
+  registration_date: string;
+  is_cancelled: boolean;
+  is_missing_trader?: boolean;
+  aggregate_turnover: number;
+  tax_paid_ytd: number;
+};
+
+type RingEdge = {
+  from_gstin: string;
+  to_gstin: string;
+  period: string;
+  amount: number;
+  invoice_count: number;
+  risk_flag: string;
+};
+
+const ring = ringSeed as {
+  ring_id: string;
+  description: string;
+  source_url: string;
+  dggi_zone: string;
+  entity_disclosure: string;
+  verified_date: string;
+  gst_entities: RingEntity[];
+  edges: RingEdge[];
+};
 
 const eyebrow: React.CSSProperties = {
   fontFamily: "var(--font-body)",
   fontSize: "var(--t-eyebrow)",
-  letterSpacing: "0.28em",
+  letterSpacing: "0.22em",
   textTransform: "uppercase",
   color: "var(--accent-gold)",
   fontWeight: 700,
 };
 
-const cardStyle: React.CSSProperties = {
+const panel: React.CSSProperties = {
   background: "var(--paper-elevated)",
-  padding: "var(--s-6)",
   borderTop: "1px solid var(--rule)",
   borderBottom: "1px solid var(--rule-soft)",
   boxShadow: "var(--shadow-card)",
+  padding: "var(--s-5)",
 };
 
-function CarouselCard({ cin, role, node, data, isLoading, isFetching, failureCount, error }: {
-  cin: string;
-  role: string;
-  node: string;
-  data?: AnalyseResponse;
-  isLoading: boolean;
-  isFetching: boolean;
-  failureCount: number;
-  error: unknown;
-}) {
-  // Treat in-flight retries as "still loading" so the card doesn't flash
-  // a transient 429 between attempts. Only the terminal failure shows as
-  // an error.
-  const retrying = isFetching && failureCount > 0 && !data;
-  const showLoading = isLoading || retrying;
-  const showError = !!error && !showLoading;
-  const band = data ? BAND_PALETTE[data.risk_band] : null;
-  return (
-    <article style={cardStyle}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "var(--s-5)" }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ ...eyebrow, margin: 0, marginBottom: "var(--s-2)" }}>Node {node}</p>
-          <h2 style={{
-            fontFamily: "var(--font-display)",
-            fontSize: "var(--t-h3)",
-            color: "var(--ink)",
-            margin: 0,
-            marginBottom: "var(--s-2)",
-            fontWeight: 500,
-            letterSpacing: "-0.005em",
-          }}>{role}</h2>
-          <code style={{
-            fontFamily: "var(--font-mono)",
-            fontSize: "var(--t-meta)",
-            color: "var(--ink-3)",
-          }}>{cin}</code>
-        </div>
-        {band && (
-          <span style={{
-            background: band.bg, color: band.fg,
-            padding: "var(--s-2) var(--s-4)",
-            fontFamily: "var(--font-body)",
-            fontSize: "var(--t-eyebrow)",
-            letterSpacing: "0.18em",
-            textTransform: "uppercase",
-            fontWeight: 700,
-          }}>{data!.risk_band}</span>
-        )}
-      </div>
-
-      {showLoading && (
-        <p style={{ color: "var(--ink-4)", margin: "var(--s-4) 0 0", fontFamily: "var(--font-body)", fontSize: "var(--t-meta)" }}>
-          {retrying
-            ? `Still trying… (attempt ${failureCount + 1} of 4)`
-            : "Running analysis…"}
-        </p>
-      )}
-      {showError && (
-        <p style={{ color: "var(--risk-critical)", margin: "var(--s-4) 0 0", fontFamily: "var(--font-body)", fontSize: "var(--t-meta)" }}>
-          {(error as Error).message}
-        </p>
-      )}
-
-      {data && (
-        <>
-          <div style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(3, 1fr)",
-            gap: "var(--s-5)",
-            marginTop: "var(--s-5)",
-            paddingTop: "var(--s-4)",
-            borderTop: "1px solid var(--rule-soft)",
-          }}>
-            <div>
-              <p style={{ ...eyebrow, margin: 0 }}>Score</p>
-              <p style={{
-                fontFamily: "var(--font-display)",
-                fontSize: "var(--t-h2)",
-                fontWeight: 500,
-                color: "var(--ink)",
-                margin: "var(--s-1) 0 0",
-              }}>{data.fraud_risk_score.toFixed(1)}</p>
-            </div>
-            <div>
-              <p style={{ ...eyebrow, margin: 0 }}>Info Quality</p>
-              <p style={{
-                fontFamily: "var(--font-mono)",
-                fontSize: "var(--t-h3)",
-                color: "var(--ink)",
-                margin: "var(--s-1) 0 0",
-              }}>{data.data_confidence}%</p>
-            </div>
-            <div>
-              <p style={{ ...eyebrow, margin: 0 }}>Signals</p>
-              <p style={{
-                fontFamily: "var(--font-mono)",
-                fontSize: "var(--t-h3)",
-                color: "var(--ink)",
-                margin: "var(--s-1) 0 0",
-              }}>{data.evidence_chain.length}</p>
-            </div>
-          </div>
-          <Link
-            to={`/graph/${cin}`}
-            style={{
-              display: "inline-block",
-              marginTop: "var(--s-5)",
-              fontFamily: "var(--font-body)",
-              fontSize: "var(--t-eyebrow)",
-              letterSpacing: "0.18em",
-              textTransform: "uppercase",
-              fontWeight: 600,
-              color: "var(--accent-gold)",
-              textDecoration: "none",
-              borderBottom: "1px solid var(--accent-gold)",
-              paddingBottom: 2,
-            }}
-          >
-            Open in graph explorer →
-          </Link>
-        </>
-      )}
-    </article>
-  );
-}
-
-// Stream 1.4 — retry policy for the three concurrent /analyse calls.
-// day27_rehearsal.json showed nodes B + C hitting 429 because /analyse
-// burns 3 budget slots in the global 10/min/IP rate-limit window. With
-// the Stream 1.2 prod default of 60/min the contention is gone, but we
-// still want a real retry for transient failures (cold boot, brief Fly.io
-// VM hand-off, etc.). React Query's exponential backoff: 300 / 900 / 2700ms.
-// We only retry on rate-limit and 5xx — auth/404/422 are permanent.
 const RETRIABLE_HTTP_CODES = new Set([408, 425, 429, 500, 502, 503, 504]);
 
 function isRetriable(err: unknown): boolean {
   const msg = err instanceof Error ? err.message : String(err ?? "");
-  // api.ts formats errors as "GET /path -> 429: ..." — fish the status out.
   const match = msg.match(/-> (\d{3})/);
-  if (!match) return false;
-  return RETRIABLE_HTTP_CODES.has(Number(match[1]));
+  return match ? RETRIABLE_HTTP_CODES.has(Number(match[1])) : false;
 }
 
-function CarouselRingDiagram() {
+function formatCr(value: number): string {
+  return `Rs ${(value / 10_000_000).toLocaleString("en-IN", { maximumFractionDigits: 1 })} cr`;
+}
+
+function shortGstin(gstin: string): string {
+  return `${gstin.slice(0, 4)}...${gstin.slice(-4)}`;
+}
+
+function aggregateEdges(edges: RingEdge[]) {
+  const byPair = new Map<string, { from: string; to: string; amount: number; invoices: number; periods: Set<string> }>();
+  for (const edge of edges) {
+    const key = `${edge.from_gstin}->${edge.to_gstin}`;
+    const prev = byPair.get(key) ?? { from: edge.from_gstin, to: edge.to_gstin, amount: 0, invoices: 0, periods: new Set<string>() };
+    prev.amount += edge.amount;
+    prev.invoices += edge.invoice_count;
+    prev.periods.add(edge.period);
+    byPair.set(key, prev);
+  }
+  return [...byPair.values()];
+}
+
+function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <svg
-      width={300}
-      height={210}
-      viewBox="0 0 300 210"
-      style={{ display: "block", margin: "0 auto" }}
-      aria-label="ITC carousel ring: A → B → C → A, ₹512 crore"
-    >
-      <defs>
-        <marker id="arr" markerWidth={8} markerHeight={8} refX={6} refY={3} orient="auto">
-          <path d="M0,0 L0,6 L8,3 z" fill="var(--accent-gold)" />
-        </marker>
-      </defs>
-      {/* edges */}
-      <line x1={75} y1={170} x2={218} y2={42} stroke="var(--accent-gold)" strokeWidth={1.5} markerEnd="url(#arr)" />
-      <line x1={232} y1={55} x2={232} y2={162} stroke="var(--accent-gold)" strokeWidth={1.5} markerEnd="url(#arr)" />
-      <line x1={218} y1={178} x2={90} y2={178} stroke="var(--accent-gold)" strokeWidth={1.5} markerEnd="url(#arr)" />
-      {/* nodes */}
-      <circle cx={68} cy={178} r={22} fill="var(--paper-elevated)" stroke="var(--accent-gold)" strokeWidth={1.5} />
-      <text x={68} y={175} textAnchor="middle" fill="var(--ink)" fontSize={11} fontFamily="var(--font-mono)">A</text>
-      <text x={68} y={189} textAnchor="middle" fill="var(--ink-3)" fontSize={8} fontFamily="var(--font-body)">Issuer</text>
-      <circle cx={232} cy={36} r={22} fill="var(--paper-elevated)" stroke="var(--accent-gold)" strokeWidth={1.5} />
-      <text x={232} y={33} textAnchor="middle" fill="var(--ink)" fontSize={11} fontFamily="var(--font-mono)">B</text>
-      <text x={232} y={47} textAnchor="middle" fill="var(--ink-3)" fontSize={8} fontFamily="var(--font-body)">Recipient</text>
-      <circle cx={232} cy={178} r={22} fill="var(--paper-elevated)" stroke="var(--accent-gold)" strokeWidth={1.5} />
-      <text x={232} y={175} textAnchor="middle" fill="var(--ink)" fontSize={11} fontFamily="var(--font-mono)">C</text>
-      <text x={232} y={189} textAnchor="middle" fill="var(--ink-3)" fontSize={8} fontFamily="var(--font-body)">Conduit</text>
-      {/* centre label */}
-      <text x={150} y={107} textAnchor="middle" fill="var(--ink-2)" fontSize={10} fontFamily="var(--font-mono)">₹512 cr</text>
-    </svg>
+    <div>
+      <p style={{ ...eyebrow, color: "var(--ink-3)", margin: 0 }}>{label}</p>
+      <p style={{ fontFamily: "var(--font-mono)", fontSize: "var(--t-h3)", margin: "var(--s-1) 0 0", color: "var(--ink)" }}>{value}</p>
+    </div>
+  );
+}
+
+function RingTopology({ selectedGstin, onSelect }: { selectedGstin: string; onSelect: (gstin: string) => void }) {
+  const edges = useMemo(() => aggregateEdges(ring.edges), []);
+  const nodeByGstin = new Map(ring.gst_entities.map((entity) => [entity.gstin, entity]));
+  const cx = 390;
+  const cy = 260;
+  const radius = 185;
+  const points = ring.gst_entities.map((entity, index) => {
+    const angle = -Math.PI / 2 + (index * 2 * Math.PI) / ring.gst_entities.length;
+    return { entity, x: cx + Math.cos(angle) * radius, y: cy + Math.sin(angle) * radius };
+  });
+  const pointByGstin = new Map(points.map((p) => [p.entity.gstin, p]));
+  const selected = nodeByGstin.get(selectedGstin) ?? ring.gst_entities[0];
+  const taxRatio = selected.aggregate_turnover > 0 ? (selected.tax_paid_ytd / selected.aggregate_turnover) * 100 : 0;
+
+  return (
+    <section style={panel}>
+      <div style={{ display: "flex", justifyContent: "space-between", gap: "var(--s-5)", flexWrap: "wrap" }}>
+        <div>
+          <p style={{ ...eyebrow, margin: 0 }}>Live topology from {ring.ring_id}</p>
+          <h2 style={{ fontFamily: "var(--font-display)", fontSize: "var(--t-h2)", fontWeight: 500, margin: "var(--s-1) 0 0" }}>{ring.gst_entities.length}-node CLAIMS_ITC_FROM cycle</h2>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(90px, 1fr))", gap: "var(--s-4)", minWidth: 300 }}>
+          <Metric label="Cycle edges" value={String(edges.length)} />
+          <Metric label="Invoices" value={String(edges.reduce((sum, edge) => sum + edge.invoices, 0))} />
+          <Metric label="ITC churn" value={formatCr(edges.reduce((sum, edge) => sum + edge.amount, 0))} />
+        </div>
+      </div>
+
+      <svg viewBox="0 0 780 540" role="img" aria-label="Seven-node GST input-tax-credit carousel graph" style={{ width: "100%", marginTop: "var(--s-4)" }}>
+        <defs><marker id="itc-arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#a07127" /></marker></defs>
+        {edges.map((edge) => {
+          const source = pointByGstin.get(edge.from);
+          const target = pointByGstin.get(edge.to);
+          if (!source || !target) return null;
+          const active = selectedGstin === edge.from || selectedGstin === edge.to;
+          return <g key={`${edge.from}-${edge.to}`}><line x1={source.x} y1={source.y} x2={target.x} y2={target.y} stroke={active ? "#7f1d1d" : "#a07127"} strokeWidth={active ? 3 : 1.5} markerEnd="url(#itc-arrow)" opacity={active ? 1 : 0.68} /><text x={(source.x + target.x) / 2} y={(source.y + target.y) / 2 - 8} textAnchor="middle" fontFamily="var(--font-mono)" fontSize="11" fill="#585045">{formatCr(edge.amount)}</text></g>;
+        })}
+        {points.map(({ entity, x, y }, index) => {
+          const selectedNode = selectedGstin === entity.gstin;
+          const risky = entity.is_cancelled || entity.is_missing_trader;
+          return <g key={entity.gstin} onClick={() => onSelect(entity.gstin)} style={{ cursor: "pointer" }}><circle cx={x} cy={y} r={selectedNode ? 42 : 36} fill={risky ? "#7f1d1d" : "#f3ead2"} stroke={selectedNode ? "#0e0d0a" : "#a07127"} strokeWidth={selectedNode ? 3 : 1.5} /><text x={x} y={y - 8} textAnchor="middle" fontFamily="var(--font-mono)" fontSize="13" fill={risky ? "white" : "#0e0d0a"}>G{index + 1}</text><text x={x} y={y + 9} textAnchor="middle" fontFamily="var(--font-body)" fontSize="10" fill={risky ? "white" : "#585045"}>{shortGstin(entity.gstin)}</text>{entity.is_cancelled && <text x={x} y={y + 24} textAnchor="middle" fontFamily="var(--font-body)" fontSize="9" fill="white">cancelled</text>}{entity.is_missing_trader && !entity.is_cancelled && <text x={x} y={y + 24} textAnchor="middle" fontFamily="var(--font-body)" fontSize="9" fill="white">missing</text>}</g>;
+        })}
+      </svg>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1.25fr repeat(3, 1fr)", gap: "var(--s-4)", borderTop: "1px solid var(--rule-soft)", paddingTop: "var(--s-4)" }}>
+        <div><p style={{ ...eyebrow, margin: 0 }}>Selected GST entity</p><h3 style={{ margin: "var(--s-1) 0", fontFamily: "var(--font-display)", fontSize: "var(--t-h3)", fontWeight: 500 }}>{selected.name}</h3><code style={{ fontFamily: "var(--font-mono)", fontSize: "var(--t-meta)", color: "var(--ink-3)" }}>{selected.gstin}</code></div>
+        <Metric label="Turnover" value={formatCr(selected.aggregate_turnover)} />
+        <Metric label="Tax paid" value={formatCr(selected.tax_paid_ytd)} />
+        <Metric label="Tax / turnover" value={`${taxRatio.toFixed(2)}%`} />
+      </div>
+    </section>
+  );
+}
+
+function AnalysisCard({ entity, data, isLoading, isFetching, failureCount, error }: { entity: RingEntity; data?: AnalyseResponse; isLoading: boolean; isFetching: boolean; failureCount: number; error: unknown; }) {
+  const retrying = isFetching && failureCount > 0 && !data;
+  const band = data ? BAND_PALETTE[data.risk_band] : null;
+  const graphSignals = data?.evidence_chain.filter((signal) => signal.module_name === "m04_graph_patterns") ?? [];
+  return (
+    <article style={{ ...panel, padding: "var(--s-4)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", gap: "var(--s-3)", alignItems: "flex-start" }}><div><p style={{ ...eyebrow, margin: 0 }}>{shortGstin(entity.gstin)}</p><h3 style={{ margin: "var(--s-1) 0", fontFamily: "var(--font-display)", fontSize: "1.15rem", fontWeight: 500 }}>{entity.name}</h3><code style={{ fontFamily: "var(--font-mono)", fontSize: "0.72rem", color: "var(--ink-3)" }}>{entity.cin}</code></div>{band && <span style={{ background: band.bg, color: band.fg, padding: "6px 9px", fontSize: "0.65rem", letterSpacing: "0.12em", fontWeight: 700 }}>{data!.risk_band}</span>}</div>
+      {(isLoading || retrying) && <p style={{ color: "var(--ink-4)", fontFamily: "var(--font-body)", fontSize: "var(--t-meta)" }}>{retrying ? `Retrying live analysis (${failureCount + 1}/4)` : "Running live analysis..."}</p>}
+      {Boolean(error) && !isLoading && !retrying && <p style={{ color: "var(--risk-critical)", fontFamily: "var(--font-body)", fontSize: "var(--t-meta)" }}>{(error as Error).message}</p>}
+      {data && <><div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "var(--s-3)", marginTop: "var(--s-4)", borderTop: "1px solid var(--rule-soft)", paddingTop: "var(--s-3)" }}><Metric label="Score" value={data.fraud_risk_score.toFixed(1)} /><Metric label="DC" value={`${data.data_confidence}%`} /><Metric label="Signals" value={String(data.evidence_chain.length)} /></div>{graphSignals.length > 0 && <ul style={{ margin: "var(--s-3) 0 0", padding: 0, listStyle: "none", display: "grid", gap: 8 }}>{graphSignals.slice(0, 2).map((signal) => <li key={signal.signal_id} style={{ borderLeft: `3px solid ${SEVERITY_PALETTE[signal.severity]}`, paddingLeft: 10 }}><p style={{ margin: 0, fontFamily: "var(--font-mono)", fontSize: "0.72rem", color: "var(--accent-gold)" }}>{signal.signal_type}</p><p style={{ margin: "2px 0 0", fontFamily: "var(--font-body)", fontSize: "0.82rem", color: "var(--ink-2)", lineHeight: 1.45 }}>{signal.evidence_string}</p></li>)}</ul>}<Link to={`/graph/${data.cin}`} style={{ display: "inline-block", marginTop: "var(--s-4)", color: "var(--accent-gold)", fontFamily: "var(--font-body)", fontSize: "var(--t-eyebrow)", textTransform: "uppercase", letterSpacing: "0.16em", textDecoration: "none", borderBottom: "1px solid var(--accent-gold)" }}>Open provenance graph</Link></>}
+    </article>
   );
 }
 
 export default function ITCCarousel() {
-  const results = useQueries({
-    queries: CAROUSEL_CINS.map((c) => ({
-      queryKey: ["analyse", c.cin],
-      queryFn: () => api.analyse(c.cin),
-      retry: (failureCount: number, error: unknown) =>
-        failureCount < 3 && isRetriable(error),
-      retryDelay: (attempt: number) => Math.min(300 * 3 ** attempt, 2700),
-    })),
-  });
-
+  const cins = ring.gst_entities.map((entity) => entity.cin).filter((cin): cin is string => Boolean(cin));
+  const [selectedGstin, setSelectedGstin] = useState(ring.gst_entities[0].gstin);
+  const results = useQueries({ queries: cins.map((cin) => ({ queryKey: ["analyse", cin], queryFn: () => api.analyse(cin), retry: (failureCount: number, error: unknown) => failureCount < 3 && isRetriable(error), retryDelay: (attempt: number) => Math.min(300 * 3 ** attempt, 2700) })) });
+  const resultByCin = new Map(cins.map((cin, index) => [cin, results[index]]));
   return (
-    <div style={{ display: "grid", gap: "var(--s-6)", maxWidth: 960 }}>
-      <header style={{ borderBottom: "1px solid var(--rule)", paddingBottom: "var(--s-5)" }}>
-        <p style={{ ...eyebrow, margin: 0, marginBottom: "var(--s-2)" }}>
-          Investigation · GST Tax Credit Fraud Ring
-        </p>
-        <h1 style={{
-          fontFamily: "var(--font-display)",
-          fontSize: "var(--t-h1)",
-          fontWeight: 500,
-          color: "var(--ink)",
-          margin: 0,
-          letterSpacing: "-0.01em",
-        }}>
-          ITC Carousel
-        </h1>
-        <div style={{ height: 1, background: "var(--accent-gold)", width: 56, margin: "var(--s-4) 0" }} aria-hidden />
-        <p style={{
-          color: "var(--ink-2)",
-          margin: 0,
-          fontFamily: "var(--font-body)",
-          fontSize: "var(--t-body)",
-          maxWidth: "60ch",
-          lineHeight: 1.6,
-        }}>
-          Three companies appear to be routing fake GST tax credit claims through
-          each other in a closed loop — modelled on a real 2022 case. All three
-          share registered addresses and bank branches, which our network and
-          shell-entity checks have flagged.
-        </p>
-        <div style={{ marginTop: "var(--s-3)", display: "inline-flex", gap: 6, alignItems: "center", fontFamily: "monospace", fontSize: "0.68rem", color: "#a16207", letterSpacing: "0.05em" }}>
-          <span aria-hidden style={{ width: 6, height: 6, background: "#a16207", borderRadius: "50%", display: "inline-block" }} />
-          DGGI Mumbai · company names redacted
-        </div>
-      </header>
-      <CarouselRingDiagram />
-      {CAROUSEL_CINS.map((c, i) => (
-        <CarouselCard
-          key={c.cin}
-          cin={c.cin}
-          role={c.role}
-          node={c.node}
-          data={results[i].data}
-          isLoading={results[i].isLoading}
-          isFetching={results[i].isFetching}
-          failureCount={results[i].failureCount}
-          error={results[i].error}
-        />
-      ))}
+    <div style={{ display: "grid", gap: "var(--s-6)", maxWidth: 1180 }}>
+      <header style={{ borderBottom: "1px solid var(--rule)", paddingBottom: "var(--s-5)" }}><p style={{ ...eyebrow, margin: 0, marginBottom: "var(--s-2)" }}>Investigation - GST tax-credit graph</p><h1 style={{ fontFamily: "var(--font-display)", fontSize: "var(--t-h1)", fontWeight: 500, color: "var(--ink)", margin: 0 }}>DGGI Mumbai ITC Carousel</h1><div style={{ height: 1, background: "var(--accent-gold)", width: 56, margin: "var(--s-4) 0" }} aria-hidden /><p style={{ color: "var(--ink-2)", margin: 0, fontFamily: "var(--font-body)", fontSize: "var(--t-body)", maxWidth: "78ch", lineHeight: 1.6 }}>{ring.description}</p><div style={{ marginTop: "var(--s-3)", display: "flex", gap: "var(--s-3)", flexWrap: "wrap", alignItems: "center", fontFamily: "var(--font-mono)", fontSize: "0.72rem", color: "#a16207" }}><span>DGGI {ring.dggi_zone}</span><span>Verified {ring.verified_date}</span><a href={ring.source_url} style={{ color: "#a16207" }}>CBIC press-release archive</a></div></header>
+      <RingTopology selectedGstin={selectedGstin} onSelect={setSelectedGstin} />
+      <section style={{ display: "grid", gap: "var(--s-4)" }}><div><p style={{ ...eyebrow, margin: 0 }}>Live per-node analysis</p><h2 style={{ fontFamily: "var(--font-display)", fontSize: "var(--t-h2)", fontWeight: 500, margin: "var(--s-1) 0 0" }}>Every CIN in the ring is scored independently</h2></div><div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(310px, 1fr))", gap: "var(--s-4)" }}>{ring.gst_entities.map((entity) => { const result = entity.cin ? resultByCin.get(entity.cin) : undefined; return <AnalysisCard key={entity.gstin} entity={entity} data={result?.data} isLoading={result?.isLoading ?? false} isFetching={result?.isFetching ?? false} failureCount={result?.failureCount ?? 0} error={result?.error} />; })}</div></section>
+      <section style={{ ...panel, color: "var(--ink-2)", fontFamily: "var(--font-body)", lineHeight: 1.6 }}><p style={{ ...eyebrow, margin: 0, marginBottom: "var(--s-2)" }}>Source disclosure</p><p style={{ margin: 0 }}>{ring.entity_disclosure}</p></section>
     </div>
   );
 }

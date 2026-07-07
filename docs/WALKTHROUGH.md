@@ -122,7 +122,7 @@ SME. She has 10 minutes to decide if it goes to her senior with a
 1. On the IL&FS Dashboard, look below the `CRITICAL` band stamp.
 2. **Expect:** a small green dot followed by **"SFIO · NCLT · RBI — public court record"** in eyebrow font.
 3. Switch to Amtek Auto (`U27101MH2010PTC215432`) — same green badge.
-4. Navigate to `/evergreening` (DHFL) — grey badge: **"SFIO patterns · synthetic demonstration"**.
+4. Navigate to `/evergreening` (DHFL) — grey badge: **"SFIO / RBI public-record pattern - graph fixture active"**.
 5. Navigate to `/itc` — amber badge: **"DGGI Mumbai · company names redacted"**.
 
 ### 1.4 Use the severity filter chips
@@ -156,7 +156,7 @@ SME. She has 10 minutes to decide if it goes to her senior with a
 1. Navigate to `/evergreening`.
 2. **Expect:** a shimmer skeleton animates briefly during load (not a plain text paragraph).
 3. After load:
-   - Grey source badge: "SFIO patterns · synthetic demonstration"
+   - Grey source badge: "SFIO / RBI public-record pattern - graph fixture active"
    - DHFL's 4-column metrics grid: fraud risk · override reason · info quality · signals
    - Evidence list with specific ₹ amounts
 
@@ -197,7 +197,7 @@ Click **Log out** in the nav. Token cleared from localStorage. Land back on `/lo
 - [ ] Dashboard for IL&FS: CRITICAL band, score 75, evidence chain with ₹-specific strings
 - [ ] Company metadata row shows industry name format: **Construction (NIC 45201)**
 - [ ] Green source badge "SFIO · NCLT · RBI — public court record" visible for IL&FS + Amtek
-- [ ] Grey badge "SFIO patterns · synthetic demonstration" on `/evergreening`
+- [ ] Grey badge "SFIO / RBI public-record pattern - graph fixture active" on `/evergreening`
 - [ ] Amber badge "DGGI Mumbai · company names redacted" on `/itc`
 - [ ] Severity filter chips render; clicking CRITICAL narrows the chain; "✕ show all" restores
 - [ ] Chip counts differ between IL&FS and Amtek Auto
@@ -315,7 +315,7 @@ the evidence chain — but she does NOT need (and should NOT have) write access.
 1. Navigate to `/evergreening`.
 2. **Expect:**
    - Shimmer skeleton animates briefly during load.
-   - After load: grey source badge "SFIO patterns · synthetic demonstration" appears.
+   - After load: grey source badge "SFIO / RBI public-record pattern - graph fixture active" appears.
    - 4-column metrics grid: fraud risk · override reason · info quality · signals.
 3. Pattern 13 (loan round-tripping), 14 (overlapping timestamps), 15 (related-party intermediary) all fire.
 4. Each signal cites specific ₹ amounts.
@@ -493,7 +493,7 @@ Not 401, not 500. A different code = regression.
 ## Section 7 — What's NOT covered by this walkthrough
 
 - **Live MCA Public Portal scraping** — requires `python -m backend.app.ingest.mca_public_playwright --bootstrap` to bank session cookies. Without it, non-seeded CINs return 404. See `docs/INGEST_MCA_PUBLIC.md`.
-- **Gemini Flash narrative** — runs in template-fallback mode in dev (no `GEMINI_API_KEY`). Still grounded in real numbers. Set a real Google AI Studio key in `.env.local` to flip it on.
+- **Mistral narrative** — runs in template-fallback mode in dev (no `MISTRAL_API_KEY`). Still grounded in real numbers. Set a real Mistral API key in `.env.local` to flip it on.
 - **NCLT / RBI Wilful Defaulter live polling** — scrapers are coded (`ibbi_fetcher.py`, `rbi_fetcher.py`, `gstn_fetcher.py`, `nclt.py`) but run against fixture sources in dev.
 - **Production deployment** — see `docs/DEPLOY_ORACLE.md` / `DEPLOY_MILESWEB.md` / `DEPLOY_ORACLE_AMPERE.md`.
 
