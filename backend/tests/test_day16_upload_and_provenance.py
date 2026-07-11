@@ -157,6 +157,15 @@ def test_provenance_returns_evidence_graph(client: TestClient) -> None:
         assert "label" in edge
 
 
+def test_provenance_export_downloads_json(client: TestClient) -> None:
+    resp = client.get("/analyse/U45201MH2005PTC155294/provenance/export")
+    assert resp.status_code == 200
+    assert resp.headers["content-type"].startswith("application/json")
+    assert "sentinel-g-U45201MH2005PTC155294-provenance.json" in resp.headers["content-disposition"]
+    body = resp.json()
+    assert body["cin"] == "U45201MH2005PTC155294"
+    assert body["signal_count"] >= 5
+
 def test_analyse_payload_surfaces_propagation_band(client: TestClient) -> None:
     body = client.get("/analyse/U45201MH2005PTC155294").json()
     assert "propagation_band" in body

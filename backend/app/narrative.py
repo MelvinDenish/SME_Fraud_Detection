@@ -315,6 +315,7 @@ class MistralNarrator:
             )
 
         client = await self._ensure_client()
+        cache_result = True
         if client is None:
             summary = _template_fallback(ni)
             model_label = "template-fallback"
@@ -322,6 +323,7 @@ class MistralNarrator:
             logger.info("Mistral narrator: rate-limited - serving template")
             summary = _template_fallback(ni)
             model_label = "template-fallback (rate-limited)"
+            cache_result = False
         else:
             try:
                 settings = get_settings()
@@ -351,6 +353,7 @@ class MistralNarrator:
                 logger.warning("Mistral narrator: call failed (%s) - template fallback", exc)
                 summary = _template_fallback(ni)
                 model_label = "template-fallback (api-error)"
+                cache_result = False
 
         result = NarrativeResult(
             summary=summary,
@@ -359,7 +362,8 @@ class MistralNarrator:
             cached=False,
             evidence_hash=ni.evidence_hash,
         )
-        self._cache_put(cache_key, result)
+        if cache_result:
+            self._cache_put(cache_key, result)
         return result
 
     def reset_for_tests(self) -> None:

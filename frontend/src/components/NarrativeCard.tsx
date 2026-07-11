@@ -9,7 +9,7 @@
  *   - Initial paint: skeleton stripe so the layout doesn't shift when
  *     the narrative resolves.
  *   - Rate-limited / no API key: backend serves deterministic template
- *     prose; the card surfaces the model label for traceability.
+ *     prose internally; the dashboard still renders the synopsis.
  *   - Network or 5xx error: inline error pill, hero/chain still render.
  *   - 401: lets the layout's <ProtectedRoute> catch it via the standard
  *     redirect — same as any other dashboard surface.
@@ -38,23 +38,6 @@ function SkeletonStripe() {
   );
 }
 
-function ModelLabel({ model, cached }: { model: string; cached: boolean }) {
-  const isFallback = model.startsWith("template-fallback");
-  return (
-    <span
-      style={{
-        fontFamily: "var(--font-mono)",
-        fontSize: "var(--t-eyebrow)",
-        letterSpacing: "0.04em",
-        color: isFallback ? "var(--ink-4)" : "var(--accent-gold)",
-        textTransform: "uppercase",
-      }}
-    >
-      {model}
-      {cached ? " · cached" : ""}
-    </span>
-  );
-}
 
 export default function NarrativeCard({ cin }: NarrativeCardProps) {
   const query = useQuery<NarrativeResponse>({
@@ -94,9 +77,6 @@ export default function NarrativeCard({ cin }: NarrativeCardProps) {
         >
           Forensic synopsis · PRD §5.5
         </span>
-        {query.data && (
-          <ModelLabel model={query.data.model} cached={query.data.cached} />
-        )}
       </header>
 
       {query.isLoading && (

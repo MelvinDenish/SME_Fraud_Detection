@@ -415,7 +415,7 @@ export default function GraphExplorer() {
                 </Eyebrow>
                 <button
                   type="button"
-                  onClick={() => api.downloadProvenance(query.data.cin)}
+                  onClick={() => api.downloadProvenance(query.data.cin, query.data)}
                   style={{
                     background: "transparent",
                     border: `1px solid ${HEX.accentGold}`,

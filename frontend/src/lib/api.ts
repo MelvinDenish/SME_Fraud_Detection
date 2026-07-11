@@ -164,6 +164,17 @@ async function postFile<T>(path: string, file: File): Promise<T> {
   return (await res.json()) as T;
 }
 
+function downloadJsonBlob(filename: string, payload: unknown): void {
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
 /** Download a PDF report. Triggers a save-as in the user's browser. */
 export async function downloadReport(cin: string): Promise<{ reportId: string | null; generatedAt: string | null }> {
   const res = await fetch(`${API_BASE}/report/${cin}`, { headers: bearerHeader() });
@@ -184,18 +195,15 @@ export async function downloadReport(cin: string): Promise<{ reportId: string | 
 
 
 /** Download the full evidence graph / provenance chain as JSON. */
-export async function downloadProvenance(cin: string): Promise<void> {
+export async function downloadProvenance(cin: string, payload?: ProvenanceResponse): Promise<void> {
+  const filename = `sentinel-g-${cin}-provenance.json`;
+  if (payload) {
+    downloadJsonBlob(filename, payload);
+    return;
+  }
   const res = await fetch(`${API_BASE}/analyse/${cin}/provenance/export`, { headers: bearerHeader() });
   if (!res.ok) await _throwHttp("GET", `/analyse/${cin}/provenance/export`, res);
-  const blob = await res.blob();
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `sentinel-g-${cin}-provenance.json`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
+  downloadJsonBlob(filename, await res.json());
 }
 // Public data-lineage inventory — backs the /sources page judges hit
 // without logging in. Every fraud signal traces to one of these rows.
