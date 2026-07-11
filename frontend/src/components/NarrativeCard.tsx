@@ -8,10 +8,8 @@
  * Graceful degradation contract:
  *   - Initial paint: skeleton stripe so the layout doesn't shift when
  *     the narrative resolves.
- *   - LLM unavailable / rate-limited / no API key: backend serves the
- *     deterministic template-fallback prose; the card surfaces the
- *     model label so the analyst knows whether they're seeing Mistral
- *     output or the fallback.
+ *   - Rate-limited / no API key: backend serves deterministic template
+ *     prose; the card surfaces the model label for traceability.
  *   - Network or 5xx error: inline error pill, hero/chain still render.
  *   - 401: lets the layout's <ProtectedRoute> catch it via the standard
  *     redirect — same as any other dashboard surface.
@@ -143,27 +141,6 @@ export default function NarrativeCard({ cin }: NarrativeCardProps) {
           >
             {query.data.summary}
           </p>
-          {query.data.model.startsWith("template-fallback") && (
-            <p
-              style={{
-                margin: 0,
-                paddingLeft: "var(--s-3)",
-                borderLeft: "2px solid var(--accent-gold)",
-                fontFamily: "var(--font-body)",
-                fontSize: "var(--t-meta)",
-                color: "var(--ink-3)",
-                lineHeight: 1.5,
-                maxWidth: "62ch",
-              }}
-            >
-              <strong style={{ color: "var(--ink-2)" }}>Live LLM unavailable.</strong>{" "}
-              This synopsis was composed by the deterministic template — every
-              number above is drawn directly from the structured evidence, so
-              the prose is reliable but less varied than a Mistral-generated
-              summary. Set the Mistral API key on the backend to enable
-              richer prose.
-            </p>
-          )}
         </>
       )}
 
