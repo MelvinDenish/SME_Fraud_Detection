@@ -183,7 +183,21 @@ async def fetch_recent_dggi_busts(
     `max_releases` matching DGGI ITC bust records, newest-first.
 
     Designed to be called from the weekly refresh CI cron — see
-    `.github/workflows/refresh-public-data.yml`."""
+    `.github/workflows/refresh-public-data.yml`.
+
+    NOTE: The CBIC site (cbic.gov.in/entities/press-releases) migrated
+    to a JavaScript-rendered SPA in mid-2026 and no longer returns
+    meaningful HTML from plain httpx requests. When the index page
+    returns a JS-only scaffold we log a warning and return an empty
+    list rather than crashing — the CI workflow will still succeed,
+    the existing seed files remain unchanged, and the weekly diff
+    will show no changes until the scraper is updated with a Playwright
+    path or the API endpoint is discovered.
+
+    Alternative scrape paths to explore:
+    - PIB (pib.gov.in) RSS feed for CBIC/DGGI press releases
+    - Google News RSS: https://news.google.com/rss/search?q=DGGI+ITC+fraud
+    """
     headers = {
         "User-Agent": (
             "Sentinel-G/1.0 (Public-Data Refresh; "
@@ -191,37 +205,132 @@ async def fetch_recent_dggi_busts(
         ),
         "Accept": "text/html,application/xhtml+xml",
     }
-    async with httpx.AsyncClient(
-        timeout=timeout_seconds, headers=headers, follow_redirects=True
-    ) as client:
-        index_resp = await client.get(CBIC_PRESS_RELEASES_INDEX)
-        index_resp.raise_for_status()
-        soup = BeautifulSoup(index_resp.text, "html.parser")
-        # Collect candidate release links — CBIC uses /entities/press-release/ID slugs.
-        links: list[str] = []
-        for a in soup.find_all("a", href=True):
-            href = a["href"]
-            if "press-release" in href and href not in links:
-                full = href if href.startswith("http") else f"https://www.cbic.gov.in{href}"
-                links.append(full)
-            if len(links) >= max_releases * 3:
-                break
 
-        records: list[DggiBustRecord] = []
-        for url in links[: max_releases * 3]:
-            if len(records) >= max_releases:
-                break
-            try:
-                resp = await client.get(url)
-                if resp.status_code != 200:
+    # --- Primary: PIB RSS for CBIC/DGGI (JS-free, always available) ----------
+    pib_records = await _fetch_pib_rss(headers=headers, max_releases=max_releases, timeout=timeout_seconds)
+    if pib_records:
+        return pib_records
+
+    # --- Fallback: Direct CBIC index scrape (works when not JS-gated) --------
+    try:
+        async with httpx.AsyncClient(
+            timeout=timeout_seconds, headers=headers, follow_redirects=True
+        ) as client:
+            index_resp = await client.get(CBIC_PRESS_RELEASES_INDEX)
+            index_resp.raise_for_status()
+            index_text = index_resp.text
+
+            # Detect JS-only scaffold — if the page has fewer than 500 meaningful
+            # text chars it's almost certainly a loading placeholder.
+            meaningful = BeautifulSoup(index_text, "html.parser").get_text(strip=True)
+            if len(meaningful) < 500:
+                logger.warning(
+                    "DGGI scraper: CBIC index returned a JS-only page (%d chars) — "
+                    "scrape yielded 0 records. Update to Playwright or PIB RSS path.",
+                    len(meaningful),
+                )
+                return []
+
+            soup = BeautifulSoup(index_text, "html.parser")
+            links: list[str] = []
+            for a in soup.find_all("a", href=True):
+                href = a["href"]
+                if "press-release" in href and href not in links:
+                    full = href if href.startswith("http") else f"https://www.cbic.gov.in{href}"
+                    links.append(full)
+                if len(links) >= max_releases * 3:
+                    break
+
+            records: list[DggiBustRecord] = []
+            for url in links[: max_releases * 3]:
+                if len(records) >= max_releases:
+                    break
+                try:
+                    resp = await client.get(url)
+                    if resp.status_code != 200:
+                        continue
+                    rec = _parse_press_release(resp.text, url)
+                    if rec is not None:
+                        records.append(rec)
+                except (httpx.HTTPError, httpx.TimeoutException) as exc:
+                    logger.warning("DGGI scrape skipped %s: %s", url, exc)
                     continue
-                rec = _parse_press_release(resp.text, url)
-                if rec is not None:
-                    records.append(rec)
-            except (httpx.HTTPError, httpx.TimeoutException) as exc:
-                logger.warning("DGGI scrape skipped %s: %s", url, exc)
-                continue
-    return records
+            return records
+    except (httpx.HTTPError, httpx.TimeoutException) as exc:
+        logger.warning("DGGI scraper: index fetch failed (%s) — returning empty list", exc)
+        return []
+
+
+async def _fetch_pib_rss(
+    *,
+    headers: dict,
+    max_releases: int,
+    timeout: float,
+) -> list[DggiBustRecord]:
+    """Parse PIB RSS feed for CBIC/DGGI press releases — no JavaScript needed.
+
+    PIB (Press Information Bureau) syndicates GoI press releases including
+    CBIC/DGGI ITC fraud busts at a stable RSS endpoint. This is more robust
+    than scraping the CBIC Angular SPA directly.
+    """
+    PIB_RSS = "https://pib.gov.in/RssMain.aspx?ModId=6&Lang=1&Regid=3"
+    try:
+        async with httpx.AsyncClient(
+            timeout=timeout, headers=headers, follow_redirects=True
+        ) as client:
+            resp = await client.get(PIB_RSS)
+            if resp.status_code != 200:
+                logger.warning("PIB RSS returned %d", resp.status_code)
+                return []
+            soup = BeautifulSoup(resp.text, "xml")
+            items = soup.find_all("item")
+            if not items:
+                # lxml XML parser may not be installed — fall back to html.parser
+                soup = BeautifulSoup(resp.text, "html.parser")
+                items = soup.find_all("item")
+
+            records: list[DggiBustRecord] = []
+            for item in items[:max_releases * 3]:
+                title_tag = item.find("title")
+                link_tag = item.find("link")
+                desc_tag = item.find("description")
+                title_text = title_tag.get_text(strip=True) if title_tag else ""
+                link_text = link_tag.get_text(strip=True) if link_tag else ""
+                desc_text = desc_tag.get_text(strip=True) if desc_tag else ""
+                combined = f"{title_text} {desc_text}"
+                keywords = _matches_itc_keywords(combined)
+                if not keywords:
+                    continue
+                # Fetch the full release for richer parsing
+                try:
+                    full_resp = await client.get(link_text)
+                    rec = _parse_press_release(full_resp.text, link_text) if full_resp.status_code == 200 else None
+                except (httpx.HTTPError, httpx.TimeoutException):
+                    rec = None
+                if rec is None:
+                    # Build a minimal record from the RSS summary
+                    zone_m = DGGI_ZONE_PATTERN.search(combined)
+                    amount_m = AMOUNT_PATTERN.search(combined)
+                    ring_m = RING_SIZE_PATTERN.search(combined)
+                    rec = DggiBustRecord(
+                        title=title_text,
+                        url=link_text,
+                        published_on=None,
+                        dggi_zone=zone_m.group("zone").title() if zone_m else None,
+                        sector=None,
+                        total_fraud_cr=_parse_amount_to_cr(amount_m) if amount_m else None,
+                        ring_size=int(ring_m.group("count")) if ring_m else None,
+                        excerpt=desc_text[:800],
+                        keywords_matched=keywords,
+                    )
+                records.append(rec)
+                if len(records) >= max_releases:
+                    break
+            logger.info("PIB RSS: fetched %d DGGI ITC records", len(records))
+            return records
+    except (httpx.HTTPError, httpx.TimeoutException) as exc:
+        logger.warning("PIB RSS fetch failed (%s)", exc)
+        return []
 
 
 def filter_to_carousel(records: Iterable[DggiBustRecord]) -> list[DggiBustRecord]:

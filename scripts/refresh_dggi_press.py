@@ -31,6 +31,18 @@ TARGET_DIR = REPO_ROOT / "infra" / "seeds" / "itc_carousel"
 async def _run() -> int:
     TARGET_DIR.mkdir(parents=True, exist_ok=True)
     records = await fetch_recent_dggi_busts(max_releases=30)
+    if not records:
+        logger.warning(
+            "DGGI refresh: scraper returned 0 records — "
+            "CBIC/PIB may be temporarily unavailable or the site structure changed. "
+            "No files written; existing seeds are unchanged. Exiting 0 (soft failure)."
+        )
+        # Return 0 so the CI workflow exits green. The diff step will see no
+        # changes and skip the PR step. The committer gets an Actions warning
+        # email via the 'warning' annotation below, not a failure email.
+        # https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/workflow-commands-for-github-actions#setting-a-warning-message
+        print("::warning title=DGGI Scraper::Returned 0 records — check CBIC/PIB availability")
+        return 0
     carousels = filter_to_carousel(records)
     written = 0
     for rec in carousels:
@@ -43,7 +55,7 @@ async def _run() -> int:
         out_path.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
         written += 1
         logger.info("Wrote %s", out_path.relative_to(REPO_ROOT))
-    logger.info("DGGI refresh: %d records fetched, %d new files written", len(carousels), written)
+    logger.info("DGGI refresh: %d records fetched, %d filtered to carousel, %d new files written", len(records), len(carousels), written)
     return 0
 
 
