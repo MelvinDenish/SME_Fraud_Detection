@@ -30,8 +30,13 @@ class Settings(BaseSettings):
     rate_limit_per_min: int = 0
 
     # PRD §10 Day 24 — CORS lockdown. Comma-separated origin list; defaults
-    # cover the Vite dev server. Production override via CORS_ALLOWED_ORIGINS.
-    cors_allowed_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
+    # cover the Vite dev server AND the Vercel production deploy.
+    # Production override via CORS_ALLOWED_ORIGINS env var.
+    cors_allowed_origins: str = (
+        "http://localhost:5173,"
+        "http://127.0.0.1:5173,"
+        "https://sentinel-g-theta.vercel.app"
+    )
 
     @property
     def cors_origin_list(self) -> list[str]:

@@ -94,20 +94,34 @@ def create_app() -> FastAPI:
         return JSONResponse(st | {"ok": ok}, status_code=200 if ok else 503)
 
     @app.get("/health/neo4j", tags=["meta"])
-    async def neo4j_health() -> dict[str, object]:
-        """Verifies the Neo4j driver is up and GDS plugin is loaded (PRD §10 Day 1 acceptance)."""
-        driver = get_driver()
-        async with driver.session(database=settings.neo4j_database) as session:
-            result = await session.run("RETURN 1 AS ok")
-            ok_record = await result.single()
+    async def neo4j_health() -> JSONResponse:
+        """Verifies the Neo4j driver is up and GDS plugin is loaded (PRD §10 Day 1 acceptance).
+        Returns 503 (not 500) when the driver was not initialised at startup, so the
+        frontend/monitoring can distinguish 'graph offline' from an application crash."""
+        try:
+            driver = get_driver()
+        except RuntimeError as exc:
+            return JSONResponse(
+                {"neo4j_reachable": False, "gds_version": None, "error": str(exc)},
+                status_code=503,
+            )
+        try:
+            async with driver.session(database=settings.neo4j_database) as session:
+                result = await session.run("RETURN 1 AS ok")
+                ok_record = await result.single()
 
-            gds_result = await session.run("CALL gds.version() YIELD gdsVersion RETURN gdsVersion")
-            gds_record = await gds_result.single()
+                gds_result = await session.run("CALL gds.version() YIELD gdsVersion RETURN gdsVersion")
+                gds_record = await gds_result.single()
 
-        return {
-            "neo4j_reachable": bool(ok_record and ok_record["ok"] == 1),
-            "gds_version": gds_record["gdsVersion"] if gds_record else None,
-        }
+            return JSONResponse({
+                "neo4j_reachable": bool(ok_record and ok_record["ok"] == 1),
+                "gds_version": gds_record["gdsVersion"] if gds_record else None,
+            }, status_code=200)
+        except Exception as exc:
+            return JSONResponse(
+                {"neo4j_reachable": False, "gds_version": None, "error": str(exc)},
+                status_code=503,
+            )
 
     return app
 
