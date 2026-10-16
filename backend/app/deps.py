@@ -77,6 +77,14 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     except Exception as exc:  # noqa: BLE001 — must not crash lifespan
         logger.warning("lifespan: analytics_cache prewarm failed (%s)", exc)
 
+    # Pre-load ML meta-learner artefacts so /health/ml returns 200 on startup
+    # and the first /analyse call doesn't pay the cold-load cost.
+    try:
+        from backend.app.ml_inference import _load_artifacts
+        await _load_artifacts()
+    except Exception as exc:  # noqa: BLE001 — degraded but still serve
+        logger.warning("lifespan: ML artefact load failed (%s) — p_fraud_calibrated will be null", exc)
+
     try:
         yield
     finally:
